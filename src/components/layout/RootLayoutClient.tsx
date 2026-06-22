@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "./Sidebar";
 
-export default function RootLayoutClient({ children }: { children: React.ReactNode }) {
+export default function RootLayoutClient({ children, artistName }: { children: React.ReactNode; artistName: string }) {
   const pathname = usePathname();
   const isPublic = pathname.startsWith("/listen/");
 
@@ -12,7 +12,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar />
+      <Sidebar artistName={artistName} />
       <main className="flex-1 flex flex-col overflow-auto">
         {children}
       </main>

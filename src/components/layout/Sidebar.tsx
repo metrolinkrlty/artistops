@@ -47,8 +47,9 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ artistName = "Artist" }: { artistName?: string }) {
   const pathname = usePathname();
+  const initials = artistName.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "A";
 
   return (
     <aside className="w-64 min-h-screen bg-[#1a1d27] border-r border-[#2a2d3a] flex flex-col">
@@ -82,9 +83,9 @@ export default function Sidebar() {
       </nav>
       <div className="p-4 border-t border-[#2a2d3a]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">AR</div>
+          <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">{initials}</div>
           <div>
-            <p className="text-white text-sm font-medium">Alex Rivera</p>
+            <p className="text-white text-sm font-medium">{artistName}</p>
             <p className="text-[#8b8fa8] text-xs">Artist</p>
           </div>
         </div>

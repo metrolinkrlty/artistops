@@ -2,6 +2,7 @@ import Header from "@/components/layout/Header";
 import { prisma } from "@/lib/prisma";
 import { Music, Shield, DollarSign, TrendingUp, Megaphone, Target, Sparkles, ListMusic, Link2, Users } from "lucide-react";
 import Link from "next/link";
+import { getSettings } from "@/app/settings/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -92,11 +93,12 @@ function fmtCompact(n: number) {
 }
 
 export default async function Dashboard() {
-  const stats = await getStats();
+  const [stats, settings] = await Promise.all([getStats(), getSettings()]);
+  const artistName = settings.artistName || "Artist";
 
   return (
     <div className="flex-1">
-      <Header title="Dashboard" subtitle="Welcome back, Alex Rivera" />
+      <Header title="Dashboard" subtitle={`Welcome back, ${artistName}`} />
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Total Songs" value={stats.totalSongs.toString()} icon={Music} color="indigo" />

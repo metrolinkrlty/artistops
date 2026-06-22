@@ -8,7 +8,13 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  // Cap the pool: Supabase's session pooler allows a limited number of
+  // clients (pool_size 15), and serverless functions each open their own pool.
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    max: 3,
+    idleTimeoutMillis: 10_000,
+  });
   return new PrismaClient({ adapter });
 }
 
