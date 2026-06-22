@@ -20,10 +20,11 @@ export default async function RootLayout({
 }>) {
   const user = await getCurrentUser();
   const artistName = user?.artistName || "Artist";
+  const isAdmin = user?.isAdmin ?? false;
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-[#0f1117] text-white`}>
-        <RootLayoutClient artistName={artistName}>{children}</RootLayoutClient>
+        <RootLayoutClient artistName={artistName} isAdmin={isAdmin}>{children}</RootLayoutClient>
       </body>
     </html>
   );

@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Sparkles,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -49,7 +50,7 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar({ artistName = "Artist" }: { artistName?: string }) {
+export default function Sidebar({ artistName = "Artist", isAdmin = false }: { artistName?: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const initials = artistName.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "A";
@@ -93,6 +94,19 @@ export default function Sidebar({ artistName = "Artist" }: { artistName?: string
             </Link>
           );
         })}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mt-2 border-t border-[#2a2d3a] pt-3 ${
+              pathname === "/admin"
+                ? "bg-amber-600 text-white"
+                : "text-amber-400 hover:text-white hover:bg-amber-600/20"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+            Admin
+          </Link>
+        )}
       </nav>
       <div className="p-4 border-t border-[#2a2d3a]">
         <div className="flex items-center gap-3">

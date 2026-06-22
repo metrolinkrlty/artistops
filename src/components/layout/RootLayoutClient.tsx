@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import InactivityTimeout from "@/components/InactivityTimeout";
 import WelcomeSplash from "@/components/WelcomeSplash";
 
-export default function RootLayoutClient({ children, artistName }: { children: React.ReactNode; artistName: string }) {
+export default function RootLayoutClient({ children, artistName, isAdmin = false }: { children: React.ReactNode; artistName: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const isPublic = pathname.startsWith("/listen/") || pathname.startsWith("/login") || pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password");
 
@@ -19,7 +19,7 @@ export default function RootLayoutClient({ children, artistName }: { children: R
       <Suspense fallback={null}>
         <WelcomeSplash />
       </Suspense>
-      <Sidebar artistName={artistName} />
+      <Sidebar artistName={artistName} isAdmin={isAdmin} />
       <main className="flex-1 flex flex-col overflow-auto">
         {children}
       </main>
