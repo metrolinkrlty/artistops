@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   seedSampleDataForUser(user.id, artistName).catch((e) => console.error("Sample data seed failed:", e));
 
   // Send pending-approval email
-  sendEmail(email, "Your ArtistOps account is pending approval", pendingApprovalEmailHtml(artistName)).catch(console.error);
+  sendEmail(email, "Your ArtistOps account is pending approval", pendingApprovalEmailHtml(artistName), email).catch(console.error);
 
   // Sign the user in so they can see the pending page, but they can't access the dashboard yet
   const token = await signSession(user.id);

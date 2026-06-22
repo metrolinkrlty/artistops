@@ -4,7 +4,7 @@ import "server-only";
 // Requires env RESEND_API_KEY. Optional RESEND_FROM (defaults to Resend's
 // shared onboarding sender, which can only deliver to the account owner until
 // you verify your own domain in Resend).
-export async function sendEmail(to: string, subject: string, html: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+export async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM || "ArtistOps <onboarding@resend.dev>";
 
@@ -18,7 +18,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, bcc, subject, html, reply_to: "j.corliss101@gmail.com" }),
+      body: JSON.stringify({ from, to, bcc, subject, html, reply_to: replyTo || "admin@artistops.net" }),
     });
     if (!res.ok) {
       const body = await res.text();

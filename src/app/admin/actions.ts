@@ -17,7 +17,7 @@ async function requireAdmin() {
 export async function approveUser(id: string) {
   await requireAdmin();
   const user = await prisma.user.update({ where: { id }, data: { status: "APPROVED" } });
-  sendEmail(user.email, "Your ArtistOps account is approved! 🎉", approvedEmailHtml(user.artistName)).catch(console.error);
+  sendEmail(user.email, "Your ArtistOps account is approved! 🎉", approvedEmailHtml(user.artistName), user.email).catch(console.error);
   revalidatePath("/admin");
   return { ok: true };
 }
