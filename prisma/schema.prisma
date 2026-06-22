@@ -1,0 +1,382 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Song {
+  id            String   @id @default(cuid())
+  title         String
+  artist        String
+  writers       String[]
+  publishers    String[]
+  splits        Json
+  isrc          String?  @unique
+  upc           String?
+  releaseDate   DateTime?
+  genre         String?
+  bpm           Int?
+  key           String?
+  lyrics        String?
+  notes         String?
+  status        SongStatus @default(DEMO)
+  coverArtUrl   String?
+  audioFileRef  String?
+  metadataFile  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  copyrights    Copyright[]
+  distributions Distribution[]
+  revenues      Revenue[]
+  streamPlays   StreamPlay[]
+  socialPosts   SocialPost[]
+  adCampaigns   AdCampaign[]
+  pixelEvents   PixelEvent[]
+}
+
+enum SongStatus {
+  DEMO
+  MIXED
+  MASTERED
+  RELEASED
+  REGISTERED
+  MONETIZED
+}
+
+model Copyright {
+  id                 String   @id @default(cuid())
+  songId             String
+  song               Song     @relation(fields: [songId], references: [id])
+  registrationNumber String?
+  filingDate         DateTime?
+  claimant           String?
+  authors            String[]
+  workType           String?
+  depositNotes       String?
+  registeredWithUSCO Boolean  @default(false)
+  registeredWithPRO  Boolean  @default(false)
+  registeredWithMLC  Boolean  @default(false)
+  registeredWithSX   Boolean  @default(false)
+  registeredWithDist Boolean  @default(false)
+  proName            String?
+  documents          String[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Distributor {
+  id            String         @id @default(cuid())
+  name          String
+  accountId     String?
+  email         String?
+  website       String?
+  notes         String?
+  distributions Distribution[]
+  revenues      Revenue[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Distribution {
+  id            String      @id @default(cuid())
+  songId        String
+  song          Song        @relation(fields: [songId], references: [id])
+  distributorId String
+  distributor   Distributor @relation(fields: [distributorId], references: [id])
+  releaseId     String?
+  upc           String?
+  isrc          String?
+  stores        String[]
+  status        DistributionStatus @default(ACTIVE)
+  releaseDate   DateTime?
+  takedownDate  DateTime?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum DistributionStatus {
+  PENDING
+  ACTIVE
+  TAKEN_DOWN
+}
+
+model Revenue {
+  id            String      @id @default(cuid())
+  songId        String?
+  song          Song?       @relation(fields: [songId], references: [id])
+  distributorId String?
+  distributor   Distributor? @relation(fields: [distributorId], references: [id])
+  platform      String
+  revenueType   RevenueType
+  amount        Float
+  currency      String      @default("USD")
+  period        DateTime
+  source        String?
+  notes         String?
+  createdAt     DateTime    @default(now())
+}
+
+enum RevenueType {
+  STREAMING
+  PRO_ROYALTY
+  MECHANICAL
+  SOUND_EXCHANGE
+  SYNC_LICENSE
+  DIRECT_SALE
+  YOUTUBE_CONTENT_ID
+  TIKTOK
+  OTHER
+}
+
+model StreamPlay {
+  id        String   @id @default(cuid())
+  songId    String
+  song      Song     @relation(fields: [songId], references: [id])
+  platform  String
+  plays     Int
+  period    DateTime
+  isrc      String?
+  source    String?
+  createdAt DateTime @default(now())
+}
+
+model SocialPost {
+  id           String     @id @default(cuid())
+  songId       String?
+  song         Song?      @relation(fields: [songId], references: [id])
+  platform     String
+  status       PostStatus @default(IDEA)
+  content      String?
+  caption      String?
+  hashtags     String[]
+  targetAudience String?
+  scheduledAt  DateTime?
+  postedAt     DateTime?
+  campaign     String?
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum PostStatus {
+  IDEA
+  DRAFTED
+  SCHEDULED
+  POSTED
+  BOOSTED
+  COMPLETED
+}
+
+model AdCampaign {
+  id              String   @id @default(cuid())
+  songId          String?
+  song            Song?    @relation(fields: [songId], references: [id])
+  name            String
+  platform        String
+  objective       String?
+  budget          Float?
+  startDate       DateTime?
+  endDate         DateTime?
+  targetAudience  String?
+  creativeAssets  String[]
+  landingPage     String?
+  pixelEvent      String?
+  impressions     Int?
+  clicks          Int?
+  ctr             Float?
+  cpc             Float?
+  conversions     Int?
+  costPerConv     Float?
+  revenueAttributed Float?
+  status          CampaignStatus @default(DRAFT)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model PixelEvent {
+  id          String   @id @default(cuid())
+  songId      String?
+  song        Song?    @relation(fields: [songId], references: [id])
+  visitorId   String
+  pageUrl     String
+  referrer    String?
+  eventType   String
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+  createdAt   DateTime @default(now())
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  email     String?
+  phone     String?
+  company   String?
+  website   String?
+  notes     String?
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Smart Link
+model SmartLink {
+  id          String   @id @default(cuid())
+  songId      String?
+  slug        String   @unique
+  title       String
+  artistName  String
+  coverArtUrl String?
+  platforms   Json
+  isActive    Boolean  @default(true)
+  clicks      SmartLinkClick[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SmartLinkClick {
+  id              String    @id @default(cuid())
+  smartLinkId     String
+  smartLink       SmartLink @relation(fields: [smartLinkId], references: [id])
+  platform        String?
+  country         String?
+  device          String?
+  os              String?
+  browser         String?
+  referrer        String?
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  isRepeatVisitor Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+}
+
+model Playlist {
+  id            String       @id @default(cuid())
+  name          String
+  platform      String
+  playlistId    String?
+  type          PlaylistType @default(USER)
+  followerCount Int?
+  isActive      Boolean      @default(true)
+  songs         PlaylistSong[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum PlaylistType {
+  EDITORIAL
+  ALGORITHMIC
+  USER
+}
+
+model PlaylistSong {
+  id               String   @id @default(cuid())
+  playlistId       String
+  playlist         Playlist @relation(fields: [playlistId], references: [id])
+  songId           String
+  isrc             String?
+  addedAt          DateTime?
+  removedAt        DateTime?
+  streams          Int?
+  estimatedRevenue Float?
+  createdAt        DateTime @default(now())
+}
+
+model ListenerDemographic {
+  id        String   @id @default(cuid())
+  songId    String?
+  platform  String
+  period    DateTime
+  country   String?
+  city      String?
+  ageGroup  String?
+  gender    String?
+  device    String?
+  os        String?
+  streams   Int
+  createdAt DateTime @default(now())
+}
+
+model Connector {
+  id          String          @id @default(cuid())
+  name        String
+  type        ConnectorType
+  platform    String
+  status      ConnectorStatus @default(DISCONNECTED)
+  credentials Json?
+  lastSync    DateTime?
+  config      Json?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum ConnectorType {
+  STREAMING
+  DISTRIBUTOR
+  PRO
+  ROYALTY
+  ADVERTISING
+  ANALYTICS
+  CRM
+  TICKETING
+  MERCH
+  EMAIL
+}
+
+enum ConnectorStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  SYNCING
+}
+
+model RightsDocument {
+  id        String   @id @default(cuid())
+  songId    String
+  type      String
+  title     String
+  fileUrl   String?
+  parties   String[]
+  expiresAt DateTime?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AIInsight {
+  id         String   @id @default(cuid())
+  category   String
+  title      String
+  body       String
+  confidence Float?
+  actionable Boolean  @default(false)
+  dismissed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Forecast {
+  id        String   @id @default(cuid())
+  songId    String?
+  metric    String
+  period    DateTime
+  predicted Float
+  actual    Float?
+  model     String?
+  createdAt DateTime @default(now())
+}
