@@ -434,3 +434,13 @@ model Setting {
   updatedAt DateTime @updatedAt
   @@unique([userId, key])
 }
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId])
+}

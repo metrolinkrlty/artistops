@@ -64,3 +64,15 @@ export async function verifySession(value: string | undefined | null): Promise<s
 
 export const SESSION_COOKIE = "ao_session";
 export const IDLE_SECONDS = 60 * 30;
+
+// ---------- One-way token hashing (for password-reset tokens) ----------
+
+export function randomToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return toB64(bytes);
+}
+
+export async function hashToken(token: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", enc.encode(token) as BufferSource);
+  return toB64(digest);
+}

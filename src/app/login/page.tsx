@@ -90,6 +90,11 @@ function AuthForm() {
         <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
           {loading ? (mode === "signup" ? "Creating account…" : "Signing in…") : mode === "signup" ? "Create Account" : "Sign In"}
         </button>
+        {mode === "login" && (
+          <p className="text-center">
+            <a href="/forgot-password" className="text-indigo-400 text-sm hover:text-indigo-300">Forgot your password?</a>
+          </p>
+        )}
       </form>
     </div>
   );

@@ -7,7 +7,7 @@ import WelcomeSplash from "@/components/WelcomeSplash";
 
 export default function RootLayoutClient({ children, artistName }: { children: React.ReactNode; artistName: string }) {
   const pathname = usePathname();
-  const isPublic = pathname.startsWith("/listen/") || pathname.startsWith("/login");
+  const isPublic = pathname.startsWith("/listen/") || pathname.startsWith("/login") || pathname.startsWith("/forgot-password") || pathname.startsWith("/reset-password");
 
   if (isPublic) {
     return <>{children}</>;

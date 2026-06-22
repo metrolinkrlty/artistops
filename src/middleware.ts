@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession, signSession, SESSION_COOKIE, IDLE_SECONDS } from "@/lib/auth";
 
-const PUBLIC_PREFIXES = ["/login", "/api/login", "/api/signup", "/api/logout", "/listen/", "/api/pixel", "/api/smart-link-click"];
+const PUBLIC_PREFIXES = ["/login", "/forgot-password", "/reset-password", "/api/login", "/api/signup", "/api/logout", "/api/forgot-password", "/api/reset-password", "/listen/", "/api/pixel", "/api/smart-link-click"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
