@@ -212,6 +212,58 @@ async function main() {
     });
   }
 
+  console.log("Seeding smart links...");
+  await prisma.smartLinkClick.deleteMany();
+  await prisma.smartLink.deleteMany();
+  const smartLinks = [
+    {
+      slug: "midnight-drive", title: "Midnight Drive", artistName: "Alex Rivera",
+      platforms: [
+        { name: "Spotify", url: "https://open.spotify.com", priority: 1 },
+        { name: "Apple Music", url: "https://music.apple.com", priority: 2 },
+        { name: "YouTube Music", url: "https://music.youtube.com", priority: 3 },
+        { name: "Amazon Music", url: "https://music.amazon.com", priority: 4 },
+        { name: "Tidal", url: "https://tidal.com", priority: 5 },
+      ],
+    },
+    {
+      slug: "golden-hours", title: "Golden Hours", artistName: "Alex Rivera",
+      platforms: [
+        { name: "Spotify", url: "https://open.spotify.com", priority: 1 },
+        { name: "Apple Music", url: "https://music.apple.com", priority: 2 },
+        { name: "YouTube Music", url: "https://music.youtube.com", priority: 3 },
+        { name: "Amazon Music", url: "https://music.amazon.com", priority: 4 },
+      ],
+    },
+    {
+      slug: "electric-soul-preview", title: "Electric Soul (Preview)", artistName: "Alex Rivera",
+      platforms: [
+        { name: "Spotify", url: "https://open.spotify.com", priority: 1 },
+        { name: "SoundCloud", url: "https://soundcloud.com", priority: 2 },
+      ],
+    },
+  ];
+  for (const sl of smartLinks) {
+    const created = await prisma.smartLink.create({
+      data: { slug: sl.slug, title: sl.title, artistName: sl.artistName, platforms: sl.platforms, isActive: true },
+    });
+    // seed a handful of clicks
+    const platforms = sl.platforms.map((p) => p.name);
+    const countries = ["US", "GB", "CA", "AU", "DE"];
+    const devices = ["Mobile", "Desktop", "Tablet"];
+    const n = sl.slug === "midnight-drive" ? 40 : sl.slug === "golden-hours" ? 22 : 8;
+    for (let i = 0; i < n; i++) {
+      await prisma.smartLinkClick.create({
+        data: {
+          smartLinkId: created.id,
+          platform: platforms[i % platforms.length],
+          country: countries[i % countries.length],
+          device: devices[i % devices.length],
+        },
+      });
+    }
+  }
+
   console.log("✅ Seed complete.");
 }
 
