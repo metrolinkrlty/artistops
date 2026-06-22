@@ -1,0 +1,64 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
+import { saveSettings } from "./actions";
+
+const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500";
+
+export default function SettingsClient({ settings }: { settings: Record<string, string> }) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSubmit(formData: FormData) {
+    setSaving(true);
+    await saveSettings(formData);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    router.refresh();
+  }
+
+  return (
+    <div className="p-8 space-y-6 max-w-2xl">
+      <form action={handleSubmit} className="space-y-6">
+        <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+          <h2 className="text-white font-semibold mb-4">Artist Profile</h2>
+          <div className="space-y-4">
+            {[
+              { name: "artistName", label: "Artist Name" },
+              { name: "email", label: "Email" },
+              { name: "proMembership", label: "PRO Membership" },
+              { name: "ipiNumber", label: "IPI Number" },
+            ].map((f) => (
+              <div key={f.name}>
+                <label className="block text-[#8b8fa8] text-sm mb-1">{f.label}</label>
+                <input name={f.name} defaultValue={settings[f.name] || ""} className={inputClass} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+          <h2 className="text-white font-semibold mb-2">Pixel Tracking Domain</h2>
+          <p className="text-[#8b8fa8] text-sm mb-4">Set your website domain for the tracking snippet.</p>
+          <div>
+            <label className="block text-[#8b8fa8] text-sm mb-1">Website URL</label>
+            <input name="websiteUrl" defaultValue={settings.websiteUrl || ""} placeholder="https://alexrivera.com" className={inputClass} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Saving..." : "Save Changes"}</button>
+          {saved && <span className="flex items-center gap-1 text-green-400 text-sm"><CheckCircle2 className="w-4 h-4" /> Saved</span>}
+        </div>
+      </form>
+
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+        <h2 className="text-white font-semibold mb-2 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-400" /> Database</h2>
+        <p className="text-[#8b8fa8] text-sm">Connected to Supabase PostgreSQL. Your catalog, revenue, rights, and analytics are saved and synced across devices.</p>
+      </div>
+    </div>
+  );
+}
