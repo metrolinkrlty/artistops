@@ -264,6 +264,66 @@ async function main() {
     }
   }
 
+  console.log("Seeding playlists...");
+  await prisma.playlistSong.deleteMany();
+  await prisma.playlist.deleteMany();
+  const playlists = [
+    { name: "Indie Vibes", platform: "Spotify", type: "EDITORIAL", followerCount: 284000, song: "Midnight Drive", streams: 42300, revenue: 1680, addedAt: "2024-03-20" },
+    { name: "Late Night Drives", platform: "Spotify", type: "EDITORIAL", followerCount: 156000, song: "Midnight Drive", streams: 28400, revenue: 1130, addedAt: "2024-04-02" },
+    { name: "Discover Weekly", platform: "Spotify", type: "ALGORITHMIC", followerCount: 0, song: "Golden Hours", streams: 18200, revenue: 725, addedAt: "2024-05-06" },
+    { name: "Release Radar", platform: "Spotify", type: "ALGORITHMIC", followerCount: 0, song: "Golden Hours", streams: 12100, revenue: 484, addedAt: "2024-05-21" },
+    { name: "R&B Essentials", platform: "Apple Music", type: "EDITORIAL", followerCount: 198000, song: "Golden Hours", streams: 19800, revenue: 2134, addedAt: "2024-05-18" },
+    { name: "Pop Hits", platform: "Apple Music", type: "EDITORIAL", followerCount: 412000, song: "Midnight Drive", streams: 9200, revenue: 992, addedAt: "2024-04-10" },
+    { name: "Chill Mix", platform: "Amazon Music", type: "ALGORITHMIC", followerCount: 0, song: "Midnight Drive", streams: 7400, revenue: 296, addedAt: "2024-05-01" },
+    { name: "Fan Faves Mix", platform: "Spotify", type: "USER", followerCount: 2300, song: "Midnight Drive", streams: 4100, revenue: 164, addedAt: "2024-03-28" },
+  ];
+  for (const pl of playlists) {
+    const created = await prisma.playlist.create({
+      data: { name: pl.name, platform: pl.platform, type: pl.type as never, followerCount: pl.followerCount, isActive: true },
+    });
+    const songId = songIdByTitle.get(pl.song);
+    if (songId) {
+      await prisma.playlistSong.create({
+        data: { playlistId: created.id, songId, addedAt: new Date(pl.addedAt), streams: pl.streams, estimatedRevenue: pl.revenue },
+      });
+    }
+  }
+
+  console.log("Seeding AI insights...");
+  await prisma.aIInsight.deleteMany();
+  const insights = [
+    { category: "campaign", title: "Instagram campaign lifted Spotify streams", body: "Your Instagram campaign drove a +23% increase in Spotify streams last week.", confidence: 0.86, actionable: true },
+    { category: "revenue", title: "Apple Music listeners are more valuable", body: "Apple Music listeners generate 2.1× higher revenue per stream than Spotify listeners. Consider prioritizing Apple Music in smart links.", confidence: 0.91, actionable: true },
+    { category: "audience", title: "Texas is your fastest-growing market", body: "Texas has become your fastest growing audience state, up 34% month-over-month.", confidence: 0.78, actionable: false },
+    { category: "revenue", title: "Playlist 'Indie Vibes' drives revenue", body: "Playlist 'Indie Vibes' is responsible for 18% of monthly revenue.", confidence: 0.83, actionable: false },
+    { category: "revenue", title: "Revenue per stream is declining", body: "Revenue per stream is declining because more listeners are coming from lower-paying territories (India +41%).", confidence: 0.74, actionable: true },
+    { category: "streaming", title: "Best release window identified", body: "Your best release time based on listener activity is Thursday 7-9 PM EST.", confidence: 0.69, actionable: true },
+    { category: "campaign", title: "'Summer Drop' had top ROAS", body: "Ad campaign 'Summer Drop' achieved 3.2× ROAS — your highest performing campaign this year.", confidence: 0.88, actionable: false },
+    { category: "revenue", title: "Unregistered songs may lose royalties", body: "Some songs are not registered with the MLC. Register them to avoid uncollected mechanical royalties.", confidence: 0.95, actionable: true },
+    { category: "forecast", title: "On track to cross 100K monthly listeners", body: "If current growth holds, you will cross 100K monthly listeners in about 6 weeks.", confidence: 0.72, actionable: false },
+  ];
+  for (const ins of insights) await prisma.aIInsight.create({ data: ins as never });
+
+  console.log("Seeding rights documents...");
+  await prisma.rightsDocument.deleteMany();
+  const docs = [
+    { song: "Midnight Drive", type: "split_sheet", title: "Midnight Drive — Split Sheet", parties: ["Alex Rivera", "Maya Chen"], expiresAt: null },
+    { song: "Midnight Drive", type: "recording_contract", title: "Midnight Drive — Master Recording Agreement", parties: ["Alex Rivera", "Sunset Music Publishing"], expiresAt: "2027-03-15" },
+    { song: "Midnight Drive", type: "license", title: "Sync License — TV Placement", parties: ["Alex Rivera", "SyncBridge Agency"], expiresAt: "2025-08-01" },
+    { song: "Golden Hours", type: "split_sheet", title: "Golden Hours — Split Sheet", parties: ["Alex Rivera"], expiresAt: null },
+    { song: "Golden Hours", type: "distribution_agreement", title: "Golden Hours — DistroKid Distribution", parties: ["Alex Rivera", "DistroKid"], expiresAt: "2026-05-20" },
+    { song: "Electric Soul", type: "split_sheet", title: "Electric Soul — Split Sheet", parties: ["Alex Rivera", "Jordan Blake", "Sam Torres"], expiresAt: null },
+    { song: "Electric Soul", type: "license", title: "Sample Clearance — Electric Soul", parties: ["Alex Rivera", "Nova Sound"], expiresAt: "2025-07-15" },
+    { song: "Sunrise Boulevard", type: "split_sheet", title: "Sunrise Boulevard — Split Sheet", parties: ["Alex Rivera", "Maya Chen"], expiresAt: null },
+  ];
+  for (const doc of docs) {
+    const songId = songIdByTitle.get(doc.song);
+    if (!songId) continue;
+    await prisma.rightsDocument.create({
+      data: { songId, type: doc.type, title: doc.title, parties: doc.parties, expiresAt: doc.expiresAt ? new Date(doc.expiresAt) : null },
+    });
+  }
+
   console.log("✅ Seed complete.");
 }
 
