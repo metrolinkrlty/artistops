@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { APP_VERSION } from "@/lib/version";
 import {
   LayoutDashboard,
   Music,
@@ -22,6 +23,7 @@ import {
   FileLock,
   TrendingUp,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -49,7 +51,18 @@ const navItems = [
 
 export default function Sidebar({ artistName = "Artist" }: { artistName?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const initials = artistName.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "A";
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+    } catch {
+      // ignore
+    }
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside className="w-64 min-h-screen bg-[#1a1d27] border-r border-[#2a2d3a] flex flex-col">
@@ -84,11 +97,15 @@ export default function Sidebar({ artistName = "Artist" }: { artistName?: string
       <div className="p-4 border-t border-[#2a2d3a]">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">{initials}</div>
-          <div>
-            <p className="text-white text-sm font-medium">{artistName}</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-medium truncate">{artistName}</p>
             <p className="text-[#8b8fa8] text-xs">Artist</p>
           </div>
+          <button onClick={handleLogout} title="Sign out" className="text-[#8b8fa8] hover:text-red-400 transition-colors">
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
+        <p className="text-[#5a5e72] text-[10px] mt-3 text-center">ArtistOps v{APP_VERSION}</p>
       </div>
     </aside>
   );

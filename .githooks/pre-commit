@@ -1,0 +1,10 @@
+#!/bin/sh
+# Auto-bump the app version by 0.01 on every commit.
+f="src/lib/version.ts"
+[ -f "$f" ] || exit 0
+cur=$(grep -oE '[0-9]+\.[0-9]+' "$f" | head -1)
+[ -z "$cur" ] && exit 0
+new=$(awk "BEGIN{printf \"%.2f\", $cur + 0.01}")
+sed -i '' "s/\"$cur\"/\"$new\"/" "$f" 2>/dev/null || sed -i "s/\"$cur\"/\"$new\"/" "$f"
+git add "$f"
+exit 0
