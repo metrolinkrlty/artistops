@@ -5,12 +5,28 @@ import { requireUserId } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { sendEmail, approvedEmailHtml } from "@/lib/email";
 
 async function requireAdmin() {
   const userId = await requireUserId();
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user?.isAdmin) redirect("/");
   return userId;
+}
+
+export async function approveUser(id: string) {
+  await requireAdmin();
+  const user = await prisma.user.update({ where: { id }, data: { status: "APPROVED" } });
+  sendEmail(user.email, "Your ArtistOps account is approved! 🎉", approvedEmailHtml(user.artistName)).catch(console.error);
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function rejectUser(id: string) {
+  await requireAdmin();
+  await prisma.user.update({ where: { id }, data: { status: "REJECTED" } });
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 export async function getUsers() {
@@ -30,6 +46,7 @@ export async function getUsers() {
       email: u.email,
       artistName: u.artistName,
       isAdmin: u.isAdmin,
+      status: u.status,
       createdAt: u.createdAt.toISOString(),
       songs: c.songs,
       totalRevenue: c.revenue._sum.amount ?? 0,
@@ -48,7 +65,7 @@ export async function createUser(formData: FormData) {
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return { error: "Email already in use" };
 
-  await prisma.user.create({ data: { email, artistName, passwordHash: await hashPassword(password), isAdmin } });
+  await prisma.user.create({ data: { email, artistName, passwordHash: await hashPassword(password), isAdmin, status: "APPROVED" } });
   revalidatePath("/admin");
   return { ok: true };
 }
@@ -59,8 +76,9 @@ export async function updateUser(id: string, formData: FormData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const isAdmin = formData.get("isAdmin") === "on";
   const newPassword = String(formData.get("newPassword") || "");
+  const status = String(formData.get("status") || "APPROVED");
 
-  const data: Record<string, unknown> = { artistName, email, isAdmin };
+  const data: Record<string, unknown> = { artistName, email, isAdmin, status };
   if (newPassword.length >= 6) data.passwordHash = await hashPassword(newPassword);
 
   await prisma.user.update({ where: { id }, data });

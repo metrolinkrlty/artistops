@@ -45,7 +45,7 @@ function AuthForm() {
     setLoading(false);
     if (res.ok) {
       if (mode === "signup") {
-        router.push("/?welcome=1");
+        router.push("/pending-approval");
       } else {
         router.push(params.get("from") || "/");
       }

@@ -31,6 +31,37 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
   }
 }
 
+export function pendingApprovalEmailHtml(artistName: string): string {
+  return `
+  <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <div style="width:40px;height:40px;background:#6366f1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎵</div>
+      <span style="font-size:20px;font-weight:700">ArtistOps</span>
+    </div>
+    <h2 style="margin:0 0 8px">Thanks for signing up, ${artistName}!</h2>
+    <p style="color:#8b8fa8;margin:0 0 20px">Your account has been created and is <strong style="color:#f59e0b">pending approval</strong>.</p>
+    <div style="background:#1a1d27;border:1px solid #f59e0b33;border-radius:10px;padding:16px;margin-bottom:20px">
+      <p style="color:#f59e0b;margin:0 0 8px;font-weight:600">⏳ What happens next?</p>
+      <p style="color:#8b8fa8;margin:0;font-size:14px">Our team reviews each new account before granting access. You'll receive another email once your account is approved — usually within 24 hours.</p>
+    </div>
+    <p style="color:#8b8fa8;font-size:13px;margin:0">Questions? Reply to this email or contact us at <a href="mailto:admin@artistops.net" style="color:#6366f1">admin@artistops.net</a>.</p>
+  </div>`;
+}
+
+export function approvedEmailHtml(artistName: string): string {
+  return `
+  <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <div style="width:40px;height:40px;background:#6366f1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎵</div>
+      <span style="font-size:20px;font-weight:700">ArtistOps</span>
+    </div>
+    <h2 style="margin:0 0 8px">You're approved, ${artistName}! 🎉</h2>
+    <p style="color:#8b8fa8;margin:0 0 20px">Your ArtistOps account has been approved. You can now sign in and start managing your music business.</p>
+    <a href="https://artistops.net/login" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Sign in to ArtistOps</a>
+    <p style="color:#8b8fa8;font-size:13px;margin:20px 0 0">Welcome aboard — your dashboard is ready with sample data to explore every feature.</p>
+  </div>`;
+}
+
 export function passwordResetEmailHtml(artistName: string, link: string): string {
   return `
   <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">

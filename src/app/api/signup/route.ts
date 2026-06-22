@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signSession, SESSION_COOKIE, IDLE_SECONDS } from "@/lib/auth";
 import { seedSampleDataForUser } from "@/lib/sampleData";
+import { sendEmail, pendingApprovalEmailHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let email = "", password = "", artistName = "";
@@ -30,18 +31,18 @@ export async function POST(req: NextRequest) {
   }
 
   const user = await prisma.user.create({
-    data: { email, artistName, passwordHash: await hashPassword(password) },
+    data: { email, artistName, passwordHash: await hashPassword(password), status: "PENDING" },
   });
 
-  try {
-    await seedSampleDataForUser(user.id, artistName);
-  } catch (e) {
-    console.error("Sample data seed failed:", e);
-    // account still created; continue
-  }
+  // Seed sample data in the background (don't await — user sees pending page immediately)
+  seedSampleDataForUser(user.id, artistName).catch((e) => console.error("Sample data seed failed:", e));
 
+  // Send pending-approval email
+  sendEmail(email, "Your ArtistOps account is pending approval", pendingApprovalEmailHtml(artistName)).catch(console.error);
+
+  // Sign the user in so they can see the pending page, but they can't access the dashboard yet
   const token = await signSession(user.id);
-  const res = NextResponse.json({ ok: true, welcome: true });
+  const res = NextResponse.json({ ok: true, pending: true });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

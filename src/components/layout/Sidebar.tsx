@@ -50,7 +50,7 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar({ artistName = "Artist", isAdmin = false }: { artistName?: string; isAdmin?: boolean }) {
+export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpersonating = false }: { artistName?: string; isAdmin?: boolean; isImpersonating?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const initials = artistName.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "A";
