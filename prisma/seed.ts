@@ -324,6 +324,73 @@ async function main() {
     });
   }
 
+  console.log("Seeding forecasts...");
+  await prisma.forecast.deleteMany();
+  const monthly = [
+    { month: "Jul '23", streams: 18200, revenue: 728, followers: 12400, projected: false },
+    { month: "Aug '23", streams: 22100, revenue: 885, followers: 13800, projected: false },
+    { month: "Sep '23", streams: 28400, revenue: 1138, followers: 15200, projected: false },
+    { month: "Oct '23", streams: 31200, revenue: 1249, followers: 17400, projected: false },
+    { month: "Nov '23", streams: 38900, revenue: 1557, followers: 20100, projected: false },
+    { month: "Dec '23", streams: 45200, revenue: 1810, followers: 23400, projected: false },
+    { month: "Jan '24", streams: 42100, revenue: 1685, followers: 25800, projected: false },
+    { month: "Feb '24", streams: 68400, revenue: 2738, followers: 31200, projected: false },
+    { month: "Mar '24", streams: 89200, revenue: 3570, followers: 38900, projected: false },
+    { month: "Apr '24", streams: 76400, revenue: 3057, followers: 44200, projected: false },
+    { month: "May '24", streams: 98400, revenue: 3938, followers: 52100, projected: false },
+    { month: "Jun '24", streams: 87200, revenue: 3490, followers: 58400, projected: false },
+    { month: "Jul '24", streams: 101400, revenue: 4057, followers: 65200, projected: true },
+    { month: "Aug '24", streams: 112800, revenue: 4513, followers: 73400, projected: true },
+    { month: "Sep '24", streams: 128400, revenue: 5137, followers: 83800, projected: true },
+  ];
+  let order = 0;
+  for (const m of monthly) {
+    const period = new Date(2023, 6 + order, 1); // Jul 2023 + order months
+    order++;
+    for (const metric of ["streams", "revenue", "followers"] as const) {
+      await prisma.forecast.create({
+        data: { metric, period, predicted: m[metric], actual: m.projected ? null : m[metric], model: "trend-v1" },
+      });
+    }
+  }
+
+  console.log("Seeding listener demographics...");
+  await prisma.listenerDemographic.deleteMany();
+  const period = new Date("2024-05-01");
+  const cities = [
+    { city: "Los Angeles", country: "US", streams: 48200 }, { city: "New York", country: "US", streams: 41300 },
+    { city: "London", country: "GB", streams: 38900 }, { city: "Toronto", country: "CA", streams: 22100 },
+    { city: "Chicago", country: "US", streams: 18700 }, { city: "Sydney", country: "AU", streams: 16200 },
+    { city: "Houston", country: "US", streams: 14800 }, { city: "Melbourne", country: "AU", streams: 12400 },
+    { city: "Berlin", country: "DE", streams: 11200 }, { city: "São Paulo", country: "BR", streams: 9800 },
+  ];
+  for (const c of cities) await prisma.listenerDemographic.create({ data: { platform: "all", period, city: c.city, country: c.country, streams: c.streams } });
+
+  const countries = [
+    { country: "United States", streams: 168400 }, { country: "United Kingdom", streams: 61200 },
+    { country: "Canada", streams: 43800 }, { country: "Australia", streams: 31200 },
+    { country: "Germany", streams: 19800 }, { country: "Brazil", streams: 14200 },
+    { country: "France", streams: 11800 }, { country: "Japan", streams: 9400 },
+    { country: "India", streams: 8200 }, { country: "Other", streams: 29200 },
+  ];
+  for (const c of countries) await prisma.listenerDemographic.create({ data: { platform: "all", period, country: c.country, streams: c.streams } });
+
+  const ageGender = [
+    { ageGroup: "13-17", gender: "male", streams: 8 }, { ageGroup: "13-17", gender: "female", streams: 11 },
+    { ageGroup: "18-24", gender: "male", streams: 22 }, { ageGroup: "18-24", gender: "female", streams: 26 },
+    { ageGroup: "25-34", gender: "male", streams: 18 }, { ageGroup: "25-34", gender: "female", streams: 19 },
+    { ageGroup: "35-44", gender: "male", streams: 9 }, { ageGroup: "35-44", gender: "female", streams: 12 },
+    { ageGroup: "45-54", gender: "male", streams: 5 }, { ageGroup: "45-54", gender: "female", streams: 6 },
+    { ageGroup: "55+", gender: "male", streams: 2 }, { ageGroup: "55+", gender: "female", streams: 3 },
+  ];
+  for (const a of ageGender) await prisma.listenerDemographic.create({ data: { platform: "all", period, ageGroup: a.ageGroup, gender: a.gender, streams: a.streams } });
+
+  const platformsDemo = [
+    { platform: "Spotify", streams: 48 }, { platform: "TikTok", streams: 22 }, { platform: "Apple Music", streams: 16 },
+    { platform: "YouTube Music", streams: 8 }, { platform: "Amazon Music", streams: 4 }, { platform: "Other", streams: 2 },
+  ];
+  for (const p of platformsDemo) await prisma.listenerDemographic.create({ data: { platform: p.platform, period, streams: p.streams } });
+
   console.log("✅ Seed complete.");
 }
 
