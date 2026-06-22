@@ -1,15 +1,18 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getStreamingData() {
+  const userId = await requireUserId();
   const [plays, songs] = await Promise.all([
     prisma.streamPlay.findMany({
+      where: { userId },
       orderBy: { period: "desc" },
       include: { song: { select: { title: true, isrc: true } } },
     }),
-    prisma.song.findMany({ select: { id: true, title: true, isrc: true }, orderBy: { title: "asc" } }),
+    prisma.song.findMany({ where: { userId }, select: { id: true, title: true, isrc: true }, orderBy: { title: "asc" } }),
   ]);
 
   const rows = plays.map((p) => ({
@@ -21,7 +24,6 @@ export async function getStreamingData() {
     plays: p.plays,
   }));
 
-  // ISRC-centric grouping
   const isrcMap = new Map<string, { isrc: string; song: string; platforms: Record<string, number>; total: number }>();
   for (const r of rows) {
     const key = `${r.isrc || r.songTitle}`;
@@ -32,7 +34,6 @@ export async function getStreamingData() {
   }
   const isrcData = Array.from(isrcMap.values()).sort((a, b) => b.total - a.total);
 
-  // Platform comparison
   const platMap = new Map<string, number>();
   for (const r of rows) platMap.set(r.platform, (platMap.get(r.platform) || 0) + r.plays);
   const grand = Array.from(platMap.values()).reduce((a, b) => a + b, 0) || 1;
@@ -44,11 +45,15 @@ export async function getStreamingData() {
 }
 
 export async function createStreamPlay(formData: FormData) {
+  const userId = await requireUserId();
   const period = String(formData.get("period") || "");
   const songId = String(formData.get("songId") || "");
   if (!songId) return;
+  const song = await prisma.song.findFirst({ where: { id: songId, userId } });
+  if (!song) return;
   await prisma.streamPlay.create({
     data: {
+      userId,
       songId,
       platform: String(formData.get("platform") || "Spotify"),
       plays: Number(formData.get("plays") || 0),
@@ -60,6 +65,7 @@ export async function createStreamPlay(formData: FormData) {
 }
 
 export async function deleteStreamPlay(id: string) {
-  await prisma.streamPlay.delete({ where: { id } });
+  const userId = await requireUserId();
+  await prisma.streamPlay.deleteMany({ where: { id, userId } });
   revalidatePath("/streaming");
 }

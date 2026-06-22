@@ -1,11 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getInsights() {
+  const userId = await requireUserId();
   const insights = await prisma.aIInsight.findMany({
-    where: { dismissed: false },
+    where: { userId, dismissed: false },
     orderBy: { createdAt: "desc" },
   });
   return insights.map((i) => ({
@@ -20,6 +22,7 @@ export async function getInsights() {
 }
 
 export async function dismissInsight(id: string) {
-  await prisma.aIInsight.update({ where: { id }, data: { dismissed: true } });
+  const userId = await requireUserId();
+  await prisma.aIInsight.updateMany({ where: { id, userId }, data: { dismissed: true } });
   revalidatePath("/ai-insights");
 }

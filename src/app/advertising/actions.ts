@@ -1,17 +1,21 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getAdCampaigns() {
+  const userId = await requireUserId();
   return prisma.adCampaign.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { song: { select: { id: true, title: true } } },
   });
 }
 
 export async function getSongOptions() {
-  return prisma.song.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } });
+  const userId = await requireUserId();
+  return prisma.song.findMany({ where: { userId }, select: { id: true, title: true }, orderBy: { title: "asc" } });
 }
 
 const num = (v: FormDataEntryValue | null) => (v && String(v).trim() !== "" ? Number(v) : null);
@@ -41,20 +45,23 @@ function parse(formData: FormData) {
 }
 
 export async function createAdCampaign(formData: FormData) {
+  const userId = await requireUserId();
   const data = parse(formData);
   if (!data.name) return;
-  await prisma.adCampaign.create({ data });
+  await prisma.adCampaign.create({ data: { ...data, userId } });
   revalidatePath("/advertising");
 }
 
 export async function updateAdCampaign(id: string, formData: FormData) {
+  const userId = await requireUserId();
   const data = parse(formData);
   if (!data.name) return;
-  await prisma.adCampaign.update({ where: { id }, data });
+  await prisma.adCampaign.updateMany({ where: { id, userId }, data });
   revalidatePath("/advertising");
 }
 
 export async function deleteAdCampaign(id: string) {
-  await prisma.adCampaign.delete({ where: { id } });
+  const userId = await requireUserId();
+  await prisma.adCampaign.deleteMany({ where: { id, userId } });
   revalidatePath("/advertising");
 }

@@ -1,5 +1,6 @@
 import Header from "@/components/layout/Header";
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,9 @@ const CONVERSION_LABELS: Record<string, string> = {
 };
 
 async function getAnalytics() {
+  const userId = await requireUserId();
   const events = await prisma.pixelEvent.findMany({
+    where: { userId },
     select: { visitorId: true, pageUrl: true, eventType: true, utmSource: true },
   });
 

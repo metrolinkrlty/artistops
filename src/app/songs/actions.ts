@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export type SongStatus =
@@ -12,7 +13,9 @@ export type SongStatus =
   | "MONETIZED";
 
 export async function getSongs() {
+  const userId = await requireUserId();
   return prisma.song.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { copyrights: true },
   });
@@ -53,20 +56,26 @@ function parseForm(formData: FormData) {
 }
 
 export async function createSong(formData: FormData) {
+  const userId = await requireUserId();
   const data = parseForm(formData);
   if (!data.title || !data.artist) return;
-  await prisma.song.create({ data });
+  await prisma.song.create({ data: { ...data, userId } });
   revalidatePath("/songs");
 }
 
 export async function updateSong(id: string, formData: FormData) {
+  const userId = await requireUserId();
   const data = parseForm(formData);
   if (!data.title || !data.artist) return;
-  await prisma.song.update({ where: { id }, data });
+  await prisma.song.updateMany({ where: { id, userId }, data });
   revalidatePath("/songs");
 }
 
 export async function deleteSong(id: string) {
+  const userId = await requireUserId();
+  // verify ownership first
+  const song = await prisma.song.findFirst({ where: { id, userId } });
+  if (!song) return;
   // remove dependent rows first to satisfy FK constraints
   await prisma.copyright.deleteMany({ where: { songId: id } });
   await prisma.distribution.deleteMany({ where: { songId: id } });

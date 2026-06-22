@@ -1,17 +1,21 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getCopyrights() {
+  const userId = await requireUserId();
   return prisma.copyright.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { song: { select: { id: true, title: true } } },
   });
 }
 
 export async function getSongOptions() {
-  return prisma.song.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } });
+  const userId = await requireUserId();
+  return prisma.song.findMany({ where: { userId }, select: { id: true, title: true }, orderBy: { title: "asc" } });
 }
 
 function parse(formData: FormData) {
@@ -32,20 +36,26 @@ function parse(formData: FormData) {
 }
 
 export async function createCopyright(formData: FormData) {
+  const userId = await requireUserId();
   const data = parse(formData);
   if (!data.songId) return;
-  await prisma.copyright.create({ data });
+  // ensure the song belongs to this user
+  const song = await prisma.song.findFirst({ where: { id: data.songId, userId } });
+  if (!song) return;
+  await prisma.copyright.create({ data: { ...data, userId } });
   revalidatePath("/copyrights");
 }
 
 export async function updateCopyright(id: string, formData: FormData) {
+  const userId = await requireUserId();
   const data = parse(formData);
   if (!data.songId) return;
-  await prisma.copyright.update({ where: { id }, data });
+  await prisma.copyright.updateMany({ where: { id, userId }, data });
   revalidatePath("/copyrights");
 }
 
 export async function deleteCopyright(id: string) {
-  await prisma.copyright.delete({ where: { id } });
+  const userId = await requireUserId();
+  await prisma.copyright.deleteMany({ where: { id, userId } });
   revalidatePath("/copyrights");
 }

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import RootLayoutClient from "@/components/layout/RootLayoutClient";
-import { getSettings } from "@/app/settings/actions";
+import { getCurrentUser } from "@/lib/session";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,8 +18,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSettings();
-  const artistName = settings.artistName || "Artist";
+  const user = await getCurrentUser();
+  const artistName = user?.artistName || "Artist";
   return (
     <html lang="en" className="dark">
       <body className={`${inter.className} bg-[#0f1117] text-white`}>

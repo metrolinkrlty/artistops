@@ -1,11 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
-// Connector status is persisted keyed by the catalog id, stored in Connector.platform.
 export async function getConnectorStatuses(): Promise<Record<string, { status: string; lastSync: string | null }>> {
-  const rows = await prisma.connector.findMany();
+  const userId = await requireUserId();
+  const rows = await prisma.connector.findMany({ where: { userId } });
   const map: Record<string, { status: string; lastSync: string | null }> = {};
   for (const r of rows) {
     map[r.platform] = { status: r.status, lastSync: r.lastSync ? r.lastSync.toISOString() : null };
@@ -14,8 +15,10 @@ export async function getConnectorStatuses(): Promise<Record<string, { status: s
 }
 
 export async function setConnectorStatus(key: string, name: string, type: string, status: "CONNECTED" | "DISCONNECTED") {
-  const existing = await prisma.connector.findFirst({ where: { platform: key } });
+  const userId = await requireUserId();
+  const existing = await prisma.connector.findFirst({ where: { platform: key, userId } });
   const data = {
+    userId,
     name,
     platform: key,
     type: type as never,

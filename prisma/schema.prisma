@@ -6,14 +6,24 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  artistName   String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model Song {
   id            String   @id @default(cuid())
+  userId        String?
   title         String
   artist        String
   writers       String[]
   publishers    String[]
   splits        Json
-  isrc          String?  @unique
+  isrc          String?
   upc           String?
   releaseDate   DateTime?
   genre         String?
@@ -34,6 +44,7 @@ model Song {
   socialPosts   SocialPost[]
   adCampaigns   AdCampaign[]
   pixelEvents   PixelEvent[]
+  @@index([userId])
 }
 
 enum SongStatus {
@@ -47,6 +58,7 @@ enum SongStatus {
 
 model Copyright {
   id                 String   @id @default(cuid())
+  userId             String?
   songId             String
   song               Song     @relation(fields: [songId], references: [id])
   registrationNumber String?
@@ -64,10 +76,12 @@ model Copyright {
   documents          String[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
+  @@index([userId])
 }
 
 model Distributor {
   id            String         @id @default(cuid())
+  userId        String?
   name          String
   accountId     String?
   email         String?
@@ -77,10 +91,12 @@ model Distributor {
   revenues      Revenue[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  @@index([userId])
 }
 
 model Distribution {
   id            String      @id @default(cuid())
+  userId        String?
   songId        String
   song          Song        @relation(fields: [songId], references: [id])
   distributorId String
@@ -95,6 +111,7 @@ model Distribution {
   notes         String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  @@index([userId])
 }
 
 enum DistributionStatus {
@@ -105,6 +122,7 @@ enum DistributionStatus {
 
 model Revenue {
   id            String      @id @default(cuid())
+  userId        String?
   songId        String?
   song          Song?       @relation(fields: [songId], references: [id])
   distributorId String?
@@ -117,6 +135,7 @@ model Revenue {
   source        String?
   notes         String?
   createdAt     DateTime    @default(now())
+  @@index([userId])
 }
 
 enum RevenueType {
@@ -133,6 +152,7 @@ enum RevenueType {
 
 model StreamPlay {
   id        String   @id @default(cuid())
+  userId    String?
   songId    String
   song      Song     @relation(fields: [songId], references: [id])
   platform  String
@@ -141,10 +161,12 @@ model StreamPlay {
   isrc      String?
   source    String?
   createdAt DateTime @default(now())
+  @@index([userId])
 }
 
 model SocialPost {
   id           String     @id @default(cuid())
+  userId       String?
   songId       String?
   song         Song?      @relation(fields: [songId], references: [id])
   platform     String
@@ -159,6 +181,7 @@ model SocialPost {
   notes        String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  @@index([userId])
 }
 
 enum PostStatus {
@@ -172,6 +195,7 @@ enum PostStatus {
 
 model AdCampaign {
   id              String   @id @default(cuid())
+  userId          String?
   songId          String?
   song            Song?    @relation(fields: [songId], references: [id])
   name            String
@@ -194,6 +218,7 @@ model AdCampaign {
   status          CampaignStatus @default(DRAFT)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  @@index([userId])
 }
 
 enum CampaignStatus {
@@ -205,6 +230,7 @@ enum CampaignStatus {
 
 model PixelEvent {
   id          String   @id @default(cuid())
+  userId      String?
   songId      String?
   song        Song?    @relation(fields: [songId], references: [id])
   visitorId   String
@@ -217,10 +243,12 @@ model PixelEvent {
   utmContent  String?
   utmTerm     String?
   createdAt   DateTime @default(now())
+  @@index([userId])
 }
 
 model Contact {
   id        String   @id @default(cuid())
+  userId    String?
   name      String
   role      String
   email     String?
@@ -231,11 +259,12 @@ model Contact {
   tags      String[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@index([userId])
 }
 
-// Smart Link
 model SmartLink {
   id          String   @id @default(cuid())
+  userId      String?
   songId      String?
   slug        String   @unique
   title       String
@@ -246,10 +275,12 @@ model SmartLink {
   clicks      SmartLinkClick[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@index([userId])
 }
 
 model SmartLinkClick {
   id              String    @id @default(cuid())
+  userId          String?
   smartLinkId     String
   smartLink       SmartLink @relation(fields: [smartLinkId], references: [id])
   platform        String?
@@ -263,10 +294,12 @@ model SmartLinkClick {
   utmCampaign     String?
   isRepeatVisitor Boolean   @default(false)
   createdAt       DateTime  @default(now())
+  @@index([userId])
 }
 
 model Playlist {
   id            String       @id @default(cuid())
+  userId        String?
   name          String
   platform      String
   playlistId    String?
@@ -276,6 +309,7 @@ model Playlist {
   songs         PlaylistSong[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  @@index([userId])
 }
 
 enum PlaylistType {
@@ -286,6 +320,7 @@ enum PlaylistType {
 
 model PlaylistSong {
   id               String   @id @default(cuid())
+  userId           String?
   playlistId       String
   playlist         Playlist @relation(fields: [playlistId], references: [id])
   songId           String
@@ -295,10 +330,12 @@ model PlaylistSong {
   streams          Int?
   estimatedRevenue Float?
   createdAt        DateTime @default(now())
+  @@index([userId])
 }
 
 model ListenerDemographic {
   id        String   @id @default(cuid())
+  userId    String?
   songId    String?
   platform  String
   period    DateTime
@@ -310,10 +347,12 @@ model ListenerDemographic {
   os        String?
   streams   Int
   createdAt DateTime @default(now())
+  @@index([userId])
 }
 
 model Connector {
   id          String          @id @default(cuid())
+  userId      String?
   name        String
   type        ConnectorType
   platform    String
@@ -323,6 +362,7 @@ model Connector {
   config      Json?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  @@index([userId])
 }
 
 enum ConnectorType {
@@ -347,6 +387,7 @@ enum ConnectorStatus {
 
 model RightsDocument {
   id        String   @id @default(cuid())
+  userId    String?
   songId    String
   type      String
   title     String
@@ -356,10 +397,12 @@ model RightsDocument {
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@index([userId])
 }
 
 model AIInsight {
   id         String   @id @default(cuid())
+  userId     String?
   category   String
   title      String
   body       String
@@ -367,10 +410,12 @@ model AIInsight {
   actionable Boolean  @default(false)
   dismissed  Boolean  @default(false)
   createdAt  DateTime @default(now())
+  @@index([userId])
 }
 
 model Forecast {
   id        String   @id @default(cuid())
+  userId    String?
   songId    String?
   metric    String
   period    DateTime
@@ -378,10 +423,14 @@ model Forecast {
   actual    Float?
   model     String?
   createdAt DateTime @default(now())
+  @@index([userId])
 }
 
 model Setting {
-  key       String   @id
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
   value     String
   updatedAt DateTime @updatedAt
+  @@unique([userId, key])
 }

@@ -1,12 +1,15 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 type Platform = { name: string; url: string; priority: number };
 
 export async function getSmartLinks() {
+  const userId = await requireUserId();
   const links = await prisma.smartLink.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { clicks: true },
   });
@@ -16,44 +19,37 @@ export async function getSmartLinks() {
     const platCount = new Map<string, number>();
     for (const c of l.clicks) if (c.platform) platCount.set(c.platform, (platCount.get(c.platform) || 0) + 1);
     const topPlatform = Array.from(platCount.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || platforms[0]?.name || "—";
-    return {
-      id: l.id,
-      slug: l.slug,
-      title: l.title,
-      artistName: l.artistName,
-      platforms,
-      totalClicks: total,
-      topPlatform,
-      isActive: l.isActive,
-    };
+    return { id: l.id, slug: l.slug, title: l.title, artistName: l.artistName, platforms, totalClicks: total, topPlatform, isActive: l.isActive };
   });
 }
 
 export async function getSongOptions() {
-  return prisma.song.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } });
+  const userId = await requireUserId();
+  return prisma.song.findMany({ where: { userId }, select: { id: true, title: true }, orderBy: { title: "asc" } });
 }
 
 export async function createSmartLink(formData: FormData) {
+  const userId = await requireUserId();
   const title = String(formData.get("title") || "").trim();
   let slug = String(formData.get("slug") || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-");
   if (!title || !slug) return;
 
-  // platforms come as parallel arrays
   const names = formData.getAll("platformName").map(String);
   const urls = formData.getAll("platformUrl").map(String);
   const platforms: Platform[] = names
     .map((name, i) => ({ name, url: urls[i] || "", priority: i + 1 }))
     .filter((p) => p.url.trim() !== "");
 
-  // ensure unique slug
   const existing = await prisma.smartLink.findUnique({ where: { slug } });
   if (existing) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
 
+  const user = await prisma.user.findUnique({ where: { id: userId } });
   await prisma.smartLink.create({
     data: {
+      userId,
       slug,
       title,
-      artistName: String(formData.get("artistName") || "Alex Rivera"),
+      artistName: user?.artistName || "Artist",
       songId: String(formData.get("songId") || "") || null,
       platforms: platforms as never,
       isActive: true,
@@ -63,12 +59,16 @@ export async function createSmartLink(formData: FormData) {
 }
 
 export async function deleteSmartLink(id: string) {
+  const userId = await requireUserId();
+  const owned = await prisma.smartLink.findFirst({ where: { id, userId } });
+  if (!owned) return;
   await prisma.smartLinkClick.deleteMany({ where: { smartLinkId: id } });
   await prisma.smartLink.delete({ where: { id } });
   revalidatePath("/smart-links");
 }
 
 export async function toggleSmartLink(id: string, isActive: boolean) {
-  await prisma.smartLink.update({ where: { id }, data: { isActive } });
+  const userId = await requireUserId();
+  await prisma.smartLink.updateMany({ where: { id, userId }, data: { isActive } });
   revalidatePath("/smart-links");
 }

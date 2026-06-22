@@ -1,19 +1,22 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getRevenueData() {
+  const userId = await requireUserId();
   const [rows, songs, streamAgg, campaigns] = await Promise.all([
     prisma.revenue.findMany({
+      where: { userId },
       orderBy: { period: "desc" },
       include: { song: { select: { title: true } } },
     }),
-    prisma.song.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } }),
-    prisma.streamPlay.aggregate({ _sum: { plays: true } }),
+    prisma.song.findMany({ where: { userId }, select: { id: true, title: true }, orderBy: { title: "asc" } }),
+    prisma.streamPlay.aggregate({ where: { userId }, _sum: { plays: true } }),
     prisma.adCampaign.findMany({
-      where: { revenueAttributed: { not: null } },
-      select: { name: true, revenueAttributed: true, impressions: true },
+      where: { userId, revenueAttributed: { not: null } },
+      select: { name: true, revenueAttributed: true },
       orderBy: { revenueAttributed: "desc" },
     }),
   ]);
@@ -38,10 +41,12 @@ const REVENUE_TYPES = [
 ];
 
 export async function createRevenue(formData: FormData) {
+  const userId = await requireUserId();
   const period = String(formData.get("period") || "");
   const rt = String(formData.get("revenueType") || "STREAMING");
   await prisma.revenue.create({
     data: {
+      userId,
       songId: String(formData.get("songId") || "") || null,
       platform: String(formData.get("platform") || "").trim() || "Spotify",
       revenueType: (REVENUE_TYPES.includes(rt) ? rt : "OTHER") as never,
@@ -54,6 +59,7 @@ export async function createRevenue(formData: FormData) {
 }
 
 export async function deleteRevenue(id: string) {
-  await prisma.revenue.delete({ where: { id } });
+  const userId = await requireUserId();
+  await prisma.revenue.deleteMany({ where: { id, userId } });
   revalidatePath("/revenue");
 }

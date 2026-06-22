@@ -1,11 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 
 export async function getPlaylists() {
+  const userId = await requireUserId();
   const [playlists, songs] = await Promise.all([
-    prisma.playlist.findMany({ orderBy: { followerCount: "desc" }, include: { songs: true } }),
-    prisma.song.findMany({ select: { id: true, title: true } }),
+    prisma.playlist.findMany({ where: { userId }, orderBy: { followerCount: "desc" }, include: { songs: true } }),
+    prisma.song.findMany({ where: { userId }, select: { id: true, title: true } }),
   ]);
   const titleById = new Map(songs.map((s) => [s.id, s.title]));
   return playlists.map((pl) => {

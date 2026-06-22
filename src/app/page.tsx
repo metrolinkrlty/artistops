@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Music, Shield, DollarSign, TrendingUp, Megaphone, Target, Sparkles, ListMusic, Link2, Users } from "lucide-react";
 import Link from "next/link";
 import { getSettings } from "@/app/settings/actions";
+import { requireUserId } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -33,15 +34,16 @@ const aiInsightsPrev = [
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 async function getStats() {
+  const userId = await requireUserId();
   const [songs, revenues, copyrights, campaigns, streamPlays, conversions, smartClicks, playlistCount] = await Promise.all([
-    prisma.song.findMany({ select: { id: true, title: true, status: true } }),
-    prisma.revenue.findMany({ select: { amount: true, period: true, songId: true } }),
-    prisma.copyright.count({ where: { registeredWithUSCO: true } }),
-    prisma.adCampaign.count({ where: { status: "ACTIVE" } }),
-    prisma.streamPlay.findMany({ select: { platform: true, plays: true, songId: true } }),
-    prisma.pixelEvent.count({ where: { eventType: { in: ["email_signup", "pre_save", "merch_click"] } } }),
-    prisma.smartLinkClick.count().catch(() => 0),
-    prisma.playlistSong.count().catch(() => 0),
+    prisma.song.findMany({ where: { userId }, select: { id: true, title: true, status: true } }),
+    prisma.revenue.findMany({ where: { userId }, select: { amount: true, period: true, songId: true } }),
+    prisma.copyright.count({ where: { userId, registeredWithUSCO: true } }),
+    prisma.adCampaign.count({ where: { userId, status: "ACTIVE" } }),
+    prisma.streamPlay.findMany({ where: { userId }, select: { platform: true, plays: true, songId: true } }),
+    prisma.pixelEvent.count({ where: { userId, eventType: { in: ["email_signup", "pre_save", "merch_click"] } } }),
+    prisma.smartLinkClick.count({ where: { userId } }).catch(() => 0),
+    prisma.playlistSong.count({ where: { userId } }).catch(() => 0),
   ]);
 
   const totalSongs = songs.length;

@@ -1,17 +1,21 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getSocialPosts() {
+  const userId = await requireUserId();
   return prisma.socialPost.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
     include: { song: { select: { id: true, title: true } } },
   });
 }
 
 export async function getSongOptions() {
-  return prisma.song.findMany({ select: { id: true, title: true }, orderBy: { title: "asc" } });
+  const userId = await requireUserId();
+  return prisma.song.findMany({ where: { userId }, select: { id: true, title: true }, orderBy: { title: "asc" } });
 }
 
 function parse(formData: FormData) {
@@ -33,16 +37,19 @@ function parse(formData: FormData) {
 }
 
 export async function createSocialPost(formData: FormData) {
-  await prisma.socialPost.create({ data: parse(formData) });
+  const userId = await requireUserId();
+  await prisma.socialPost.create({ data: { ...parse(formData), userId } });
   revalidatePath("/social");
 }
 
 export async function updateSocialPost(id: string, formData: FormData) {
-  await prisma.socialPost.update({ where: { id }, data: parse(formData) });
+  const userId = await requireUserId();
+  await prisma.socialPost.updateMany({ where: { id, userId }, data: parse(formData) });
   revalidatePath("/social");
 }
 
 export async function deleteSocialPost(id: string) {
-  await prisma.socialPost.delete({ where: { id } });
+  const userId = await requireUserId();
+  await prisma.socialPost.deleteMany({ where: { id, userId } });
   revalidatePath("/social");
 }

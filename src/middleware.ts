@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifySession, signSession, SESSION_COOKIE, IDLE_SECONDS } from "@/lib/auth";
 
-// Paths that never require authentication.
-const PUBLIC_PREFIXES = ["/login", "/api/login", "/api/logout", "/listen/", "/api/pixel", "/api/smart-link-click"];
+const PUBLIC_PREFIXES = ["/login", "/api/login", "/api/signup", "/api/logout", "/listen/", "/api/pixel", "/api/smart-link-click"];
 
-const SESSION_COOKIE = "ao_session";
-const IDLE_SECONDS = 60 * 30; // 30 minutes rolling timeout
-
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
@@ -14,12 +11,12 @@ export function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const expected = process.env.SESSION_TOKEN || "";
+  const userId = await verifySession(token);
 
-  if (expected && token === expected) {
-    // Valid session — refresh the cookie so the 30-min window rolls forward on use.
+  if (userId) {
+    // Valid session — refresh the cookie so the 30-min idle window rolls forward.
     const res = NextResponse.next();
-    res.cookies.set(SESSION_COOKIE, expected, {
+    res.cookies.set(SESSION_COOKIE, await signSession(userId), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

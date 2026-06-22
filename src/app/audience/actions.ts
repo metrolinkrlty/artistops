@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 
 export async function getAudienceData() {
-  const rows = await prisma.listenerDemographic.findMany();
+  const userId = await requireUserId();
+  const rows = await prisma.listenerDemographic.findMany({ where: { userId } });
 
   const cityRows = rows.filter((r) => r.city);
   const cityTotal = cityRows.reduce((s, r) => s + r.streams, 0) || 1;

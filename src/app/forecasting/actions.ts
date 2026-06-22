@@ -1,11 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export async function getForecastData() {
-  const rows = await prisma.forecast.findMany({ orderBy: { period: "asc" } });
+  const userId = await requireUserId();
+  const rows = await prisma.forecast.findMany({ where: { userId }, orderBy: { period: "asc" } });
 
   const byPeriod = new Map<string, { label: string; streams: number; revenue: number; followers: number; projected: boolean }>();
   for (const r of rows) {
@@ -23,7 +25,7 @@ export async function getForecastData() {
   }
 
   const monthlyData = Array.from(byPeriod.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => ({ month: v.label, streams: v.streams, revenue: v.revenue, followers: v.followers, projected: v.projected }));
-  const firstProjected = monthlyData.find((m) => m.projected) || monthlyData[monthlyData.length - 1];
+  const firstProjected = monthlyData.find((m) => m.projected) || monthlyData[monthlyData.length - 1] || { month: "—", streams: 0, revenue: 0, followers: 0, projected: true };
 
   return { monthlyData, nextMonth: firstProjected };
 }

@@ -1,13 +1,15 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 
 type Split = { name: string; percentage: number };
 
 export async function getRightsData() {
+  const userId = await requireUserId();
   const [songs, docs] = await Promise.all([
-    prisma.song.findMany({ orderBy: { createdAt: "asc" }, include: { copyrights: true } }),
-    prisma.rightsDocument.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.song.findMany({ where: { userId }, orderBy: { createdAt: "asc" }, include: { copyrights: true } }),
+    prisma.rightsDocument.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
   ]);
   const titleById = new Map(songs.map((s) => [s.id, s.title]));
 
@@ -31,19 +33,19 @@ export async function getRightsData() {
 
   const now = Date.now();
   const ninetyDays = 90 * 24 * 60 * 60 * 1000;
-  const documents = docs.map((d) => {
+  const documents = docs.map((doc) => {
     let status: "active" | "expiring" = "active";
-    if (d.expiresAt) {
-      const diff = d.expiresAt.getTime() - now;
+    if (doc.expiresAt) {
+      const diff = doc.expiresAt.getTime() - now;
       if (diff < ninetyDays) status = "expiring";
     }
     return {
-      id: d.id,
-      songTitle: titleById.get(d.songId) ?? "—",
-      type: d.type,
-      title: d.title,
-      parties: d.parties,
-      expiresAt: d.expiresAt ? d.expiresAt.toISOString().slice(0, 10) : null,
+      id: doc.id,
+      songTitle: titleById.get(doc.songId) ?? "—",
+      type: doc.type,
+      title: doc.title,
+      parties: doc.parties,
+      expiresAt: doc.expiresAt ? doc.expiresAt.toISOString().slice(0, 10) : null,
       status,
     };
   });

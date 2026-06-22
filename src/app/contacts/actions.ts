@@ -1,10 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getContacts() {
-  return prisma.contact.findMany({ orderBy: { name: "asc" } });
+  const userId = await requireUserId();
+  return prisma.contact.findMany({ where: { userId }, orderBy: { name: "asc" } });
 }
 
 function parse(formData: FormData) {
@@ -24,20 +26,23 @@ function parse(formData: FormData) {
 }
 
 export async function createContact(formData: FormData) {
+  const userId = await requireUserId();
   const data = parse(formData);
   if (!data.name) return;
-  await prisma.contact.create({ data });
+  await prisma.contact.create({ data: { ...data, userId } });
   revalidatePath("/contacts");
 }
 
 export async function updateContact(id: string, formData: FormData) {
+  const userId = await requireUserId();
   const data = parse(formData);
   if (!data.name) return;
-  await prisma.contact.update({ where: { id }, data });
+  await prisma.contact.updateMany({ where: { id, userId }, data });
   revalidatePath("/contacts");
 }
 
 export async function deleteContact(id: string) {
-  await prisma.contact.delete({ where: { id } });
+  const userId = await requireUserId();
+  await prisma.contact.deleteMany({ where: { id, userId } });
   revalidatePath("/contacts");
 }
