@@ -4,7 +4,7 @@ import { verifySession, signSession, SESSION_COOKIE, IDLE_SECONDS } from "@/lib/
 const PUBLIC_PREFIXES = [
   "/login", "/forgot-password", "/reset-password", "/pending-approval",
   "/api/login", "/api/signup", "/api/logout", "/api/forgot-password", "/api/reset-password",
-  "/listen/", "/api/pixel", "/api/smart-link-click",
+  "/api/user-status", "/listen/", "/api/pixel", "/api/smart-link-click",
 ];
 
 const IMPERSONATE_COOKIE = "ao_impersonate";
@@ -26,29 +26,37 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Fetch user status from DB via the edge-compatible API route
-  // We pass userId as a header so the status check API can verify
-  const statusRes = await fetch(`${req.nextUrl.origin}/api/user-status?userId=${userId}`, {
-    headers: { "x-internal-check": process.env.SESSION_TOKEN || "" },
-  }).catch(() => null);
-
-  if (statusRes?.ok) {
-    const { status, isAdmin, impersonating } = await statusRes.json().catch(() => ({}));
-
-    // PENDING users can only see /pending-approval
-    if (status === "PENDING" && !isAdmin) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/pending-approval";
-      return NextResponse.redirect(url);
+  // Check user status — fail CLOSED (block if we can't verify)
+  let status = "PENDING"; // default to PENDING if check fails — safer
+  let isAdmin = false;
+  try {
+    const statusRes = await fetch(`${req.nextUrl.origin}/api/user-status?userId=${userId}`, {
+      headers: { "x-internal-check": process.env.SESSION_TOKEN || "" },
+      cache: "no-store",
+    });
+    if (statusRes.ok) {
+      const data = await statusRes.json();
+      status = data.status || "PENDING";
+      isAdmin = data.isAdmin || false;
     }
+    // If fetch fails (statusRes not ok), status stays "PENDING" → user is blocked
+  } catch {
+    // Network error — block access, redirect to pending
+  }
 
-    // Admin users: redirect / to /admin (unless they're impersonating)
-    const impersonateId = req.cookies.get(IMPERSONATE_COOKIE)?.value;
-    if (isAdmin && pathname === "/" && !impersonateId) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/admin";
-      return NextResponse.redirect(url);
-    }
+  // PENDING or REJECTED users can only see /pending-approval
+  if ((status === "PENDING" || status === "REJECTED") && !isAdmin) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/pending-approval";
+    return NextResponse.redirect(url);
+  }
+
+  // Admin users (not impersonating): redirect / to /admin
+  const impersonateId = req.cookies.get(IMPERSONATE_COOKIE)?.value;
+  if (isAdmin && pathname === "/" && !impersonateId) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/admin";
+    return NextResponse.redirect(url);
   }
 
   // Refresh rolling session cookie
