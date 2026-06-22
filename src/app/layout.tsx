@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "ArtistOps - Music Business Manager",
   description: "Professional music business management platform",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export const dynamic = "force-dynamic";
