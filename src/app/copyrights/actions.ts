@@ -30,6 +30,7 @@ function parse(formData: FormData) {
   return {
     songIds,
     groupTitle: String(formData.get("groupTitle") || "").trim() || null,
+    serviceRequestNumber: String(formData.get("serviceRequestNumber") || "").trim() || null,
     registrationNumber: String(formData.get("registrationNumber") || "").trim() || null,
     filingDate: filing ? new Date(filing) : null,
     claimant: String(formData.get("claimant") || "").trim() || null,

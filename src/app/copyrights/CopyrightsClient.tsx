@@ -11,6 +11,7 @@ type Copyright = {
   songTitles: string[];
   groupTitle: string | null;
   isGroup: boolean;
+  serviceRequestNumber: string | null;
   registrationNumber: string | null;
   filingDate: string | null;
   claimant: string | null;
@@ -103,6 +104,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
           <thead>
             <tr className="text-[#8b8fa8] text-sm border-b border-[#2a2d3a] bg-[#161820]">
               <th className="text-left px-6 py-4">Song(s)</th>
+              <th className="text-left px-6 py-4">Service Req #</th>
               <th className="text-left px-6 py-4">Reg. Number</th>
               <th className="text-left px-6 py-4">Filing Date</th>
               <th className="text-left px-6 py-4">PRO</th>
@@ -131,6 +133,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                     <span className="text-white font-medium">{c.songTitles[0] || "—"}</span>
                   )}
                 </td>
+                <td className="px-6 py-4 text-[#8b8fa8] text-xs font-mono">{c.serviceRequestNumber || "—"}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-xs font-mono">{c.registrationNumber || "Pending"}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.filingDate ? formatDate(c.filingDate) : "—"}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.proName || "—"}</td>
@@ -147,7 +150,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={10} className="px-6 py-10 text-center text-[#8b8fa8] text-sm">No copyright records yet.</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={11} className="px-6 py-10 text-center text-[#8b8fa8] text-sm">No copyright records yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -193,6 +196,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
               )}
 
               <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Service Request #</label><input name="serviceRequestNumber" defaultValue={editing?.serviceRequestNumber || ""} className={inputClass} /></div>
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Reg. Number</label><input name="registrationNumber" defaultValue={editing?.registrationNumber || ""} className={inputClass} /></div>
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Filing Date</label><input name="filingDate" type="date" defaultValue={editing?.filingDate ? editing.filingDate.slice(0, 10) : ""} className={inputClass} /></div>
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Claimant</label><input name="claimant" defaultValue={editing?.claimant || ""} className={inputClass} /></div>
