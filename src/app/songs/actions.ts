@@ -14,10 +14,13 @@ export type SongStatus =
 
 export async function getSongs() {
   const userId = await requireUserId();
-  return prisma.song.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    include: { copyrights: true },
+  const [songs, copyrights] = await Promise.all([
+    prisma.song.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.copyright.findMany({ where: { userId }, select: { songIds: true, registeredWithPRO: true, registeredWithMLC: true, registeredWithSX: true } }),
+  ]);
+  return songs.map((s) => {
+    const cr = copyrights.find((c) => c.songIds.includes(s.id));
+    return { ...s, copyrights: cr ? [cr] : [] };
   });
 }
 
@@ -77,7 +80,9 @@ export async function deleteSong(id: string) {
   const song = await prisma.song.findFirst({ where: { id, userId } });
   if (!song) return;
   // remove dependent rows first to satisfy FK constraints
-  await prisma.copyright.deleteMany({ where: { songId: id } });
+  // Only delete copyrights that solely cover this song; group copyrights covering other songs are kept
+  const soloCoprights = await prisma.copyright.findMany({ where: { userId, songIds: { equals: [id] } } });
+  if (soloCoprights.length) await prisma.copyright.deleteMany({ where: { id: { in: soloCoprights.map(c => c.id) } } });
   await prisma.distribution.deleteMany({ where: { songId: id } });
   await prisma.revenue.deleteMany({ where: { songId: id } });
   await prisma.streamPlay.deleteMany({ where: { songId: id } });

@@ -39,7 +39,6 @@ model Song {
   metadataFile  String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  copyrights    Copyright[]
   distributions Distribution[]
   revenues      Revenue[]
   streamPlays   StreamPlay[]
@@ -61,8 +60,8 @@ enum SongStatus {
 model Copyright {
   id                 String   @id @default(cuid())
   userId             String?
-  songId             String
-  song               Song     @relation(fields: [songId], references: [id])
+  songIds            String[] // one or more songs covered by this registration
+  groupTitle         String?  // optional name for group registrations
   registrationNumber String?
   filingDate         DateTime?
   claimant           String?

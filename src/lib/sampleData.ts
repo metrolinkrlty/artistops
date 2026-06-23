@@ -33,8 +33,8 @@ export async function seedSampleDataForUser(userId: string, artistName: string) 
   // --- Copyrights ---
   await prisma.copyright.createMany({
     data: [
-      { userId, songId: sMidnight, registrationNumber: "PAu004000001", filingDate: d("2024-01-20"), claimant: artistName, authors: ["Maya Chen", artistName], workType: "Musical Work", registeredWithUSCO: true, registeredWithPRO: true, registeredWithMLC: true, registeredWithSX: false, registeredWithDist: true, proName: "ASCAP" },
-      { userId, songId: sGolden, registrationNumber: "PAu004000002", filingDate: d("2024-03-10"), claimant: artistName, authors: [artistName], workType: "Musical Work", registeredWithUSCO: true, registeredWithPRO: true, registeredWithMLC: true, registeredWithSX: true, registeredWithDist: true, proName: "ASCAP" },
+      { userId, songIds: [sMidnight], registrationNumber: "PAu004000001", filingDate: d("2024-01-20"), claimant: artistName, authors: ["Maya Chen", artistName], workType: "Musical Work", registeredWithUSCO: true, registeredWithPRO: true, registeredWithMLC: true, registeredWithSX: false, registeredWithDist: true, proName: "ASCAP" },
+      { userId, songIds: [sGolden], registrationNumber: "PAu004000002", filingDate: d("2024-03-10"), claimant: artistName, authors: [artistName], workType: "Musical Work", registeredWithUSCO: true, registeredWithPRO: true, registeredWithMLC: true, registeredWithSX: true, registeredWithDist: true, proName: "ASCAP" },
     ],
   });
 

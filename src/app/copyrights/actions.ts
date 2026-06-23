@@ -6,11 +6,16 @@ import { revalidatePath } from "next/cache";
 
 export async function getCopyrights() {
   const userId = await requireUserId();
-  return prisma.copyright.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    include: { song: { select: { id: true, title: true } } },
-  });
+  const [copyrights, songs] = await Promise.all([
+    prisma.copyright.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.song.findMany({ where: { userId }, select: { id: true, title: true } }),
+  ]);
+  const songMap = new Map(songs.map((s) => [s.id, s.title]));
+  return copyrights.map((c) => ({
+    ...c,
+    songTitles: c.songIds.map((id) => songMap.get(id) || id),
+    isGroup: c.songIds.length > 1,
+  }));
 }
 
 export async function getSongOptions() {
@@ -20,8 +25,11 @@ export async function getSongOptions() {
 
 function parse(formData: FormData) {
   const filing = String(formData.get("filingDate") || "");
+  // songIds comes as multiple values from checkboxes
+  const songIds = formData.getAll("songIds").map(String).filter(Boolean);
   return {
-    songId: String(formData.get("songId") || ""),
+    songIds,
+    groupTitle: String(formData.get("groupTitle") || "").trim() || null,
     registrationNumber: String(formData.get("registrationNumber") || "").trim() || null,
     filingDate: filing ? new Date(filing) : null,
     claimant: String(formData.get("claimant") || "").trim() || null,
@@ -38,10 +46,10 @@ function parse(formData: FormData) {
 export async function createCopyright(formData: FormData) {
   const userId = await requireUserId();
   const data = parse(formData);
-  if (!data.songId) return;
-  // ensure the song belongs to this user
-  const song = await prisma.song.findFirst({ where: { id: data.songId, userId } });
-  if (!song) return;
+  if (!data.songIds.length) return;
+  // verify all songs belong to this user
+  const owned = await prisma.song.findMany({ where: { id: { in: data.songIds }, userId }, select: { id: true } });
+  if (!owned.length) return;
   await prisma.copyright.create({ data: { ...data, userId } });
   revalidatePath("/copyrights");
 }
@@ -49,7 +57,7 @@ export async function createCopyright(formData: FormData) {
 export async function updateCopyright(id: string, formData: FormData) {
   const userId = await requireUserId();
   const data = parse(formData);
-  if (!data.songId) return;
+  if (!data.songIds.length) return;
   await prisma.copyright.updateMany({ where: { id, userId }, data });
   revalidatePath("/copyrights");
 }

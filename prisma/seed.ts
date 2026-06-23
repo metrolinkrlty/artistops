@@ -75,7 +75,7 @@ async function main() {
     if (!songId) continue;
     await prisma.copyright.create({
       data: {
-        songId,
+        songIds: [songId],
         registrationNumber: c.registrationNumber ?? null,
         filingDate: d(c.filingDate),
         claimant: c.claimant ?? null,
