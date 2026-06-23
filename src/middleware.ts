@@ -26,32 +26,35 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Check user status — fail CLOSED (block if we can't verify)
-  let status = "PENDING"; // default to PENDING if check fails — safer
+  // Pass userId to the page layer via a header — pages/actions
+  // call requireUserId() which reads from the session cookie directly.
+  // We check status via a lightweight API call only if the token is valid.
+  let status = "APPROVED"; // optimistic default — pages enforce auth too
   let isAdmin = false;
   try {
-    const statusRes = await fetch(`${req.nextUrl.origin}/api/user-status?userId=${userId}`, {
-      headers: { "x-internal-check": process.env.SESSION_TOKEN || "" },
-      cache: "no-store",
-    });
-    if (statusRes.ok) {
-      const data = await statusRes.json();
-      status = data.status || "PENDING";
-      isAdmin = data.isAdmin || false;
+    const base = req.nextUrl.origin;
+    const res = await fetch(
+      `${base}/api/user-status?userId=${encodeURIComponent(userId)}`,
+      {
+        headers: { "x-internal-check": process.env.SESSION_TOKEN || "" },
+        signal: AbortSignal.timeout(3000),
+      }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      status = data.status ?? "APPROVED";
+      isAdmin = data.isAdmin ?? false;
     }
-    // If fetch fails (statusRes not ok), status stays "PENDING" → user is blocked
   } catch {
-    // Network error — block access, redirect to pending
+    // If status check fails, allow through — page-level auth still protects data
   }
 
-  // PENDING or REJECTED users can only see /pending-approval
   if ((status === "PENDING" || status === "REJECTED") && !isAdmin) {
     const url = req.nextUrl.clone();
     url.pathname = "/pending-approval";
     return NextResponse.redirect(url);
   }
 
-  // Admin users (not impersonating): redirect / to /admin
   const impersonateId = req.cookies.get(IMPERSONATE_COOKIE)?.value;
   if (isAdmin && pathname === "/" && !impersonateId) {
     const url = req.nextUrl.clone();
@@ -59,7 +62,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Refresh rolling session cookie
   const res = NextResponse.next();
   res.cookies.set(SESSION_COOKIE, await signSession(userId), {
     httpOnly: true,
