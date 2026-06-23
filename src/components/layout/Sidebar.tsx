@@ -72,9 +72,10 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
             <Music className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-bold text-lg">ArtistOps</span>
+          <span className="text-white font-bold text-lg">ArtistOps<sup className="text-[10px] font-normal text-[#8b8fa8] ml-0.5">™</sup></span>
         </div>
         <p className="text-[#8b8fa8] text-xs mt-1">Music Business Manager</p>
+        <p className="text-[#5a5e72] text-[10px] mt-0.5">v{APP_VERSION}</p>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
@@ -119,7 +120,6 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
             <LogOut className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-[#5a5e72] text-[10px] mt-3 text-center">ArtistOps v{APP_VERSION}</p>
       </div>
     </aside>
   );

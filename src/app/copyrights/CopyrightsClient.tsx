@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Search, CheckCircle, XCircle, Pencil, Trash2, X, Users } from "lucide-react";
+import { Plus, Search, CheckCircle, XCircle, Pencil, Trash2, X, Users, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/dateUtils";
@@ -12,7 +12,9 @@ type Copyright = {
   groupTitle: string | null;
   isGroup: boolean;
   serviceRequestNumber: string | null;
+  serviceRequestUrl: string | null;
   registrationNumber: string | null;
+  registrationCertUrl: string | null;
   filingDate: string | null;
   claimant: string | null;
   proName: string | null;
@@ -133,8 +135,24 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                     <span className="text-white font-medium">{c.songTitles[0] || "—"}</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-[#8b8fa8] text-xs font-mono">{c.serviceRequestNumber || "—"}</td>
-                <td className="px-6 py-4 text-[#8b8fa8] text-xs font-mono">{c.registrationNumber || "Pending"}</td>
+                <td className="px-6 py-4 text-xs font-mono">
+                  {c.serviceRequestNumber ? (
+                    c.serviceRequestUrl ? (
+                      <a href={c.serviceRequestUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300">
+                        {c.serviceRequestNumber}<ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      </a>
+                    ) : <span className="text-[#8b8fa8]">{c.serviceRequestNumber}</span>
+                  ) : "—"}
+                </td>
+                <td className="px-6 py-4 text-xs font-mono">
+                  {c.registrationNumber ? (
+                    c.registrationCertUrl ? (
+                      <a href={c.registrationCertUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-400 hover:text-green-300">
+                        {c.registrationNumber}<ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      </a>
+                    ) : <span className="text-[#8b8fa8]">{c.registrationNumber}</span>
+                  ) : <span className="text-[#8b8fa8]">Pending</span>}
+                </td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.filingDate ? formatDate(c.filingDate) : "—"}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.proName || "—"}</td>
                 <td className="px-6 py-4 text-center"><div className="flex justify-center"><Check val={c.registeredWithUSCO} /></div></td>
@@ -197,7 +215,9 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
 
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Service Request #</label><input name="serviceRequestNumber" defaultValue={editing?.serviceRequestNumber || ""} className={inputClass} /></div>
-                <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Reg. Number</label><input name="registrationNumber" defaultValue={editing?.registrationNumber || ""} className={inputClass} /></div>
+                <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Service Request URL</label><input name="serviceRequestUrl" type="url" defaultValue={editing?.serviceRequestUrl || ""} className={inputClass} placeholder="https://..." /></div>
+                <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Reg. / Certificate #</label><input name="registrationNumber" defaultValue={editing?.registrationNumber || ""} className={inputClass} /></div>
+                <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Certificate URL</label><input name="registrationCertUrl" type="url" defaultValue={editing?.registrationCertUrl || ""} className={inputClass} placeholder="https://..." /></div>
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Filing Date</label><input name="filingDate" type="date" defaultValue={editing?.filingDate ? editing.filingDate.slice(0, 10) : ""} className={inputClass} /></div>
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Claimant</label><input name="claimant" defaultValue={editing?.claimant || ""} className={inputClass} /></div>
                 <div><label className="block text-[#8b8fa8] text-xs mb-1.5">PRO</label><input name="proName" defaultValue={editing?.proName || ""} className={inputClass} placeholder="ASCAP" /></div>

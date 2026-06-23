@@ -62,8 +62,10 @@ model Copyright {
   userId             String?
   songIds            String[] // one or more songs covered by this registration
   groupTitle           String?  // optional name for group registrations
-  serviceRequestNumber String?
-  registrationNumber   String?
+  serviceRequestNumber    String?
+  serviceRequestUrl       String?
+  registrationNumber      String?
+  registrationCertUrl     String?
   filingDate         DateTime?
   claimant           String?
   authors            String[]
