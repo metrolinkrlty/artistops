@@ -12,8 +12,9 @@ function createClient() {
   // clients (pool_size 15), and serverless functions each open their own pool.
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
-    max: 7,
-    idleTimeoutMillis: 10_000,
+    max: 4,
+    idleTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 10_000,
   });
   return new PrismaClient({ adapter });
 }
