@@ -12,9 +12,9 @@ function createClient() {
   // clients (pool_size 15), and serverless functions each open their own pool.
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
-    max: 4,
-    idleTimeoutMillis: 5_000,
-    connectionTimeoutMillis: 10_000,
+    // Transaction pooler (port 6543) handles multiplexing — keep client pool minimal.
+    max: 2,
+    idleTimeoutMillis: 0,
   });
   return new PrismaClient({ adapter });
 }
