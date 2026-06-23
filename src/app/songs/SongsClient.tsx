@@ -1,7 +1,9 @@
 "use client";
+"use client";
 import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
 import { createSong, updateSong, deleteSong } from "./actions";
 
@@ -148,7 +150,7 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                     <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[song.status]}`}>{song.status}</span>
                   </td>
                   <td className="px-6 py-4 text-[#8b8fa8] text-sm">
-                    {song.releaseDate ? new Date(song.releaseDate).toLocaleDateString() : "—"}
+                    {song.releaseDate ? formatDate(song.releaseDate) : "—"}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">

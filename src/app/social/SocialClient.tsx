@@ -1,6 +1,7 @@
 "use client";
 import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
 import { createSocialPost, updateSocialPost, deleteSocialPost } from "./actions";
 
@@ -82,7 +83,7 @@ export default function SocialClient({ posts, songs }: { posts: Post[]; songs: S
                 <td className={`px-6 py-4 text-sm font-medium ${platformColors[p.platform] || "text-white"}`}>{p.platform}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm max-w-xs truncate">{p.caption}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{p.campaign || "—"}</td>
-                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{p.postedAt ? new Date(p.postedAt).toLocaleDateString() : p.scheduledAt ? new Date(p.scheduledAt).toLocaleDateString() : "—"}</td>
+                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{p.postedAt ? formatDate(p.postedAt) : p.scheduledAt ? formatDate(p.scheduledAt) : "—"}</td>
                 <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[p.status]}`}>{p.status}</span></td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

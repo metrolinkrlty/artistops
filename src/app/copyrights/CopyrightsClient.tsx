@@ -2,6 +2,7 @@
 import { Plus, Search, CheckCircle, XCircle, Pencil, Trash2, X, Users } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDate } from "@/lib/dateUtils";
 import { createCopyright, updateCopyright, deleteCopyright } from "./actions";
 
 type Copyright = {
@@ -131,7 +132,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                   )}
                 </td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-xs font-mono">{c.registrationNumber || "Pending"}</td>
-                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.filingDate ? new Date(c.filingDate).toLocaleDateString() : "—"}</td>
+                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.filingDate ? formatDate(c.filingDate) : "—"}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{c.proName || "—"}</td>
                 <td className="px-6 py-4 text-center"><div className="flex justify-center"><Check val={c.registeredWithUSCO} /></div></td>
                 <td className="px-6 py-4 text-center"><div className="flex justify-center"><Check val={c.registeredWithPRO} /></div></td>

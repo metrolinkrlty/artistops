@@ -2,6 +2,7 @@
 import { Plus, Search, Upload, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDate, formatMonthYear } from "@/lib/dateUtils";
 import { createRevenue, deleteRevenue } from "./actions";
 
 const typeColors: Record<string, string> = {
@@ -109,7 +110,7 @@ export default function RevenueClient({ rows, songs, totalStreams, campaigns }: 
                 <td className="px-6 py-4 text-white">{r.songTitle || "—"}</td>
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{r.platform}</td>
                 <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${typeColors[r.revenueType] || typeColors.OTHER}`}>{r.revenueType.replace(/_/g, " ")}</span></td>
-                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{new Date(r.period).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</td>
+                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{formatMonthYear(r.period)}</td>
                 <td className="px-6 py-4 text-right text-green-400 font-medium">${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
                 <td className="px-6 py-4"><button onClick={() => handleDelete(r)} className="text-[#8b8fa8] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button></td>
               </tr>

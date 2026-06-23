@@ -2,6 +2,7 @@
 import { Plus, Search, Upload, X, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatDate, formatMonthYear } from "@/lib/dateUtils";
 import { createStreamPlay, deleteStreamPlay } from "./actions";
 
 const csvFormat = `isrc,platform,plays,period
@@ -72,7 +73,7 @@ export default function StreamingClient({ rows, songs, isrcData, platformCompari
                 <tr key={s.id} className="border-b border-[#2a2d3a] last:border-0 hover:bg-[#2a2d3a]/40 transition-colors group">
                   <td className="px-6 py-4 text-white">{s.songTitle}</td>
                   <td className="px-6 py-4 text-[#8b8fa8] text-sm">{s.platform}</td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{new Date(s.period).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</td>
+                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{formatMonthYear(s.period)}</td>
                   <td className="px-6 py-4 text-[#8b8fa8] text-xs font-mono">{s.isrc || "—"}</td>
                   <td className="px-6 py-4 text-right text-white font-medium">{s.plays.toLocaleString()}</td>
                   <td className="px-6 py-4"><button onClick={() => handleDelete(s)} className="text-[#8b8fa8] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4" /></button></td>

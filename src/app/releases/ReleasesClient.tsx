@@ -1,6 +1,7 @@
 "use client";
 import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
+import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
 import { createRelease, updateRelease, deleteRelease } from "./actions";
 
@@ -77,7 +78,7 @@ export default function ReleasesClient({ releases, songs, distributors }: { rele
                 <td className="px-6 py-4 text-[#8b8fa8] text-sm">{d.distributor?.name || "—"}</td>
                 <td className="px-6 py-4"><div className="text-[#8b8fa8] text-xs font-mono">{d.isrc}</div><div className="text-[#8b8fa8] text-xs font-mono">{d.upc}</div></td>
                 <td className="px-6 py-4"><div className="flex flex-wrap gap-1">{d.stores.slice(0, 3).map((s) => <span key={s} className="text-xs bg-[#2a2d3a] text-[#8b8fa8] px-2 py-0.5 rounded">{s}</span>)}{d.stores.length > 3 && <span className="text-xs text-[#8b8fa8]">+{d.stores.length - 3}</span>}</div></td>
-                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{d.releaseDate ? new Date(d.releaseDate).toLocaleDateString() : "—"}</td>
+                <td className="px-6 py-4 text-[#8b8fa8] text-sm">{d.releaseDate ? formatDate(d.releaseDate) : "—"}</td>
                 <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[d.status]}`}>{d.status.replace("_", " ")}</span></td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
