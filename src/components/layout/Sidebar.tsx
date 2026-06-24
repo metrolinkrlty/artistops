@@ -84,6 +84,7 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
             <Link
               key={href}
               href={href}
+              data-navhref={href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 active
                   ? "bg-indigo-600 text-white"

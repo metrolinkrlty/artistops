@@ -2,12 +2,13 @@ import Header from "@/components/layout/Header";
 import { prisma } from "@/lib/prisma";
 import { Music, Shield, DollarSign, TrendingUp, Megaphone, Target, Sparkles, ListMusic, Link2, Users } from "lucide-react";
 import Link from "next/link";
+import NavCard from "@/components/NavCard";
 import { getSettings } from "@/app/settings/actions";
 import { requireUserId } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-function StatCard({ title, value, icon: Icon, color = "indigo" }: { title: string; value: string; icon: React.ElementType; color?: string }) {
+function StatCard({ title, value, icon: Icon, color = "indigo", href }: { title: string; value: string; icon: React.ElementType; color?: string; href: string }) {
   const colors: Record<string, string> = {
     indigo: "bg-indigo-500/10 text-indigo-400",
     green: "bg-green-500/10 text-green-400",
@@ -15,13 +16,13 @@ function StatCard({ title, value, icon: Icon, color = "indigo" }: { title: strin
     blue: "bg-blue-500/10 text-blue-400",
   };
   return (
-    <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+    <NavCard href={href} className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <span className="text-[#8b8fa8] text-sm">{title}</span>
         <div className={`p-2 rounded-lg ${colors[color]}`}><Icon className="w-4 h-4" /></div>
       </div>
       <p className="text-white text-2xl font-bold">{value}</p>
-    </div>
+    </NavCard>
   );
 }
 
@@ -103,43 +104,43 @@ export default async function Dashboard() {
       <Header title="Dashboard" subtitle={`Welcome back, ${artistName}`} />
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Songs" value={stats.totalSongs.toString()} icon={Music} color="indigo" />
-          <StatCard title="Released Songs" value={stats.releasedSongs.toString()} icon={TrendingUp} color="green" />
-          <StatCard title="Registered Copyrights" value={stats.registeredCopyrights.toString()} icon={Shield} color="amber" />
-          <StatCard title="Total Revenue" value={`$${stats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={DollarSign} color="green" />
+          <StatCard title="Total Songs" value={stats.totalSongs.toString()} icon={Music} color="indigo" href="/songs" />
+          <StatCard title="Released Songs" value={stats.releasedSongs.toString()} icon={TrendingUp} color="green" href="/songs" />
+          <StatCard title="Registered Copyrights" value={stats.registeredCopyrights.toString()} icon={Shield} color="amber" href="/copyrights" />
+          <StatCard title="Total Revenue" value={`$${stats.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} icon={DollarSign} color="green" href="/revenue" />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Monthly Revenue" value={`$${stats.monthlyRevenue.toLocaleString()}`} icon={DollarSign} color="blue" />
-          <StatCard title="Active Campaigns" value={stats.activeCampaigns.toString()} icon={Megaphone} color="amber" />
-          <StatCard title="Website Conversions" value={stats.websiteConversions.toString()} icon={Target} color="indigo" />
-          <StatCard title="Total Streams" value={fmtCompact(stats.totalStreams)} icon={TrendingUp} color="green" />
+          <StatCard title="Monthly Revenue" value={`$${stats.monthlyRevenue.toLocaleString()}`} icon={DollarSign} color="blue" href="/revenue" />
+          <StatCard title="Active Campaigns" value={stats.activeCampaigns.toString()} icon={Megaphone} color="amber" href="/advertising" />
+          <StatCard title="Website Conversions" value={stats.websiteConversions.toString()} icon={Target} color="indigo" href="/analytics" />
+          <StatCard title="Total Streams" value={fmtCompact(stats.totalStreams)} icon={TrendingUp} color="green" href="/streaming" />
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+          <NavCard href="/smart-links" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2"><Link2 className="w-4 h-4 text-indigo-400" /><span className="text-[#8b8fa8] text-sm">Smart Link Clicks</span></div>
             <p className="text-white text-2xl font-bold">{stats.smartClicks.toLocaleString()}</p>
             <p className="text-[#8b8fa8] text-xs mt-1">All-time</p>
-          </div>
-          <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+          </NavCard>
+          <NavCard href="/playlist-intelligence" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2"><ListMusic className="w-4 h-4 text-green-400" /><span className="text-[#8b8fa8] text-sm">Playlist Placements</span></div>
             <p className="text-white text-2xl font-bold">{stats.playlistCount}</p>
             <p className="text-[#8b8fa8] text-xs mt-1">Tracked placements</p>
-          </div>
-          <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+          </NavCard>
+          <NavCard href="/audience" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2"><Users className="w-4 h-4 text-blue-400" /><span className="text-[#8b8fa8] text-sm">Monthly Listeners</span></div>
             <p className="text-white text-2xl font-bold">87,400</p>
             <p className="text-green-400 text-xs mt-1">+12.3% MoM</p>
-          </div>
-          <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+          </NavCard>
+          <NavCard href="/audience" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2"><span className="text-xl">🇺🇸</span><span className="text-[#8b8fa8] text-sm">Top Territory</span></div>
             <p className="text-white text-2xl font-bold">United States</p>
             <p className="text-[#8b8fa8] text-xs mt-1">42.3% of total streams</p>
-          </div>
+          </NavCard>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+          <NavCard href="/revenue" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
             <h2 className="text-white font-semibold mb-4">Monthly Revenue</h2>
             <div className="flex items-end gap-2 h-32">
               {stats.monthlyData.map((d, i) => {
@@ -153,9 +154,9 @@ export default async function Dashboard() {
                 );
               })}
             </div>
-          </div>
+          </NavCard>
 
-          <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+          <NavCard href="/streaming" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
             <h2 className="text-white font-semibold mb-4">Top Platforms by Plays</h2>
             <div className="space-y-3">
               {stats.topPlatformsByPlays.map((p) => {
@@ -170,13 +171,13 @@ export default async function Dashboard() {
               })}
               {stats.topPlatformsByPlays.length === 0 && <p className="text-[#8b8fa8] text-sm">No play data yet.</p>}
             </div>
-          </div>
+          </NavCard>
         </div>
 
-        <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+        <NavCard href="/ai-insights" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white font-semibold flex items-center gap-2"><Sparkles className="w-4 h-4 text-indigo-400" /> AI Insights</h2>
-            <Link href="/ai-insights" className="text-indigo-400 text-sm hover:text-indigo-300">View all →</Link>
+            <span className="text-indigo-400 text-sm">View all →</span>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
             {aiInsightsPrev.map((i, idx) => (
@@ -186,9 +187,9 @@ export default async function Dashboard() {
               </div>
             ))}
           </div>
-        </div>
+        </NavCard>
 
-        <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+        <NavCard href="/revenue" className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
           <h2 className="text-white font-semibold mb-4">Top Songs by Revenue</h2>
           <table className="w-full">
             <thead><tr className="text-[#8b8fa8] text-sm border-b border-[#2a2d3a]"><th className="text-left pb-3">Song</th><th className="text-right pb-3">Revenue</th><th className="text-right pb-3">Streams</th></tr></thead>
@@ -203,7 +204,7 @@ export default async function Dashboard() {
               {stats.topSongsByRevenue.length === 0 && <tr><td colSpan={3} className="py-6 text-center text-[#8b8fa8] text-sm">No revenue data yet.</td></tr>}
             </tbody>
           </table>
-        </div>
+        </NavCard>
       </div>
     </div>
   );
