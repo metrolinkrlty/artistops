@@ -128,7 +128,7 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
             {filtered.map((song) => {
               const cr = song.copyrights?.[0];
               return (
-                <tr key={song.id} className="border-b border-[#2a2d3a] last:border-0 hover:bg-[#2a2d3a]/40 transition-colors">
+                <tr key={song.id} onClick={() => openEdit(song)} className="border-b border-[#2a2d3a] last:border-0 hover:bg-[#2a2d3a]/40 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
                     <div className="text-white font-medium">{song.title}</div>
                     <div className="text-[#8b8fa8] text-xs">{song.artist}</div>
@@ -152,11 +152,8 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                   <td className="px-6 py-4 text-[#8b8fa8] text-sm">
                     {song.releaseDate ? formatDate(song.releaseDate) : "—"}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex gap-2">
-                      <button onClick={() => openEdit(song)} className="p-1 text-[#8b8fa8] hover:text-indigo-400 transition-colors" title="Edit">
-                        <Pencil className="w-4 h-4" />
-                      </button>
                       <button onClick={() => handleDelete(song)} className="p-1 text-[#8b8fa8] hover:text-red-400 transition-colors" title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </button>

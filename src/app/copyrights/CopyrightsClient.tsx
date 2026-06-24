@@ -120,7 +120,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
           </thead>
           <tbody>
             {filtered.map((c) => (
-              <tr key={c.id} className="border-b border-[#2a2d3a] last:border-0 hover:bg-[#2a2d3a]/40 transition-colors group">
+              <tr key={c.id} onClick={() => openEdit(c)} className="border-b border-[#2a2d3a] last:border-0 hover:bg-[#2a2d3a]/40 transition-colors cursor-pointer">
                 <td className="px-6 py-4">
                   {c.isGroup ? (
                     <div>
@@ -135,7 +135,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                     <span className="text-white font-medium">{c.songTitles[0] || "—"}</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-xs font-mono">
+                <td className="px-6 py-4 text-xs font-mono" onClick={e => e.stopPropagation()}>
                   {c.serviceRequestNumber ? (
                     c.serviceRequestUrl ? (
                       <a href={c.serviceRequestUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-indigo-400 hover:text-indigo-300">
@@ -147,7 +147,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                 <td className="px-6 py-4 text-xs font-mono">
                   {c.registrationNumber ? (
                     c.registrationCertUrl ? (
-                      <a href={c.registrationCertUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-green-400 hover:text-green-300">
+                      <a href={c.registrationCertUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1 text-green-400 hover:text-green-300">
                         {c.registrationNumber}<ExternalLink className="w-3 h-3 flex-shrink-0" />
                       </a>
                     ) : <span className="text-[#8b8fa8]">{c.registrationNumber}</span>
@@ -161,8 +161,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
                 <td className="px-6 py-4 text-center"><div className="flex justify-center"><Check val={c.registeredWithSX} /></div></td>
                 <td className="px-6 py-4 text-center"><div className="flex justify-center"><Check val={c.registeredWithDist} /></div></td>
                 <td className="px-6 py-4">
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEdit(c)} className="text-[#8b8fa8] hover:text-indigo-400"><Pencil className="w-4 h-4" /></button>
+                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                     <button onClick={() => handleDelete(c)} className="text-[#8b8fa8] hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </td>

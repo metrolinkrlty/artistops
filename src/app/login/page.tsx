@@ -107,7 +107,7 @@ export default function LoginPage() {
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center"><Music className="w-5 h-5 text-white" /></div>
           <div>
-            <h1 className="text-2xl font-bold">ArtistOps</h1>
+            <h1 className="text-2xl font-bold">ArtistOps<sup className="text-[10px] font-normal text-[#8b8fa8] ml-0.5">™</sup></h1>
             <p className="text-[#8b8fa8] text-xs">Music Business Manager</p>
           </div>
         </div>
