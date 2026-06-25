@@ -6,7 +6,7 @@ import "server-only";
 // you verify your own domain in Resend).
 export async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || "ArtistOps <onboarding@resend.dev>";
+  const from = process.env.RESEND_FROM || "ArtistOps <noreply@artistops.net>";
 
   if (!apiKey) {
     console.warn("[email] RESEND_API_KEY not set — email not sent.");
