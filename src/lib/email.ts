@@ -1,33 +1,35 @@
 import "server-only";
+import nodemailer from "nodemailer";
 
-// Sends transactional email via Resend's REST API (no SDK dependency).
-// Requires env RESEND_API_KEY. Optional RESEND_FROM (defaults to Resend's
-// shared onboarding sender, which can only deliver to the account owner until
-// you verify your own domain in Resend).
+// Sends transactional email via InMotion SMTP.
+// Requires env vars: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+// Set SMTP_USER=noreply@artistops.net and SMTP_PASS to its InMotion password.
 export async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || "ArtistOps <noreply@artistops.net>";
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = parseInt(process.env.SMTP_PORT || "465", 10);
 
-  if (!apiKey) {
-    console.warn("[email] RESEND_API_KEY not set — email not sent.");
+  if (!host || !user || !pass) {
+    console.warn("[email] SMTP env vars not set — email not sent.");
     return { ok: false, skipped: true, error: "Email is not configured yet." };
   }
 
   try {
-    const bcc = process.env.ADMIN_BCC_EMAIL || "j.corliss101@gmail.com";
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, bcc, subject, html, reply_to: replyTo || "admin@artistops.net" }),
+    const transporter = nodemailer.createTransport({
+      host, port, secure: port === 465,
+      auth: { user, pass },
     });
-    if (!res.ok) {
-      const body = await res.text();
-      console.error("[email] Resend error:", res.status, body);
-      return { ok: false, error: "Failed to send email." };
-    }
+
+    await transporter.sendMail({
+      from: `ArtistOps <${user}>`,
+      to, subject, html,
+      ...(replyTo ? { replyTo } : {}),
+    });
+
     return { ok: true };
   } catch (e) {
-    console.error("[email] send failed:", e);
+    console.error("[email] SMTP send failed:", e);
     return { ok: false, error: "Failed to send email." };
   }
 }
