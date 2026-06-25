@@ -32,6 +32,24 @@ export async function sendEmail(to: string, subject: string, html: string, reply
   }
 }
 
+export function adminSignupNotificationHtml(artistName: string, email: string): string {
+  return `
+  <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <div style="width:40px;height:40px;background:#6366f1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎵</div>
+      <span style="font-size:20px;font-weight:700">ArtistOps</span>
+    </div>
+    <h2 style="margin:0 0 8px">New access request</h2>
+    <p style="color:#8b8fa8;margin:0 0 20px">Someone wants to join ArtistOps and is waiting for your approval.</p>
+    <div style="background:#1a1d27;border:1px solid #334155;border-radius:10px;padding:16px;margin-bottom:20px">
+      <p style="margin:0 0 6px"><strong>Name:</strong> ${artistName}</p>
+      <p style="margin:0"><strong>Email:</strong> ${email}</p>
+    </div>
+    <a href="https://artistops.net/admin" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Review in Admin Dashboard</a>
+    <p style="color:#5a5e72;font-size:12px;margin:20px 0 0">Reply to this email to contact the applicant directly.</p>
+  </div>`;
+}
+
 export function pendingApprovalEmailHtml(artistName: string): string {
   return `
   <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, signSession, SESSION_COOKIE, IDLE_SECONDS } from "@/lib/auth";
 import { seedSampleDataForUser } from "@/lib/sampleData";
-import { sendEmail, pendingApprovalEmailHtml } from "@/lib/email";
+import { sendEmail, pendingApprovalEmailHtml, adminSignupNotificationHtml } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
   let email = "", password = "", artistName = "";
@@ -37,8 +37,12 @@ export async function POST(req: NextRequest) {
   // Seed sample data in the background (don't await — user sees pending page immediately)
   seedSampleDataForUser(user.id, artistName).catch((e) => console.error("Sample data seed failed:", e));
 
-  // Send pending-approval email
-  sendEmail(email, "Your ArtistOps account is pending approval", pendingApprovalEmailHtml(artistName), email).catch(console.error);
+  // Notify admin — reply-to goes directly to the applicant
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
+  sendEmail(adminEmail, `New ArtistOps signup request from ${email}`, adminSignupNotificationHtml(artistName, email), email).catch(console.error);
+
+  // Confirm receipt to the user — reply-to goes to admin so replies are seen
+  sendEmail(email, "Your ArtistOps account is pending approval", pendingApprovalEmailHtml(artistName), adminEmail).catch(console.error);
 
   // Sign the user in so they can see the pending page, but they can't access the dashboard yet
   const token = await signSession(user.id);
