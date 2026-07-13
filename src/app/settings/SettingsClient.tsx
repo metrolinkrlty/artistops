@@ -41,6 +41,42 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
         </div>
 
         <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+          <h2 className="text-white font-semibold mb-4">Contact Information</h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { name: "legalName", label: "Legal Name" },
+                { name: "businessName", label: "Business / Entity" },
+                { name: "phone", label: "Phone" },
+                { name: "altPhone", label: "Alt. Phone" },
+              ].map((f) => (
+                <div key={f.name}>
+                  <label className="block text-[#8b8fa8] text-sm mb-1">{f.label}</label>
+                  <input name={f.name} defaultValue={settings[f.name] || ""} className={inputClass} />
+                </div>
+              ))}
+            </div>
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-1">Address</label>
+              <input name="addressLine" defaultValue={settings.addressLine || ""} className={inputClass} />
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { name: "city", label: "City" },
+                { name: "state", label: "State" },
+                { name: "zip", label: "ZIP" },
+                { name: "country", label: "Country" },
+              ].map((f) => (
+                <div key={f.name}>
+                  <label className="block text-[#8b8fa8] text-sm mb-1">{f.label}</label>
+                  <input name={f.name} defaultValue={settings[f.name] || ""} className={inputClass} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
           <h2 className="text-white font-semibold mb-2">Pixel Tracking Domain</h2>
           <p className="text-[#8b8fa8] text-sm mb-4">Set your website domain for the tracking snippet.</p>
           <div>

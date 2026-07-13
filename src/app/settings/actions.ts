@@ -4,7 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
-const SETTING_KEYS = ["proMembership", "ipiNumber", "websiteUrl"];
+const SETTING_KEYS = [
+  "proMembership", "ipiNumber", "websiteUrl",
+  "legalName", "businessName", "phone", "altPhone",
+  "addressLine", "city", "state", "zip", "country",
+];
 
 export async function getSettings(): Promise<Record<string, string>> {
   const userId = await requireUserId();
@@ -18,6 +22,15 @@ export async function getSettings(): Promise<Record<string, string>> {
     proMembership: "",
     ipiNumber: "",
     websiteUrl: "",
+    legalName: "",
+    businessName: "",
+    phone: "",
+    altPhone: "",
+    addressLine: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "",
   };
   for (const r of rows) map[r.key] = r.value;
   return map;
