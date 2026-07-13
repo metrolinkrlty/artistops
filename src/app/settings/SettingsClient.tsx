@@ -10,6 +10,8 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [contactUnlocked, setContactUnlocked] = useState(false);
+  const roClass = contactUnlocked ? inputClass : `${inputClass} opacity-60 cursor-not-allowed`;
 
   async function handleSubmit(formData: FormData) {
     setSaving(true);
@@ -41,11 +43,20 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
         </div>
 
         <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
-          <h2 className="text-white font-semibold mb-2">Contact Information</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-white font-semibold">Contact Information</h2>
+            <button
+              type="button"
+              onClick={() => setContactUnlocked((v) => !v)}
+              className={`text-xs px-2.5 py-1 rounded-md border transition-colors ${contactUnlocked ? "border-indigo-500/50 text-indigo-300 hover:bg-indigo-500/10" : "border-amber-500/40 text-amber-300 hover:bg-amber-500/10"}`}
+            >
+              {contactUnlocked ? "Lock" : "Edit anyway"}
+            </button>
+          </div>
           <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-4">
             <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <p className="text-amber-300/90 text-xs leading-relaxed">
-              This information is on file with the U.S. Copyright Office. Editing it here updates ArtistOps only — it does <span className="font-semibold">not</span> change your official Copyright Office record. To change the registration record, update it on the eCO website (eco.copyright.gov).
+              This information is on file with the U.S. Copyright Office and is locked to prevent accidental edits. Changing it here updates ArtistOps only — it does <span className="font-semibold">not</span> change your official Copyright Office record. To change the registration record, update it on the eCO website (eco.copyright.gov). Click <span className="font-semibold">Edit anyway</span> to override.
             </p>
           </div>
           <div className="space-y-4">
@@ -59,13 +70,13 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               ].map((f) => (
                 <div key={f.name}>
                   <label className="block text-[#8b8fa8] text-sm mb-1">{f.label}</label>
-                  <input name={f.name} defaultValue={settings[f.name] || ""} className={inputClass} />
+                  <input name={f.name} defaultValue={settings[f.name] || ""} readOnly={!contactUnlocked} className={roClass} />
                 </div>
               ))}
             </div>
             <div>
               <label className="block text-[#8b8fa8] text-sm mb-1">Address</label>
-              <input name="addressLine" defaultValue={settings.addressLine || ""} className={inputClass} />
+              <input name="addressLine" defaultValue={settings.addressLine || ""} readOnly={!contactUnlocked} className={roClass} />
             </div>
             <div className="grid grid-cols-4 gap-4">
               {[
@@ -76,7 +87,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               ].map((f) => (
                 <div key={f.name}>
                   <label className="block text-[#8b8fa8] text-sm mb-1">{f.label}</label>
-                  <input name={f.name} defaultValue={settings[f.name] || ""} className={inputClass} />
+                  <input name={f.name} defaultValue={settings[f.name] || ""} readOnly={!contactUnlocked} className={roClass} />
                 </div>
               ))}
             </div>
