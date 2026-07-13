@@ -38,6 +38,7 @@ model Song {
   coverArtUrl   String?
   audioFileRef  String?
   metadataFile  String?
+  masterFileUrl String?  // external link to the full-quality master (e.g. Google Drive .wav) when it's too large to store in-app
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   distributions Distribution[]

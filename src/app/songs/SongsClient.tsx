@@ -41,6 +41,7 @@ type Song = {
   status: string;
   audioFileRef: string | null;
   metadataFile: string | null;
+  masterFileUrl: string | null;
   copyrights: Copyright[];
 };
 
@@ -323,6 +324,16 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                     </div>
                   )}
                 </div>
+              </div>
+              {/* Master file (external, e.g. Google Drive WAV) */}
+              <div className="col-span-2">
+                <label className="block text-[#8b8fa8] text-xs mb-1.5">Master File Link (external — e.g. full-quality Google Drive .wav)</label>
+                <input name="masterFileUrl" defaultValue={editing?.masterFileUrl || ""} placeholder="https://drive.google.com/file/d/…/view" className={inputClass} />
+                {editing?.masterFileUrl && (
+                  <a href={editing.masterFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1.5 text-xs text-indigo-400 hover:text-indigo-300">
+                    <Music className="w-3 h-3" /> Open master WAV
+                  </a>
+                )}
               </div>
               <input type="hidden" name="metadataFile" defaultValue={editing?.metadataFile || ""} />
               <div className="col-span-2">

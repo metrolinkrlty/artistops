@@ -78,6 +78,7 @@ function parseForm(formData: FormData) {
     status: (String(formData.get("status") || "DEMO") as SongStatus),
     audioFileRef: String(formData.get("audioFileRef") || "").trim() || null,
     metadataFile: String(formData.get("metadataFile") || "").trim() || null,
+    masterFileUrl: String(formData.get("masterFileUrl") || "").trim() || null,
   };
 }
 
