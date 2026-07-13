@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Search, CheckCircle, XCircle, Pencil, Trash2, X, Users, ExternalLink } from "lucide-react";
+import { Plus, Search, CheckCircle, XCircle, Pencil, Trash2, X, Users, ExternalLink, Lock } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDate } from "@/lib/dateUtils";
@@ -172,7 +172,11 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
         </table>
       </div>
 
-      {showForm && (
+      {showForm && (() => {
+      // Once a registration/case number exists the work has been filed with the
+      // Copyright Office; the covered works & group title are fixed and can't be edited.
+      const locked = !!(editing && editing.registrationNumber && editing.registrationNumber.trim());
+      return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2d3a]">
@@ -180,27 +184,44 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
               <button onClick={() => setShowForm(false)} className="text-[#8b8fa8] hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <form action={handleSubmit} className="p-6 space-y-4">
-              {/* Song selection */}
+              {/* Song selection — locked once filed with the Copyright Office */}
               <div>
                 <label className="block text-[#8b8fa8] text-xs mb-2">
                   Songs Covered * <span className="text-[#5a5e72]">(select one or more)</span>
                 </label>
-                <div className="bg-[#0f1117] border border-[#2a2d3a] rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
-                  {songs.map((s) => (
-                    <label key={s.id} className="flex items-center gap-2 cursor-pointer text-sm">
-                      <input
-                        type="checkbox"
-                        checked={selectedSongIds.includes(s.id)}
-                        onChange={() => toggleSong(s.id)}
-                        className="accent-indigo-600"
-                      />
-                      <span className={selectedSongIds.includes(s.id) ? "text-white" : "text-[#8b8fa8]"}>{s.title}</span>
-                    </label>
-                  ))}
-                </div>
-                {selectedSongIds.length === 0 && <p className="text-red-400 text-xs mt-1">Select at least one song</p>}
-                {selectedSongIds.length > 1 && (
-                  <p className="text-indigo-400 text-xs mt-1">Group registration — {selectedSongIds.length} songs selected</p>
+                {locked ? (
+                  <>
+                    <div className="bg-[#0f1117] border border-[#2a2d3a] rounded-lg p-3 space-y-1.5 max-h-40 overflow-y-auto opacity-90">
+                      {songs.filter((s) => selectedSongIds.includes(s.id)).map((s) => (
+                        <div key={s.id} className="flex items-center gap-2 text-sm text-white">
+                          <Lock className="w-3 h-3 text-[#8b8fa8] flex-shrink-0" />{s.title}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-amber-400/90 text-xs mt-1.5 flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> Covered works are locked — this registration has been filed with the Copyright Office (Reg./Case #{editing?.registrationNumber}) and its works can&apos;t be changed.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-[#0f1117] border border-[#2a2d3a] rounded-lg p-3 space-y-2 max-h-40 overflow-y-auto">
+                      {songs.map((s) => (
+                        <label key={s.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                          <input
+                            type="checkbox"
+                            checked={selectedSongIds.includes(s.id)}
+                            onChange={() => toggleSong(s.id)}
+                            className="accent-indigo-600"
+                          />
+                          <span className={selectedSongIds.includes(s.id) ? "text-white" : "text-[#8b8fa8]"}>{s.title}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedSongIds.length === 0 && <p className="text-red-400 text-xs mt-1">Select at least one song</p>}
+                    {selectedSongIds.length > 1 && (
+                      <p className="text-indigo-400 text-xs mt-1">Group registration — {selectedSongIds.length} songs selected</p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -208,7 +229,7 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
               {selectedSongIds.length > 1 && (
                 <div>
                   <label className="block text-[#8b8fa8] text-xs mb-1.5">Group Registration Title</label>
-                  <input name="groupTitle" defaultValue={editing?.groupTitle || ""} className={inputClass} placeholder="e.g. Spring 2024 EP Registration" />
+                  <input name="groupTitle" defaultValue={editing?.groupTitle || ""} readOnly={locked} className={`${inputClass} ${locked ? "opacity-70 cursor-not-allowed" : ""}`} placeholder="e.g. Spring 2024 EP Registration" />
                 </div>
               )}
 
@@ -237,7 +258,8 @@ export default function CopyrightsClient({ copyrights, songs }: { copyrights: Co
             </form>
           </div>
         </div>
-      )}
+      );
+      })()}
     </div>
   );
 }
