@@ -16,13 +16,13 @@ export default async function CopyrightsPage() {
         </div>
         <div className="flex gap-2">
           <a
-            href="https://eco.copyright.gov"
+            href="https://eservice.eco.loc.gov/eService_enu?SWECmd=Start"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 bg-[#1a1d27] border border-[#2a2d3a] text-[#8b8fa8] hover:text-white hover:border-indigo-500 rounded-lg text-sm transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            eCO Copyright Office
+            eCO Login
           </a>
           <a
             href="https://publicrecords.copyright.gov/"
