@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 const SETTING_KEYS = [
   "proMembership", "ipiNumber", "websiteUrl",
-  "legalName", "businessName", "phone", "altPhone",
+  "legalName", "businessName", "correspondentEmail", "phone", "altPhone",
   "addressLine", "city", "state", "zip", "country",
 ];
 
@@ -24,6 +24,7 @@ export async function getSettings(): Promise<Record<string, string>> {
     websiteUrl: "",
     legalName: "",
     businessName: "",
+    correspondentEmail: "",
     phone: "",
     altPhone: "",
     addressLine: "",

@@ -47,6 +47,7 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
               {[
                 { name: "legalName", label: "Legal Name" },
                 { name: "businessName", label: "Business / Entity" },
+                { name: "correspondentEmail", label: "Correspondent Email" },
                 { name: "phone", label: "Phone" },
                 { name: "altPhone", label: "Alt. Phone" },
               ].map((f) => (
