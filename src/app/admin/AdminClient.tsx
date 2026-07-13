@@ -64,8 +64,10 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: u.id }),
     });
-    router.push("/");
-    router.refresh();
+    // Full-page load so the server re-renders "/" with the new impersonation
+    // cookie — a soft router.push serves the stale admin-time RSC cache (sidebar
+    // only, empty body until a manual refresh).
+    window.location.href = "/";
   }
 
   return (
