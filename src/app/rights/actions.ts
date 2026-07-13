@@ -17,7 +17,15 @@ export async function getRightsData() {
   const songRights = songs.map((s) => {
     // Find the copyright record that covers this song (individual or group)
     const cr = copyrights.find((c) => c.songIds.includes(s.id));
-    const splits = ((s.splits as unknown as Split[]) || []).map((sp) => ({ name: sp.name, pct: sp.percentage }));
+    // splits should be an array of { name, percentage }; tolerate a legacy
+    // object form ({ "Name": 100 }) or null without crashing the page.
+    const raw = s.splits as unknown;
+    const splitArr: Split[] = Array.isArray(raw)
+      ? (raw as Split[])
+      : raw && typeof raw === "object"
+        ? Object.entries(raw as Record<string, unknown>).map(([name, percentage]) => ({ name, percentage: Number(percentage) }))
+        : [];
+    const splits = splitArr.map((sp) => ({ name: sp.name, pct: sp.percentage }));
     return {
       id: s.id,
       title: s.title,
