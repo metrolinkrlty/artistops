@@ -1,11 +1,11 @@
 "use client";
-"use client";
-import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play } from "lucide-react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
-import { createSong, updateSong, deleteSong } from "./actions";
+import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl } from "./actions";
+import { supabaseBrowser, AUDIO_BUCKET } from "@/lib/supabaseClient";
 
 const statusColors: Record<string, string> = {
   DEMO: "bg-gray-500/20 text-gray-400",
@@ -39,6 +39,8 @@ type Song = {
   notes: string | null;
   collectionTitle: string | null;
   status: string;
+  audioFileRef: string | null;
+  metadataFile: string | null;
   copyrights: Copyright[];
 };
 
@@ -60,6 +62,58 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
   const [editing, setEditing] = useState<Song | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [metaJson, setMetaJson] = useState<string>("");
+  const [reading, setReading] = useState(false);
+  const [uploadPct, setUploadPct] = useState<number | null>(null);
+  const [playUrl, setPlayUrl] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  function fillIfEmpty(name: string, value: string | number | null | undefined) {
+    if (value === null || value === undefined || value === "") return;
+    const el = formRef.current?.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null;
+    if (el && !el.value) el.value = String(value);
+  }
+
+  async function onAudioSelected(file: File | null) {
+    setAudioFile(file);
+    setMetaJson("");
+    if (!file) return;
+    setReading(true);
+    try {
+      const { parseBlob } = await import("music-metadata");
+      const mm = await parseBlob(file);
+      const c = mm.common;
+      const f = mm.format;
+      // Pre-fill blank form fields from tags (never overwrite what's there)
+      fillIfEmpty("title", c.title);
+      fillIfEmpty("artist", c.artist);
+      fillIfEmpty("genre", (c.genre || [])[0]);
+      fillIfEmpty("isrc", (c.isrc || [])[0]);
+      fillIfEmpty("bpm", c.bpm ?? undefined);
+      fillIfEmpty("key", c.key);
+      const summary = {
+        title: c.title, artist: c.artist, album: c.album, year: c.year,
+        genre: c.genre, isrc: c.isrc, bpm: c.bpm, key: c.key, track: c.track,
+        container: f.container, codec: f.codec,
+        durationSec: f.duration ? Math.round(f.duration) : null,
+        sampleRate: f.sampleRate, bitsPerSample: f.bitsPerSample, bitrate: f.bitrate,
+        channels: f.numberOfChannels,
+      };
+      setMetaJson(JSON.stringify(summary));
+    } catch (e) {
+      console.error("metadata read failed", e);
+      setMetaJson(JSON.stringify({ note: "No readable metadata", fileName: file.name }));
+    } finally {
+      setReading(false);
+    }
+  }
+
+  async function loadPlayback(path: string) {
+    setPlayUrl(null);
+    const url = await getAudioUrl(path);
+    if (url) setPlayUrl(url);
+  }
 
   const filtered = songs.filter(
     (s) =>
@@ -67,23 +121,44 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
       s.artist.toLowerCase().includes(search.toLowerCase())
   );
 
+  function resetAudioState() {
+    setAudioFile(null); setMetaJson(""); setReading(false); setUploadPct(null); setPlayUrl(null);
+  }
   function openAdd() {
-    setEditing(null);
-    setShowForm(true);
+    setEditing(null); resetAudioState(); setShowForm(true);
   }
   function openEdit(song: Song) {
-    setEditing(song);
-    setShowForm(true);
+    setEditing(song); resetAudioState(); setShowForm(true);
+    if (song.audioFileRef) loadPlayback(song.audioFileRef);
   }
 
   async function handleSubmit(formData: FormData) {
     setSaving(true);
-    if (editing) await updateSong(editing.id, formData);
-    else await createSong(formData);
-    setSaving(false);
-    setShowForm(false);
-    setEditing(null);
-    router.refresh();
+    try {
+      // If a new audio file was staged, upload it straight to Supabase Storage
+      if (audioFile) {
+        setUploadPct(0);
+        const { path, token } = await createAudioUploadUrl(audioFile.name);
+        const { error } = await supabaseBrowser.storage
+          .from(AUDIO_BUCKET)
+          .uploadToSignedUrl(path, token, audioFile, { contentType: audioFile.type || "audio/mpeg" });
+        if (error) throw error;
+        setUploadPct(100);
+        formData.set("audioFileRef", path);
+        if (metaJson) formData.set("metadataFile", metaJson);
+      }
+      if (editing) await updateSong(editing.id, formData);
+      else await createSong(formData);
+      setShowForm(false);
+      setEditing(null);
+      resetAudioState();
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      alert("Upload failed: " + (e instanceof Error ? e.message : "unknown error"));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(song: Song) {
@@ -196,7 +271,9 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form action={handleSubmit} className="p-6 grid grid-cols-2 gap-4">
+            <form ref={formRef} action={handleSubmit} className="p-6 grid grid-cols-2 gap-4">
+              {/* Persist existing refs unless replaced on submit */}
+              <input type="hidden" name="audioFileRef" defaultValue={editing?.audioFileRef || ""} />
               <Field label="Title *"><input name="title" required defaultValue={editing?.title || ""} className={inputClass} /></Field>
               <Field label="Artist *"><input name="artist" required defaultValue={editing?.artist || "Alex Rivera"} className={inputClass} /></Field>
               <Field label="Writers (comma-separated)"><input name="writers" defaultValue={editing?.writers.join(", ") || ""} className={inputClass} /></Field>
@@ -217,6 +294,37 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                   <input name="collectionTitle" defaultValue={editing?.collectionTitle || ""} placeholder='e.g. "Hey Evelyn"' className={inputClass} />
                 </Field>
               </div>
+              {/* Audio file upload */}
+              <div className="col-span-2">
+                <label className="block text-[#8b8fa8] text-xs mb-1.5">Audio File (MP3 / WAV · up to 50 MB)</label>
+                <div className="bg-[#0f1117] border border-dashed border-[#2a2d3a] rounded-lg p-4">
+                  {editing?.audioFileRef && !audioFile && (
+                    <div className="flex items-center gap-3 mb-3">
+                      <Music className="w-4 h-4 text-indigo-400" />
+                      <span className="text-sm text-white flex-1 truncate">Current: {editing.audioFileRef.split("/").pop()}</span>
+                      {playUrl ? (
+                        <audio controls src={playUrl} className="h-8" />
+                      ) : (
+                        <button type="button" onClick={() => loadPlayback(editing.audioFileRef!)} className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300"><Play className="w-3 h-3" /> Load</button>
+                      )}
+                    </div>
+                  )}
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-indigo-400 hover:text-indigo-300 w-fit">
+                    <UploadCloud className="w-4 h-4" />
+                    {audioFile ? "Choose a different file" : editing?.audioFileRef ? "Replace file" : "Choose audio file"}
+                    <input type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav" className="hidden" onChange={(e) => onAudioSelected(e.target.files?.[0] || null)} />
+                  </label>
+                  {reading && <p className="text-xs text-[#8b8fa8] mt-2 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Reading metadata…</p>}
+                  {audioFile && !reading && (
+                    <div className="mt-2 text-xs text-[#8b8fa8]">
+                      <p className="text-white">{audioFile.name} · {(audioFile.size / 1048576).toFixed(1)} MB</p>
+                      {metaJson && <p className="mt-1 text-green-400">✓ Metadata read — blank fields above were pre-filled for your review.</p>}
+                      {uploadPct === 100 ? <p className="text-green-400">Uploaded ✓</p> : uploadPct !== null && <p>Uploading…</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <input type="hidden" name="metadataFile" defaultValue={editing?.metadataFile || ""} />
               <div className="col-span-2">
                 <Field label="Notes"><textarea name="notes" defaultValue={editing?.notes || ""} className={inputClass} rows={3} /></Field>
               </div>

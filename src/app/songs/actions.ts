@@ -2,7 +2,27 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
+import { supabaseAdmin, AUDIO_BUCKET } from "@/lib/supabaseAdmin";
 import { revalidatePath } from "next/cache";
+
+// Mint a pre-signed upload URL scoped to the current user's folder. The browser
+// pushes the file bytes directly to Supabase Storage using this URL.
+export async function createAudioUploadUrl(fileName: string) {
+  const userId = await requireUserId();
+  const safe = fileName.replace(/[^\w.\-]+/g, "_").slice(-80);
+  const path = `${userId}/${crypto.randomUUID()}-${safe}`;
+  const { data, error } = await supabaseAdmin.storage.from(AUDIO_BUCKET).createSignedUploadUrl(path);
+  if (error || !data) throw new Error(error?.message || "Could not create upload URL");
+  return { path, token: data.token };
+}
+
+// Short-lived signed URL for playback/download of a stored object.
+export async function getAudioUrl(path: string): Promise<string | null> {
+  const userId = await requireUserId();
+  if (!path.startsWith(`${userId}/`)) return null; // only your own files
+  const { data } = await supabaseAdmin.storage.from(AUDIO_BUCKET).createSignedUrl(path, 60 * 60);
+  return data?.signedUrl ?? null;
+}
 
 export type SongStatus =
   | "DEMO"
@@ -56,6 +76,8 @@ function parseForm(formData: FormData) {
     notes: String(formData.get("notes") || "").trim() || null,
     collectionTitle: String(formData.get("collectionTitle") || "").trim() || null,
     status: (String(formData.get("status") || "DEMO") as SongStatus),
+    audioFileRef: String(formData.get("audioFileRef") || "").trim() || null,
+    metadataFile: String(formData.get("metadataFile") || "").trim() || null,
   };
 }
 
@@ -80,6 +102,10 @@ export async function deleteSong(id: string) {
   // verify ownership first
   const song = await prisma.song.findFirst({ where: { id, userId } });
   if (!song) return;
+  // remove the stored audio object, if any
+  if (song.audioFileRef) {
+    await supabaseAdmin.storage.from(AUDIO_BUCKET).remove([song.audioFileRef]).catch(() => {});
+  }
   // remove dependent rows first to satisfy FK constraints
   // Only delete copyrights that solely cover this song; group copyrights covering other songs are kept
   const soloCoprights = await prisma.copyright.findMany({ where: { userId, songIds: { equals: [id] } } });
