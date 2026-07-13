@@ -37,6 +37,7 @@ type Song = {
   bpm: number | null;
   key: string | null;
   notes: string | null;
+  collectionTitle: string | null;
   status: string;
   copyrights: Copyright[];
 };
@@ -130,7 +131,14 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
               return (
                 <tr key={song.id} onClick={() => openEdit(song)} className="border-b border-[#2a2d3a] last:border-0 hover:bg-[#2a2d3a]/40 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
-                    <div className="text-white font-medium">{song.title}</div>
+                    <div className="text-white font-medium flex items-center gap-2">
+                      {song.title}
+                      {song.collectionTitle && (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30" title={`Also a collection: ${song.collectionTitle}`}>
+                          Collection
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[#8b8fa8] text-xs">{song.artist}</div>
                   </td>
                   <td className="px-6 py-4">
@@ -204,6 +212,11 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </Field>
+              <div className="col-span-2">
+                <Field label="Collection Title (if this song also names a collection/group registration)">
+                  <input name="collectionTitle" defaultValue={editing?.collectionTitle || ""} placeholder='e.g. "Hey Evelyn"' className={inputClass} />
+                </Field>
+              </div>
               <div className="col-span-2">
                 <Field label="Notes"><textarea name="notes" defaultValue={editing?.notes || ""} className={inputClass} rows={3} /></Field>
               </div>

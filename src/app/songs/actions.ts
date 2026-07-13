@@ -54,6 +54,7 @@ function parseForm(formData: FormData) {
     bpm: bpmRaw ? Number(bpmRaw) : null,
     key: String(formData.get("key") || "").trim() || null,
     notes: String(formData.get("notes") || "").trim() || null,
+    collectionTitle: String(formData.get("collectionTitle") || "").trim() || null,
     status: (String(formData.get("status") || "DEMO") as SongStatus),
   };
 }

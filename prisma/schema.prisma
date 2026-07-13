@@ -33,6 +33,7 @@ model Song {
   key           String?
   lyrics        String?
   notes         String?
+  collectionTitle String?  // set when this song also names a collection/group registration (e.g. "Hey Evelyn")
   status        SongStatus @default(DEMO)
   coverArtUrl   String?
   audioFileRef  String?
