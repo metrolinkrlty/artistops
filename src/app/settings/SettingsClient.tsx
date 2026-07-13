@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { saveSettings } from "./actions";
 
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500";
@@ -41,7 +41,13 @@ export default function SettingsClient({ settings }: { settings: Record<string, 
         </div>
 
         <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
-          <h2 className="text-white font-semibold mb-4">Contact Information</h2>
+          <h2 className="text-white font-semibold mb-2">Contact Information</h2>
+          <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2 mb-4">
+            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-amber-300/90 text-xs leading-relaxed">
+              This information is on file with the U.S. Copyright Office. Editing it here updates ArtistOps only — it does <span className="font-semibold">not</span> change your official Copyright Office record. To change the registration record, update it on the eCO website (eco.copyright.gov).
+            </p>
+          </div>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {[
