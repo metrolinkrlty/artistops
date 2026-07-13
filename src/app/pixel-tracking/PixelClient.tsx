@@ -11,10 +11,12 @@ const eventColors: Record<string, string> = {
   link_click: "bg-cyan-500/20 text-cyan-400",
 };
 
-const SNIPPET = `<!-- ArtistOps Tracking Pixel -->
+function buildSnippet(pixelId: string) {
+  return `<!-- ArtistOps Tracking Pixel -->
 <script>
 (function() {
-  var AO_PIXEL_URL = 'https://artistops-app.netlify.app/api/pixel';
+  var AO_PIXEL_URL = 'https://artistops.net/api/pixel';
+  var AO_PIXEL_ID = '${pixelId}';
   var visitorId = localStorage.getItem('ao_vid') ||
     Math.random().toString(36).substr(2, 9);
   localStorage.setItem('ao_vid', visitorId);
@@ -25,6 +27,7 @@ const SNIPPET = `<!-- ArtistOps Tracking Pixel -->
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        pixelId: AO_PIXEL_ID,
         visitorId: visitorId,
         pageUrl: window.location.pathname,
         referrer: document.referrer,
@@ -49,15 +52,18 @@ const SNIPPET = `<!-- ArtistOps Tracking Pixel -->
   window.aoTrack = track;
 })();
 </script>`;
+}
 
 type Event = {
   id: string; songTitle: string | null; visitorId: string; pageUrl: string;
   eventType: string; utmSource: string | null; utmCampaign: string | null; createdAt: string;
 };
 
-export default function PixelClient({ events }: { events: Event[] }) {
+export default function PixelClient({ events, pixelId }: { events: Event[]; pixelId: string }) {
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
+
+  const snippet = buildSnippet(pixelId);
 
   const filtered = events.filter((e) =>
     e.eventType.toLowerCase().includes(search.toLowerCase()) ||
@@ -65,7 +71,7 @@ export default function PixelClient({ events }: { events: Event[] }) {
   );
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(SNIPPET);
+    navigator.clipboard.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -82,7 +88,7 @@ export default function PixelClient({ events }: { events: Event[] }) {
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copied ? "Copied!" : "Copy"}
           </button>
         </div>
-        <pre className="bg-[#0f1117] border border-[#2a2d3a] rounded-lg p-4 text-xs text-green-300 overflow-x-auto whitespace-pre-wrap">{SNIPPET}</pre>
+        <pre className="bg-[#0f1117] border border-[#2a2d3a] rounded-lg p-4 text-xs text-green-300 overflow-x-auto whitespace-pre-wrap">{snippet}</pre>
       </div>
 
       <div>
