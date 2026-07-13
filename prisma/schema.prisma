@@ -234,9 +234,22 @@ enum CampaignStatus {
   COMPLETED
 }
 
+// A named tracking pixel. Its id is the public token embedded in the snippet,
+// so one user can run several (e.g. one per website) and keep the data separate.
+model Pixel {
+  id        String       @id @default(cuid())
+  userId    String
+  name      String
+  createdAt DateTime     @default(now())
+  events    PixelEvent[]
+  @@index([userId])
+}
+
 model PixelEvent {
   id          String   @id @default(cuid())
   userId      String?
+  pixelId     String?
+  pixel       Pixel?   @relation(fields: [pixelId], references: [id])
   songId      String?
   song        Song?    @relation(fields: [songId], references: [id])
   visitorId   String
@@ -250,6 +263,7 @@ model PixelEvent {
   utmTerm     String?
   createdAt   DateTime @default(now())
   @@index([userId])
+  @@index([pixelId])
 }
 
 model Contact {

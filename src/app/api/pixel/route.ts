@@ -34,20 +34,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: CORS });
     }
 
-    // A pixel id is just the ArtistOps user id embedded in the snippet.
-    const user = await prisma.user.findUnique({
+    // A pixel id is a Pixel token embedded in the snippet. Fall back to treating
+    // it as a user id so the legacy single-pixel snippet keeps working.
+    const pixel = await prisma.pixel.findUnique({
       where: { id: String(pixelId) },
-      select: { id: true },
+      select: { id: true, userId: true },
     });
-    if (!user) {
-      return NextResponse.json({ error: "Unknown pixel" }, { status: 404, headers: CORS });
+    let ownerId: string;
+    let resolvedPixelId: string | null;
+    if (pixel) {
+      ownerId = pixel.userId;
+      resolvedPixelId = pixel.id;
+    } else {
+      const user = await prisma.user.findUnique({
+        where: { id: String(pixelId) },
+        select: { id: true },
+      });
+      if (!user) {
+        return NextResponse.json({ error: "Unknown pixel" }, { status: 404, headers: CORS });
+      }
+      ownerId = user.id;
+      resolvedPixelId = null;
     }
 
     // Only attribute to a song the pixel owner actually owns.
     let validSongId: string | null = null;
     if (songId) {
       const song = await prisma.song.findFirst({
-        where: { id: String(songId), userId: user.id },
+        where: { id: String(songId), userId: ownerId },
         select: { id: true },
       });
       validSongId = song?.id ?? null;
@@ -57,7 +71,8 @@ export async function POST(request: NextRequest) {
 
     await prisma.pixelEvent.create({
       data: {
-        userId: user.id,
+        userId: ownerId,
+        pixelId: resolvedPixelId,
         songId: validSongId,
         visitorId: String(visitorId).slice(0, 100),
         pageUrl: String(pageUrl).slice(0, 500),
