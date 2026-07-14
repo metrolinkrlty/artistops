@@ -464,3 +464,43 @@ model PasswordReset {
   createdAt DateTime @default(now())
   @@index([userId])
 }
+
+// Public-website configuration for an artist. One row per artist site; `slug`
+// is the public identifier the website fetches (e.g. "luke-corliss").
+// socialLinks is a JSON map like { instagram, spotify, appleMusic, youtube, ... }.
+// bio/hero/featuredSongIds/previewSeconds are used by the Phase 2 website CMS.
+model ArtistSite {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  slug            String   @unique
+  displayName     String
+  tagline         String?
+  bio             String?
+  location        String?
+  heroImageUrl    String?
+  socialLinks     Json?
+  featuredSongIds String[]
+  previewSeconds  Int      @default(30)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([userId])
+}
+
+// A mailing-list / listener email captured from an artist's public website.
+// `site` is the ArtistSite slug. notifyOptIn = true means they explicitly asked
+// to hear about future releases and show dates (vs. an email captured only to
+// unlock a full track). One email per site.
+model MailingSubscriber {
+  id          String   @id @default(cuid())
+  userId      String?
+  site        String
+  email       String
+  name        String?
+  notifyOptIn Boolean  @default(false)
+  source      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([site, email])
+  @@index([userId])
+  @@index([site])
+}
