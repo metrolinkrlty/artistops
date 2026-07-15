@@ -486,6 +486,26 @@ model ArtistSite {
   @@index([userId])
 }
 
+// A track featured on an artist's public website. Audio lives in the private
+// `audio` bucket at previewPath/fullPath; the site streams previews via signed
+// URLs and the full track only after an email unlock. Managed per ArtistSite slug.
+model SiteTrack {
+  id          String   @id @default(cuid())
+  userId      String?
+  site        String
+  trackId     String
+  title       String
+  order       Int      @default(0)
+  previewPath String
+  fullPath    String
+  durationSec Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@unique([site, trackId])
+  @@index([site])
+  @@index([userId])
+}
+
 // A mailing-list / listener email captured from an artist's public website.
 // `site` is the ArtistSite slug. notifyOptIn = true means they explicitly asked
 // to hear about future releases and show dates (vs. an email captured only to
