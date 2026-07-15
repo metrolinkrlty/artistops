@@ -31,6 +31,7 @@ export async function GET(
       bio: true,
       heroImageUrl: true,
       socialLinks: true,
+      contactEmail: true,
     },
   });
 

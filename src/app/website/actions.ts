@@ -53,6 +53,27 @@ export async function saveArtistSite(formData: FormData) {
   const location = String(formData.get("location") || "").trim() || null;
   const bio = String(formData.get("bio") || "").trim() || null;
 
+  const email = (field: string) => {
+    const v = String(formData.get(field) || "").trim();
+    if (!v) return null;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return { invalid: v };
+    return v;
+  };
+  const contactEmail = email("contactEmail");
+  const notifyEmail = email("notifyEmail");
+  const mailFromEmail = email("mailFromEmail");
+  const mailReplyTo = email("mailReplyTo");
+  for (const [label, val] of [
+    ["Contact email", contactEmail],
+    ["Notify email", notifyEmail],
+    ["Mailing from", mailFromEmail],
+    ["Reply-to", mailReplyTo],
+  ] as const) {
+    if (val && typeof val === "object") {
+      return { ok: false, error: `${label} is not a valid email address.` };
+    }
+  }
+
   const socialLinks: SocialLinks = {};
   for (const key of SOCIAL_KEYS) {
     const val = String(formData.get(`social_${key}`) || "").trim();
@@ -65,10 +86,17 @@ export async function saveArtistSite(formData: FormData) {
     return { ok: false, error: `The slug "${slug}" is already taken.` };
   }
 
+  const emailFields = {
+    contactEmail: contactEmail as string | null,
+    notifyEmail: notifyEmail as string | null,
+    mailFromEmail: mailFromEmail as string | null,
+    mailReplyTo: mailReplyTo as string | null,
+  };
+
   await prisma.artistSite.upsert({
     where: { userId },
-    create: { userId, slug, displayName, tagline, location, bio, socialLinks },
-    update: { slug, displayName, tagline, location, bio, socialLinks },
+    create: { userId, slug, displayName, tagline, location, bio, socialLinks, ...emailFields },
+    update: { slug, displayName, tagline, location, bio, socialLinks, ...emailFields },
   });
 
   // Keep this artist's existing subscribers pointed at the (possibly new) slug.

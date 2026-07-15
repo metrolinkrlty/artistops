@@ -481,6 +481,11 @@ model ArtistSite {
   socialLinks     Json?
   featuredSongIds String[]
   previewSeconds  Int      @default(30)
+  // Artist-controlled email settings (Phase 3):
+  contactEmail    String?  // public booking/contact address shown on the site
+  notifyEmail     String?  // where new mailing-list signups are reported (internal)
+  mailFromEmail   String?  // From address for the artist's outbound mailing-list email
+  mailReplyTo     String?  // Reply-To for the artist's outbound mailing-list email
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   @@index([userId])

@@ -12,7 +12,18 @@ type ArtistSite = {
   location: string | null;
   bio: string | null;
   socialLinks: unknown;
+  contactEmail: string | null;
+  notifyEmail: string | null;
+  mailFromEmail: string | null;
+  mailReplyTo: string | null;
 } | null;
+
+const EMAIL_FIELDS: { key: "contactEmail" | "notifyEmail" | "mailFromEmail" | "mailReplyTo"; label: string; hint: string; placeholder: string }[] = [
+  { key: "contactEmail", label: "Contact / booking email", hint: "Shown publicly on your website for fans and bookers.", placeholder: "booking@yourdomain.com" },
+  { key: "notifyEmail", label: "Notify me of new signups", hint: "Private — we email you here when someone joins your mailing list.", placeholder: "you@yourdomain.com" },
+  { key: "mailFromEmail", label: "Mailing list — From address", hint: "The From address on emails you send to your list.", placeholder: "hello@yourdomain.com" },
+  { key: "mailReplyTo", label: "Mailing list — Reply-To", hint: "Where replies to your mailing-list emails go.", placeholder: "you@yourdomain.com" },
+];
 
 type Subscriber = {
   id: string;
@@ -121,6 +132,26 @@ export default function WebsiteClient({
                     placeholder={f.placeholder}
                     type="url"
                   />
+                </Field>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-1 text-sm font-semibold text-foreground">Email</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Control the email addresses tied to your website and mailing list.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {EMAIL_FIELDS.map((f) => (
+                <Field key={f.key} label={f.label}>
+                  <Input
+                    name={f.key}
+                    defaultValue={site?.[f.key] ?? ""}
+                    placeholder={f.placeholder}
+                    type="email"
+                  />
+                  <span className="text-xs text-muted-foreground">{f.hint}</span>
                 </Field>
               ))}
             </div>

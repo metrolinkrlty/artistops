@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/email";
 
 // Public endpoint: an artist's website posts a captured email here.
 // notifyOptIn=true means the visitor explicitly asked to hear about future
@@ -59,7 +60,13 @@ export async function POST(
   // in that artist's dashboard. Still store even if no site row exists yet.
   const site = await prisma.artistSite.findUnique({
     where: { slug },
-    select: { userId: true },
+    select: { userId: true, notifyEmail: true, mailReplyTo: true, displayName: true },
+  });
+
+  // Only notify the artist about brand-new signups (not re-submits).
+  const existing = await prisma.mailingSubscriber.findUnique({
+    where: { site_email: { site: slug, email } },
+    select: { id: true },
   });
 
   try {
@@ -88,5 +95,35 @@ export async function POST(
     );
   }
 
+  // Fire-and-forget notification to the artist's chosen address (if set).
+  if (!existing && site?.notifyEmail) {
+    const who = site.displayName || slug;
+    const subject = `New mailing-list signup — ${who}`;
+    const html = signupNotificationHtml(who, email, notifyOptIn, source);
+    // Don't block the response or fail the signup if email is down.
+    sendEmail(site.notifyEmail, subject, html, site.mailReplyTo || undefined).catch(
+      () => {}
+    );
+  }
+
   return NextResponse.json({ ok: true }, { headers: CORS });
+}
+
+function signupNotificationHtml(
+  who: string,
+  email: string,
+  notifyOptIn: boolean,
+  source: string | null
+): string {
+  return `
+  <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">
+    <h2 style="margin:0 0 8px">New signup for ${who}</h2>
+    <p style="color:#8b8fa8;margin:0 0 20px">Someone just joined from your website.</p>
+    <div style="background:#1a1d27;border:1px solid #334155;border-radius:10px;padding:16px;margin-bottom:20px">
+      <p style="margin:0 0 6px"><strong>Email:</strong> ${email}</p>
+      <p style="margin:0 0 6px"><strong>Wants release &amp; show updates:</strong> ${notifyOptIn ? "Yes" : "No"}</p>
+      <p style="margin:0"><strong>Source:</strong> ${source || "website"}</p>
+    </div>
+    <a href="https://artistops.net/website" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">View your mailing list</a>
+  </div>`;
 }
