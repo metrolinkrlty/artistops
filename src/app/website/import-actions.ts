@@ -30,6 +30,28 @@ function isHttpUrl(v: string): boolean {
   }
 }
 
+// Turn a fetch/network failure into a message that points at the real cause,
+// so an SSL/DNS/timeout problem doesn't get reported as "couldn't read the page".
+function describeFetchFailure(err: unknown): string {
+  const e = err as { name?: string; message?: string; cause?: { code?: string } };
+  const code = e?.cause?.code ?? "";
+  if (e?.name === "AbortError") {
+    return "That website took too long to respond. Try again in a moment.";
+  }
+  if (code.includes("SSL") || code.includes("TLS") || code.startsWith("ERR_TLS")) {
+    return "Couldn't establish a secure (HTTPS) connection to that site — its SSL certificate may be missing, expired, or misconfigured. Open the site in a browser to confirm it loads, then try again.";
+  }
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") {
+    return "Couldn't find that website — double-check the address.";
+  }
+  if (code === "ECONNREFUSED" || code === "ECONNRESET" || code.startsWith("UND_ERR")) {
+    return "That website refused the connection. Make sure it's online, then try again.";
+  }
+  const status = e?.message?.match(/Fetch failed \((\d+)\)/);
+  if (status) return `That website returned an error (HTTP ${status[1]}).`;
+  return "Couldn't load that website. Check the URL and try again.";
+}
+
 type Extracted = {
   displayName: string;
   tagline: string;
@@ -113,8 +135,8 @@ export async function importFromWebsite(
       accept: "text/html",
     });
     html = cleanHtmlForModel(decodeHtml(bytes));
-  } catch {
-    return { ok: false, error: "Couldn't load that website. Check the URL and try again." };
+  } catch (err) {
+    return { ok: false, error: describeFetchFailure(err) };
   }
   if (html.length < 200) {
     return { ok: false, error: "That page didn't have enough content to import." };
