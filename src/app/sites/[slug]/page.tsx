@@ -1,10 +1,13 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { Show } from "@/app/website/site-fields";
+import { unlockCookieName } from "@/app/sites/unlock";
 import SiteMusic from "./SiteMusic";
 import SiteMailingList from "./SiteMailingList";
+import SiteAnalytics from "./SiteAnalytics";
 
 export const dynamic = "force-dynamic";
 
@@ -39,11 +42,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function ArtistSitePage({ params }: Params) {
   const { slug } = await params;
-  const [site, trackCount] = await Promise.all([
+  const [site, trackCount, cookieStore] = await Promise.all([
     getSite(slug),
     prisma.siteTrack.count({ where: { site: slug } }),
+    cookies(),
   ]);
   if (!site) notFound();
+
+  const unlocked = cookieStore.get(unlockCookieName(slug))?.value === "1";
 
   const accent =
     site.themeColor && /^#[0-9a-fA-F]{6}$/.test(site.themeColor)
@@ -59,6 +65,8 @@ export default async function ArtistSitePage({ params }: Params) {
   const shows: Show[] = Array.isArray(site.shows) ? (site.shows as Show[]) : [];
   const hidden = site.hiddenSections ?? [];
   const showShows = !hidden.includes("shows");
+  const gallery = site.galleryImages ?? [];
+  const showGallery = !hidden.includes("gallery") && gallery.length > 0;
   const hasMusic = trackCount > 0;
   const ctaPrimary = site.heroCtaPrimary?.trim() || "Listen";
   const ctaSecondary = site.heroCtaSecondary?.trim() || "Join the Mailing List";
@@ -66,12 +74,14 @@ export default async function ArtistSitePage({ params }: Params) {
   const nav = [
     hasMusic && { href: "#music", label: "Music" },
     bioParagraphs.length && { href: "#about", label: "About" },
+    showGallery && { href: "#gallery", label: "Gallery" },
     showShows && { href: "#shows", label: "Shows" },
     { href: "#mailing-list", label: "Mailing List" },
   ].filter(Boolean) as { href: string; label: string }[];
 
   return (
     <div style={themeStyle} className="min-h-screen bg-neutral-950 text-neutral-100">
+      <SiteAnalytics ownerId={site.userId} />
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
@@ -132,7 +142,7 @@ export default async function ArtistSitePage({ params }: Params) {
           <section id="music" className="scroll-mt-20 py-24">
             <div className="mx-auto max-w-3xl px-6">
               <SectionHeading kicker="Listen" title="Music" accent={accent} />
-              <SiteMusic slug={slug} />
+              <SiteMusic slug={slug} initiallyUnlocked={unlocked} />
             </div>
           </section>
         )}
@@ -145,6 +155,28 @@ export default async function ArtistSitePage({ params }: Params) {
               <div className="space-y-5 text-lg leading-relaxed text-neutral-200">
                 {bioParagraphs.map((p, i) => (
                   <p key={i}>{p}</p>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Gallery */}
+        {showGallery && (
+          <section id="gallery" className="scroll-mt-20 py-24">
+            <div className="mx-auto max-w-5xl px-6">
+              <SectionHeading kicker="On Stage" title="Gallery" accent={accent} />
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+                {gallery.map((src, i) => (
+                  <div
+                    key={i}
+                    className={`overflow-hidden rounded-lg border border-white/10 bg-white/[0.03] ${
+                      i === 0 ? "col-span-2 row-span-2" : ""
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 hover:scale-105" />
+                  </div>
                 ))}
               </div>
             </div>

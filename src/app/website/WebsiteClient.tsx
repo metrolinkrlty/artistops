@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { saveArtistSite, deleteSubscriber, type SocialLinks } from "./actions";
+import {
+  saveArtistSite,
+  deleteSubscriber,
+  uploadSiteImage,
+  clearHeroImage,
+  removeGalleryImage,
+  type SocialLinks,
+} from "./actions";
 import { SECTION_KEYS, type Show } from "./site-fields";
 import AiEditor from "./AiEditor";
 
@@ -22,6 +30,8 @@ type ArtistSite = {
   themeColor: string | null;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
+  heroImageUrl: string | null;
+  galleryImages: string[];
   hiddenSections: string[];
   shows: unknown;
   socialLinks: unknown;
@@ -322,6 +332,9 @@ export default function WebsiteClient({
         </form>
       </section>
 
+      {/* Images */}
+      <ImageManager heroImageUrl={site?.heroImageUrl ?? null} galleryImages={site?.galleryImages ?? []} disabled={!site?.slug} />
+
       {/* Mailing list */}
       <section className="rounded-xl border border-border bg-card p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -364,6 +377,95 @@ export default function WebsiteClient({
         )}
       </section>
     </div>
+  );
+}
+
+function ImageManager({
+  heroImageUrl,
+  galleryImages,
+  disabled,
+}: {
+  heroImageUrl: string | null;
+  galleryImages: string[];
+  disabled: boolean;
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<"hero" | "gallery" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const heroInput = useRef<HTMLInputElement>(null);
+  const galleryInput = useRef<HTMLInputElement>(null);
+  const [pending, startTransition] = useTransition();
+
+  async function upload(kind: "hero" | "gallery", input: HTMLInputElement | null) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    setBusy(kind);
+    setError(null);
+    const fd = new FormData();
+    fd.set("kind", kind);
+    fd.set("file", file);
+    const res = await uploadSiteImage(fd);
+    setBusy(null);
+    if (input) input.value = "";
+    if (!res.ok) setError(res.error || "Upload failed.");
+    else router.refresh();
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-6">
+      <h2 className="mb-1 text-lg font-semibold">Images</h2>
+      <p className="mb-5 text-sm text-muted-foreground">
+        {disabled ? "Save your site details first, then add photos." : "Upload a hero background and gallery photos for your site."}
+      </p>
+
+      <div className="space-y-6">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-foreground">Hero background</h3>
+          <div className="flex flex-wrap items-center gap-4">
+            {heroImageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={heroImageUrl} alt="Hero" className="h-20 w-32 rounded-lg border border-border object-cover" />
+            )}
+            <div className="flex items-center gap-2">
+              <input ref={heroInput} type="file" accept="image/*" disabled={disabled || busy === "hero"} onChange={() => upload("hero", heroInput.current)} className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-foreground" />
+              {busy === "hero" && <span className="text-xs text-muted-foreground">Uploading…</span>}
+              {heroImageUrl && (
+                <Button variant="ghost" size="xs" disabled={pending} onClick={() => startTransition(() => { clearHeroImage().then(() => router.refresh()); })}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-foreground">Gallery</h3>
+          {galleryImages.length > 0 && (
+            <div className="mb-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+              {galleryImages.map((url) => (
+                <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="aspect-square w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => startTransition(() => { removeGalleryImage(url).then(() => router.refresh()); })}
+                    className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input ref={galleryInput} type="file" accept="image/*" disabled={disabled || busy === "gallery"} onChange={() => upload("gallery", galleryInput.current)} className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-foreground" />
+            {busy === "gallery" && <span className="text-xs text-muted-foreground">Uploading…</span>}
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+    </section>
   );
 }
 

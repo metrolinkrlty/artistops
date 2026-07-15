@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
+import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
 import { SECTION_KEYS, type Show } from "./site-fields";
 
 export type SocialLinks = {
@@ -185,6 +186,84 @@ export async function getSubscribers() {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+const IMAGE_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+// Uploads a hero or gallery image to Supabase and records its public URL on the
+// artist's site. kind = "hero" (single) | "gallery" (appended).
+export async function uploadSiteImage(formData: FormData) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { slug: true, galleryImages: true },
+  });
+  if (!site) return { ok: false, error: "Save your site details first." };
+
+  const kind = String(formData.get("kind") || "");
+  if (kind !== "hero" && kind !== "gallery") {
+    return { ok: false, error: "Invalid image type." };
+  }
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Choose an image to upload." };
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, error: "Image must be under 8 MB." };
+  }
+  const ext = IMAGE_EXT[file.type];
+  if (!ext) {
+    return { ok: false, error: "Use a JPG, PNG, WebP, or GIF image." };
+  }
+
+  // Make sure the (public) bucket exists; ignore "already exists".
+  await supabaseAdmin.storage.createBucket(IMAGE_BUCKET, { public: true }).catch(() => {});
+
+  const path = `sites/${site.slug}/${kind}-${Date.now()}.${ext}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { error: upErr } = await supabaseAdmin.storage
+    .from(IMAGE_BUCKET)
+    .upload(path, bytes, { contentType: file.type, upsert: true });
+  if (upErr) return { ok: false, error: "Upload failed. Try again." };
+
+  const { data } = supabaseAdmin.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+  const url = data.publicUrl;
+
+  if (kind === "hero") {
+    await prisma.artistSite.update({ where: { userId }, data: { heroImageUrl: url } });
+  } else {
+    await prisma.artistSite.update({
+      where: { userId },
+      data: { galleryImages: [...site.galleryImages, url] },
+    });
+  }
+  revalidatePath("/website");
+  return { ok: true, url };
+}
+
+export async function clearHeroImage() {
+  const userId = await requireUserId();
+  await prisma.artistSite.update({ where: { userId }, data: { heroImageUrl: null } });
+  revalidatePath("/website");
+}
+
+export async function removeGalleryImage(url: string) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { galleryImages: true },
+  });
+  if (!site) return;
+  await prisma.artistSite.update({
+    where: { userId },
+    data: { galleryImages: site.galleryImages.filter((u) => u !== url) },
+  });
+  revalidatePath("/website");
 }
 
 export async function deleteSubscriber(id: string) {

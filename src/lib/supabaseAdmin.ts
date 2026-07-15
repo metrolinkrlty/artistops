@@ -9,3 +9,4 @@ export const supabaseAdmin = createClient(
 );
 
 export const AUDIO_BUCKET = "audio";
+export const IMAGE_BUCKET = "site-images";
