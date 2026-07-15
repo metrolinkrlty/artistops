@@ -109,7 +109,7 @@ export default function PixelClient({ pixels, events }: { pixels: Pixel[]; event
       {/* Pixels */}
       <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
         <h2 className="text-white font-semibold mb-1">Your Pixels</h2>
-        <p className="text-[#8b8fa8] text-sm mb-4">Each pixel has its own ID and snippet — use a separate one per website to keep the data separate.</p>
+        <p className="text-[#8b8fa8] text-sm mb-4">Each pixel has its own ID and snippet — use a separate one per website, and name it after that site&apos;s domain (e.g. lukecorliss.com) so the install instructions point to the right place.</p>
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {pixels.map((p) => (
             <div
@@ -135,7 +135,7 @@ export default function PixelClient({ pixels, events }: { pixels: Pixel[]; event
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder="New pixel name (e.g. artistops.net)"
+            placeholder="Website domain (e.g. lukecorliss.com)"
             className="bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500 w-72"
           />
           <button
