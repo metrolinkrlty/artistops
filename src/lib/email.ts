@@ -5,6 +5,34 @@ import nodemailer from "nodemailer";
 // falls back to InMotion SMTP (SMTP_HOST/PORT/USER/PASS) if Resend isn't set.
 // If neither is configured, it skips gracefully instead of throwing.
 export async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  // Prefer the artist's own SMTP mail server (InMotion) when configured.
+  // Only fall back to Resend if SMTP isn't set up.
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = parseInt(process.env.SMTP_PORT || "465", 10);
+
+  if (host && user && pass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host, port, secure: port === 465,
+        auth: { user, pass },
+      });
+
+      await transporter.sendMail({
+        from: `ArtistOps <${user}>`,
+        to, subject, html,
+        ...(replyTo ? { replyTo } : {}),
+      });
+
+      return { ok: true };
+    } catch (e) {
+      console.error("[email] SMTP send failed:", e);
+      return { ok: false, error: "Failed to send email." };
+    }
+  }
+
+  // Fallback: Resend REST API.
   const resendKey = process.env.RESEND_API_KEY;
   const resendFrom = process.env.RESEND_FROM;
 
@@ -36,34 +64,8 @@ export async function sendEmail(to: string, subject: string, html: string, reply
     }
   }
 
-  // Fallback: InMotion SMTP.
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const port = parseInt(process.env.SMTP_PORT || "465", 10);
-
-  if (!host || !user || !pass) {
-    console.warn("[email] No Resend or SMTP config — email not sent.");
-    return { ok: false, skipped: true, error: "Email is not configured yet." };
-  }
-
-  try {
-    const transporter = nodemailer.createTransport({
-      host, port, secure: port === 465,
-      auth: { user, pass },
-    });
-
-    await transporter.sendMail({
-      from: `ArtistOps <${user}>`,
-      to, subject, html,
-      ...(replyTo ? { replyTo } : {}),
-    });
-
-    return { ok: true };
-  } catch (e) {
-    console.error("[email] SMTP send failed:", e);
-    return { ok: false, error: "Failed to send email." };
-  }
+  console.warn("[email] No SMTP or Resend config — email not sent.");
+  return { ok: false, skipped: true, error: "Email is not configured yet." };
 }
 
 export function adminSignupNotificationHtml(artistName: string, email: string): string {
