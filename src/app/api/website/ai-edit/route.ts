@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import type { SocialLinks, Show } from "@/app/website/actions";
+import type { SocialLinks } from "@/app/website/actions";
+import type { Show } from "@/app/website/site-fields";
 
 // Tier 1 "vibe editor": the artist chats in plain English and Claude edits
 // their ArtistSite config through a small set of tools. The brain lives here in

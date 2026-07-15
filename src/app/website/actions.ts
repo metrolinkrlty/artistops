@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
+import { SECTION_KEYS, type Show } from "./site-fields";
 
 export type SocialLinks = {
   instagram?: string;
@@ -26,15 +27,6 @@ const SOCIAL_KEYS: (keyof SocialLinks)[] = [
   "website",
 ];
 
-// Sections the artist can hide on their public site.
-export const SECTION_KEYS = ["gallery", "shows"] as const;
-
-export type Show = {
-  date: string;
-  venue: string;
-  city: string;
-  ticketUrl: string;
-};
 
 function slugify(input: string): string {
   return input

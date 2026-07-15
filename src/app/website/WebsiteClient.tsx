@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { saveArtistSite, deleteSubscriber, SECTION_KEYS, type SocialLinks, type Show } from "./actions";
+import { saveArtistSite, deleteSubscriber, type SocialLinks } from "./actions";
+import { SECTION_KEYS, type Show } from "./site-fields";
 import AiEditor from "./AiEditor";
 
 const SECTION_LABELS: Record<(typeof SECTION_KEYS)[number], string> = {
