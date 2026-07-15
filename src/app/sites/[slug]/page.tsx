@@ -1,0 +1,236 @@
+import type { CSSProperties } from "react";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import type { Show } from "@/app/website/site-fields";
+import SiteMusic from "./SiteMusic";
+import SiteMailingList from "./SiteMailingList";
+
+export const dynamic = "force-dynamic";
+
+type Params = { params: Promise<{ slug: string }> };
+
+const SOCIAL_ORDER: { key: string; label: string }[] = [
+  { key: "spotify", label: "Spotify" },
+  { key: "appleMusic", label: "Apple Music" },
+  { key: "youtube", label: "YouTube" },
+  { key: "instagram", label: "Instagram" },
+  { key: "facebook", label: "Facebook" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "bandcamp", label: "Bandcamp" },
+  { key: "website", label: "Website" },
+];
+
+const DEFAULT_ACCENT = "#e0a530";
+
+function getSite(slug: string) {
+  return prisma.artistSite.findUnique({ where: { slug } });
+}
+
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const { slug } = await params;
+  const site = await getSite(slug);
+  if (!site) return { title: "Site not found" };
+  return {
+    title: site.tagline ? `${site.displayName} — ${site.tagline}` : site.displayName,
+    description: site.heroSubtext || site.bio || undefined,
+  };
+}
+
+export default async function ArtistSitePage({ params }: Params) {
+  const { slug } = await params;
+  const [site, trackCount] = await Promise.all([
+    getSite(slug),
+    prisma.siteTrack.count({ where: { site: slug } }),
+  ]);
+  if (!site) notFound();
+
+  const accent =
+    site.themeColor && /^#[0-9a-fA-F]{6}$/.test(site.themeColor)
+      ? site.themeColor
+      : DEFAULT_ACCENT;
+  const themeStyle = { "--accent": accent } as CSSProperties;
+
+  const social = (site.socialLinks as Record<string, string> | null) || {};
+  const socialLinks = SOCIAL_ORDER.filter((s) => social[s.key]);
+  const bioParagraphs = site.bio
+    ? site.bio.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+    : [];
+  const shows: Show[] = Array.isArray(site.shows) ? (site.shows as Show[]) : [];
+  const hidden = site.hiddenSections ?? [];
+  const showShows = !hidden.includes("shows");
+  const hasMusic = trackCount > 0;
+  const ctaPrimary = site.heroCtaPrimary?.trim() || "Listen";
+  const ctaSecondary = site.heroCtaSecondary?.trim() || "Join the Mailing List";
+
+  const nav = [
+    hasMusic && { href: "#music", label: "Music" },
+    bioParagraphs.length && { href: "#about", label: "About" },
+    showShows && { href: "#shows", label: "Shows" },
+    { href: "#mailing-list", label: "Mailing List" },
+  ].filter(Boolean) as { href: string; label: string }[];
+
+  return (
+    <div style={themeStyle} className="min-h-screen bg-neutral-950 text-neutral-100">
+      {/* Nav */}
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <a href="#top" className="text-lg font-semibold uppercase tracking-[0.15em]" style={{ color: accent }}>
+            {site.displayName}
+          </a>
+          <nav className="hidden gap-7 sm:flex">
+            {nav.map((l) => (
+              <a key={l.href} href={l.href} className="text-sm uppercase tracking-widest text-neutral-400 transition hover:text-neutral-100">
+                {l.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <main id="top">
+        {/* Hero */}
+        <section className="relative isolate overflow-hidden">
+          {site.heroImageUrl ? (
+            <>
+              <div className="absolute inset-0 -z-10 bg-cover bg-center" style={{ backgroundImage: `url('${site.heroImageUrl}')` }} />
+              <div className="absolute inset-0 -z-10 bg-gradient-to-b from-neutral-950/70 via-neutral-950/60 to-neutral-950" />
+            </>
+          ) : (
+            <div
+              className="absolute inset-0 -z-10"
+              style={{ background: `radial-gradient(90% 80% at 20% 0%, ${accent}22, transparent 60%), #0a0a0a` }}
+            />
+          )}
+          <div className="mx-auto flex min-h-[78vh] max-w-5xl flex-col justify-end px-6 pb-20 pt-40">
+            {site.location && (
+              <p className="mb-4 text-sm uppercase tracking-[0.35em]" style={{ color: accent }}>
+                {site.location}
+              </p>
+            )}
+            <h1 className="text-5xl font-bold uppercase leading-[0.95] tracking-tight sm:text-7xl">
+              {site.displayName}
+            </h1>
+            {site.heroSubtext && (
+              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-neutral-200">{site.heroSubtext}</p>
+            )}
+            <div className="mt-8 flex flex-wrap gap-4">
+              {hasMusic && (
+                <a href="#music" className="rounded-lg px-7 py-3 font-semibold text-neutral-950 transition" style={{ backgroundColor: accent }}>
+                  {ctaPrimary}
+                </a>
+              )}
+              <a href="#mailing-list" className="rounded-lg border border-white/20 px-7 py-3 font-semibold text-neutral-100 transition hover:border-white/50">
+                {ctaSecondary}
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Music */}
+        {hasMusic && (
+          <section id="music" className="scroll-mt-20 py-24">
+            <div className="mx-auto max-w-3xl px-6">
+              <SectionHeading kicker="Listen" title="Music" accent={accent} />
+              <SiteMusic slug={slug} />
+            </div>
+          </section>
+        )}
+
+        {/* About */}
+        {bioParagraphs.length > 0 && (
+          <section id="about" className="scroll-mt-20 border-y border-white/10 bg-white/[0.02] py-24">
+            <div className="mx-auto max-w-3xl px-6">
+              <SectionHeading kicker="About" title={`About ${site.displayName}`} accent={accent} />
+              <div className="space-y-5 text-lg leading-relaxed text-neutral-200">
+                {bioParagraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Shows */}
+        {showShows && (
+          <section id="shows" className="scroll-mt-20 py-24">
+            <div className="mx-auto max-w-3xl px-6">
+              <SectionHeading kicker="Live" title="Upcoming Shows" accent={accent} center />
+              {shows.length > 0 ? (
+                <ul className="space-y-3">
+                  {shows.map((s, i) => (
+                    <li key={i} className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-semibold uppercase tracking-wide" style={{ color: accent }}>{s.date}</p>
+                        <p className="text-neutral-100">
+                          {s.venue}
+                          {s.city && <span className="text-neutral-400"> · {s.city}</span>}
+                        </p>
+                      </div>
+                      {s.ticketUrl && (
+                        <a href={s.ticketUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 rounded-lg border px-5 py-2 text-center text-sm font-semibold uppercase tracking-widest transition hover:text-neutral-950" style={{ borderColor: accent, color: accent }}>
+                          Tickets
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-8 py-14 text-center">
+                  <p className="text-2xl font-semibold uppercase tracking-wide" style={{ color: accent }}>Dates to be announced</p>
+                  <p className="mt-3 text-neutral-400">Join the list to hear about new shows first.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Mailing list */}
+        <section id="mailing-list" className="scroll-mt-20 border-t border-white/10 bg-white/[0.02] py-24">
+          <div className="mx-auto max-w-3xl px-6 text-center">
+            <SectionHeading kicker="Stay in Touch" title="Join the Mailing List" accent={accent} center />
+            <p className="mx-auto mb-8 max-w-xl text-neutral-400">
+              First word on new music and show dates. No spam — just the good stuff.
+            </p>
+            <SiteMailingList slug={slug} />
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-10">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-5 px-6">
+          {socialLinks.length > 0 && (
+            <nav className="flex flex-wrap items-center justify-center gap-3">
+              {socialLinks.map((s) => (
+                <a key={s.key} href={social[s.key]} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/15 px-4 py-1.5 text-xs uppercase tracking-widest text-neutral-400 transition hover:text-neutral-100" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
+                  {s.label}
+                </a>
+              ))}
+            </nav>
+          )}
+          {site.contactEmail && (
+            <p className="text-xs uppercase tracking-widest text-neutral-500">
+              Booking &amp; contact:{" "}
+              <a href={`mailto:${site.contactEmail}`} className="transition hover:text-neutral-200" style={{ color: accent }}>
+                {site.contactEmail}
+              </a>
+            </p>
+          )}
+          <p className="text-sm text-neutral-500">
+            &copy; {new Date().getFullYear()} {site.displayName}
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function SectionHeading({ kicker, title, accent, center }: { kicker: string; title: string; accent: string; center?: boolean }) {
+  return (
+    <div className={`mb-8 ${center ? "text-center" : ""}`}>
+      <p className="mb-2 text-sm uppercase tracking-[0.3em]" style={{ color: accent }}>{kicker}</p>
+      <h2 className="text-4xl font-bold uppercase tracking-tight sm:text-5xl">{title}</h2>
+    </div>
+  );
+}

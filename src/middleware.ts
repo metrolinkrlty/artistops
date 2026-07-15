@@ -5,7 +5,7 @@ const PUBLIC_PREFIXES = [
   "/login", "/forgot-password", "/reset-password", "/pending-approval",
   "/api/login", "/api/signup", "/api/logout", "/api/forgot-password", "/api/reset-password",
   "/api/user-status", "/listen/", "/api/pixel", "/api/smart-link-click",
-  "/api/site/",
+  "/api/site/", "/sites/",
 ];
 
 const IMPERSONATE_COOKIE = "ao_impersonate";

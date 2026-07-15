@@ -131,6 +131,24 @@ export default function WebsiteClient({
 
   return (
     <div className="space-y-8 p-6">
+      {/* Live site link */}
+      {site?.slug && (
+        <a
+          href={`/sites/${site.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between rounded-xl border border-border bg-card px-6 py-4 transition hover:border-primary"
+        >
+          <div>
+            <p className="text-sm font-semibold text-foreground">Your website is live</p>
+            <p className="text-sm text-muted-foreground">
+              /sites/{site.slug} — click to view it in a new tab
+            </p>
+          </div>
+          <span className="text-sm font-medium text-primary">View site →</span>
+        </a>
+      )}
+
       {/* Conversational AI editor */}
       <AiEditor />
 
