@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { saveArtistSite, deleteSubscriber, type SocialLinks } from "./actions";
+import AiEditor from "./AiEditor";
 
 type ArtistSite = {
   slug: string;
@@ -110,6 +111,9 @@ export default function WebsiteClient({
 
   return (
     <div className="space-y-8 p-6">
+      {/* Conversational AI editor */}
+      <AiEditor />
+
       {/* Site settings */}
       <section className="rounded-xl border border-border bg-card p-6">
         <h2 className="mb-1 text-lg font-semibold">Site details</h2>
