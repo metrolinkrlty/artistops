@@ -48,5 +48,19 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ ok: true, site }, { headers: CORS });
+  // The website tracking pixel is data-driven: the external site reads this and
+  // installs the pixel with no redeploy. Queried separately and defensively so
+  // that a DB not yet carrying `websitePixelId` still serves site content.
+  let pixelId: string | null = null;
+  try {
+    const p = await prisma.artistSite.findUnique({
+      where: { slug },
+      select: { websitePixelId: true },
+    });
+    pixelId = p?.websitePixelId ?? null;
+  } catch {
+    pixelId = null;
+  }
+
+  return NextResponse.json({ ok: true, site: { ...site, pixelId } }, { headers: CORS });
 }

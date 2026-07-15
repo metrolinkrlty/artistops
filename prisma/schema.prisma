@@ -486,6 +486,7 @@ model ArtistSite {
   heroCtaSecondary String? // label for the secondary hero button
   galleryImages   String[] @default([]) // public URLs of gallery photos
   socialLinks     Json?
+  websitePixelId  String?  // which Pixel powers the artist's external website (data-driven install, no redeploy)
   featuredSongIds String[]
   previewSeconds  Int      @default(30)
   // Artist-controlled email settings (Phase 3):

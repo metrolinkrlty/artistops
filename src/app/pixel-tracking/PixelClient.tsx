@@ -1,8 +1,8 @@
 "use client";
-import { Search, Copy, Check, Plus, Trash2 } from "lucide-react";
+import { Search, Copy, Check, Plus, Trash2, Globe } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createPixel, deletePixel } from "./actions";
+import { createPixel, deletePixel, setWebsitePixel } from "./actions";
 
 const eventColors: Record<string, string> = {
   page_view: "bg-blue-500/20 text-blue-400",
@@ -63,9 +63,16 @@ type Event = {
   utmSource: string | null; utmCampaign: string | null; createdAt: string;
 };
 
-export default function PixelClient({ pixels, events }: { pixels: Pixel[]; events: Event[] }) {
+export default function PixelClient({ pixels, events, websitePixelId }: { pixels: Pixel[]; events: Event[]; websitePixelId: string | null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+
+  const handleSetWebsite = (id: string | null) => {
+    startTransition(async () => {
+      await setWebsitePixel(id);
+      router.refresh();
+    });
+  };
   const [selected, setSelected] = useState<string | null>(pixels[0]?.id ?? null);
   const [search, setSearch] = useState("");
   const [copied, setCopied] = useState(false);
@@ -118,6 +125,7 @@ export default function PixelClient({ pixels, events }: { pixels: Pixel[]; event
               className={`group flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg text-sm cursor-pointer border transition-colors ${selected === p.id ? "bg-indigo-600/20 border-indigo-500 text-white" : "border-[#2a2d3a] text-[#8b8fa8] hover:text-white"}`}
             >
               <span>{p.name}</span>
+              {p.id === websitePixelId && <Globe className="w-3.5 h-3.5 text-green-400" aria-label="Installed on your website" />}
               <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(p.id); }}
                 disabled={pending}
@@ -154,12 +162,21 @@ export default function PixelClient({ pixels, events }: { pixels: Pixel[]; event
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-white font-semibold">Tracking Snippet — {selectedName}</h2>
-              <p className="text-[#8b8fa8] text-sm mt-1">Paste this before the &lt;/body&gt; tag on {selectedName || "your website"}</p>
+              <p className="text-[#8b8fa8] text-sm mt-1">On an ArtistOps-connected site, click &ldquo;Use on my website&rdquo; below — no code, no redeploy. For a site built elsewhere, paste this before the &lt;/body&gt; tag on {selectedName || "your website"}.</p>
             </div>
             <button onClick={handleCopy} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copied ? "Copied!" : "Copy"}
             </button>
           </div>
+          {selected === websitePixelId ? (
+            <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-400">
+              <Globe className="w-4 h-4 shrink-0" /> Installed on your ArtistOps website automatically — changes take effect with no redeploy.
+            </div>
+          ) : (
+            <button onClick={() => handleSetWebsite(selected)} disabled={pending} className="mb-4 flex items-center gap-2 rounded-lg border border-indigo-500/40 bg-indigo-600/20 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-600/30 disabled:opacity-50">
+              <Globe className="w-4 h-4 shrink-0" /> Use this pixel on my ArtistOps website (no redeploy)
+            </button>
+          )}
           <pre className="bg-[#0f1117] border border-[#2a2d3a] rounded-lg p-4 text-xs text-green-300 overflow-x-auto whitespace-pre-wrap">{snippet}</pre>
         </div>
       )}

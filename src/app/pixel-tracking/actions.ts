@@ -31,6 +31,40 @@ export async function deletePixel(id: string) {
   revalidatePath("/pixel-tracking");
 }
 
+// Which pixel (if any) the artist has designated for their external website.
+// Read defensively so a not-yet-migrated DB still renders the page.
+export async function getWebsitePixelId(): Promise<string | null> {
+  const userId = await requireUserId();
+  try {
+    const site = await prisma.artistSite.findUnique({
+      where: { userId },
+      select: { websitePixelId: true },
+    });
+    return site?.websitePixelId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Designate (or clear) the pixel that powers the artist's external website.
+// The site reads this from its config and installs the pixel with no redeploy.
+export async function setWebsitePixel(
+  pixelId: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  if (pixelId) {
+    const owned = await prisma.pixel.findFirst({ where: { id: pixelId, userId }, select: { id: true } });
+    if (!owned) return { ok: false, error: "That pixel doesn't exist." };
+  }
+  try {
+    await prisma.artistSite.update({ where: { userId }, data: { websitePixelId: pixelId } });
+  } catch {
+    return { ok: false, error: "Couldn't save — set up your website first, then try again." };
+  }
+  revalidatePath("/pixel-tracking");
+  return { ok: true };
+}
+
 export async function getPixelEvents() {
   const userId = await requireUserId();
   const events = await prisma.pixelEvent.findMany({
