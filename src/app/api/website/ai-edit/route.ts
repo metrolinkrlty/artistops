@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { describeAiError } from "@/lib/webImport";
 import type { SocialLinks } from "@/app/website/actions";
 import type { Show } from "@/app/website/site-fields";
 
@@ -419,7 +420,7 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[ai-edit] Anthropic error", err);
     return NextResponse.json(
-      { error: "The editor hit a snag. Please try again." },
+      { error: describeAiError(err, "The editor hit a snag. Please try again.") },
       { status: 502 }
     );
   }

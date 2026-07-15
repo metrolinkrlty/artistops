@@ -130,3 +130,29 @@ export function cleanHtmlForModel(html: string, maxChars = 60000): string {
 export function decodeHtml(bytes: Uint8Array): string {
   return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
 }
+
+// Map an Anthropic SDK failure to a clear, actionable message. `fallback` is
+// used for unrecognized errors so each caller keeps its own default wording.
+// This exists because a rejected API key (bad/revoked key, or no access to the
+// model) otherwise surfaces as a vague "couldn't read the website".
+export function describeAiError(err: unknown, fallback: string): string {
+  const e = err as { status?: number; name?: string };
+  switch (e?.status) {
+    case 401:
+      return "The AI service rejected the API key (invalid or revoked). Check the ANTHROPIC_API_KEY environment variable.";
+    case 403:
+      return "The AI API key doesn't have access to the required model (claude-opus-4-8).";
+    case 404:
+      return "The AI model (claude-opus-4-8) isn't available to this API key.";
+    case 429:
+      return "The AI service is rate-limited right now. Wait a moment and try again.";
+    case 500:
+    case 503:
+    case 529:
+      return "The AI service is temporarily unavailable. Please try again shortly.";
+  }
+  if (e?.name === "APIConnectionError" || e?.name === "APIConnectionTimeoutError") {
+    return "Couldn't reach the AI service. Please try again.";
+  }
+  return fallback;
+}

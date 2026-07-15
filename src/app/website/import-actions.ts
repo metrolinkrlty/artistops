@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
-import { assertSafeUrl, fetchCapped, cleanHtmlForModel, decodeHtml } from "@/lib/webImport";
+import { assertSafeUrl, fetchCapped, cleanHtmlForModel, decodeHtml, describeAiError } from "@/lib/webImport";
 import type { SocialLinks } from "./actions";
 
 const MODEL = "claude-opus-4-8";
@@ -163,7 +163,7 @@ export async function importFromWebsite(
     data = tu.input as Extracted;
   } catch (err) {
     console.error("[import] extraction failed", err);
-    return { ok: false, error: "Couldn't read that website. Please try again." };
+    return { ok: false, error: describeAiError(err, "Couldn't read that website. Please try again.") };
   }
 
   // 3. Resolve the slug (existing site keeps its slug; new one derives a unique slug).
