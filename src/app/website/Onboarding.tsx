@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles } from "lucide-react";
 import { saveArtistSite } from "./actions";
+import ImportWebsite from "./ImportWebsite";
 
 function slugify(input: string): string {
   return input
@@ -94,6 +95,16 @@ export default function Onboarding() {
 
         {step === 1 && (
           <div className="space-y-4">
+            <div className="rounded-xl border border-border bg-background/40 p-4">
+              <p className="text-sm font-medium text-foreground">Already have a website?</p>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Paste its address and we&rsquo;ll pull in your photos, bio, and details automatically.
+              </p>
+              <ImportWebsite onDone={(slug) => setDoneSlug(slug)} />
+            </div>
+            <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-muted-foreground">
+              <span className="h-px flex-1 bg-border" /> or start from scratch <span className="h-px flex-1 bg-border" />
+            </div>
             <p className="text-sm text-muted-foreground">Start with your name — everything else you can change later.</p>
             <Field label="Artist / band name">
               <Input

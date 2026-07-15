@@ -14,6 +14,7 @@ import {
 } from "./actions";
 import { SECTION_KEYS, type Show } from "./site-fields";
 import AiEditor from "./AiEditor";
+import ImportWebsite from "./ImportWebsite";
 
 const SECTION_LABELS: Record<(typeof SECTION_KEYS)[number], string> = {
   gallery: "Gallery",
@@ -81,6 +82,7 @@ export default function WebsiteClient({
   subscribers: Subscriber[];
   isAdmin: boolean;
 }) {
+  const router = useRouter();
   const social = (site?.socialLinks as SocialLinks) || {};
   const hidden = site?.hiddenSections ?? [];
   const showsText = (Array.isArray(site?.shows) ? (site!.shows as Show[]) : [])
@@ -161,6 +163,15 @@ export default function WebsiteClient({
 
       {/* Conversational AI editor */}
       <AiEditor />
+
+      {/* Import from an existing website */}
+      <section className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-1 text-lg font-semibold">Import from a website</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Have an existing site? Pull its photos, bio, and details into this one. (Only import sites you own.)
+        </p>
+        <ImportWebsite onDone={() => router.refresh()} />
+      </section>
 
       {/* Site settings */}
       <section className="rounded-xl border border-border bg-card p-6">
