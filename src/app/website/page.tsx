@@ -2,6 +2,7 @@ import Header from "@/components/layout/Header";
 import { getCurrentUser } from "@/lib/session";
 import { getArtistSite, getSubscribers } from "./actions";
 import WebsiteClient from "./WebsiteClient";
+import Onboarding from "./Onboarding";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +19,15 @@ export default async function WebsitePage() {
         title="Website"
         subtitle="Manage your public website, social links, and mailing list"
       />
-      <WebsiteClient
-        site={site}
-        subscribers={subscribers}
-        isAdmin={!!user?.isAdmin}
-      />
+      {site ? (
+        <WebsiteClient
+          site={site}
+          subscribers={subscribers}
+          isAdmin={!!user?.isAdmin}
+        />
+      ) : (
+        <Onboarding />
+      )}
     </div>
   );
 }
