@@ -1,17 +1,49 @@
 import "server-only";
 import nodemailer from "nodemailer";
 
-// Sends transactional email via InMotion SMTP.
-// Requires env vars: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
-// Set SMTP_USER=noreply@artistops.net and SMTP_PASS to its InMotion password.
+// Sends transactional email. Prefers Resend (RESEND_API_KEY + RESEND_FROM);
+// falls back to InMotion SMTP (SMTP_HOST/PORT/USER/PASS) if Resend isn't set.
+// If neither is configured, it skips gracefully instead of throwing.
 export async function sendEmail(to: string, subject: string, html: string, replyTo?: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  const resendKey = process.env.RESEND_API_KEY;
+  const resendFrom = process.env.RESEND_FROM;
+
+  if (resendKey && resendFrom) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: resendFrom,
+          to: [to],
+          subject,
+          html,
+          ...(replyTo ? { reply_to: replyTo } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        console.error("[email] Resend send failed:", res.status, body);
+        return { ok: false, error: "Failed to send email." };
+      }
+      return { ok: true };
+    } catch (e) {
+      console.error("[email] Resend error:", e);
+      return { ok: false, error: "Failed to send email." };
+    }
+  }
+
+  // Fallback: InMotion SMTP.
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const port = parseInt(process.env.SMTP_PORT || "465", 10);
 
   if (!host || !user || !pass) {
-    console.warn("[email] SMTP env vars not set — email not sent.");
+    console.warn("[email] No Resend or SMTP config — email not sent.");
     return { ok: false, skipped: true, error: "Email is not configured yet." };
   }
 
