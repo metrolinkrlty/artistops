@@ -3,8 +3,13 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { saveArtistSite, deleteSubscriber, type SocialLinks } from "./actions";
+import { saveArtistSite, deleteSubscriber, SECTION_KEYS, type SocialLinks, type Show } from "./actions";
 import AiEditor from "./AiEditor";
+
+const SECTION_LABELS: Record<(typeof SECTION_KEYS)[number], string> = {
+  gallery: "Gallery",
+  shows: "Upcoming Shows",
+};
 
 type ArtistSite = {
   slug: string;
@@ -14,6 +19,10 @@ type ArtistSite = {
   bio: string | null;
   heroSubtext: string | null;
   themeColor: string | null;
+  heroCtaPrimary: string | null;
+  heroCtaSecondary: string | null;
+  hiddenSections: string[];
+  shows: unknown;
   socialLinks: unknown;
   availableEmails: string[];
   contactEmail: string | null;
@@ -62,6 +71,14 @@ export default function WebsiteClient({
   isAdmin: boolean;
 }) {
   const social = (site?.socialLinks as SocialLinks) || {};
+  const hidden = site?.hiddenSections ?? [];
+  const showsText = (Array.isArray(site?.shows) ? (site!.shows as Show[]) : [])
+    .map((s) => {
+      const parts = [s.date, s.venue, s.city, s.ticketUrl];
+      while (parts.length && !parts[parts.length - 1]) parts.pop();
+      return parts.join(" | ");
+    })
+    .join("\n");
   const [status, setStatus] = useState<{ ok?: boolean; error?: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -163,6 +180,14 @@ export default function WebsiteClient({
               className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
             />
           </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Hero button (primary)">
+              <Input name="heroCtaPrimary" defaultValue={site?.heroCtaPrimary ?? ""} placeholder="Listen Now" />
+            </Field>
+            <Field label="Hero button (secondary)">
+              <Input name="heroCtaSecondary" defaultValue={site?.heroCtaSecondary ?? ""} placeholder="Join the Mailing List" />
+            </Field>
+          </div>
           <Field label="Bio">
             <textarea
               name="bio"
@@ -172,6 +197,38 @@ export default function WebsiteClient({
               className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
             />
           </Field>
+
+          <div>
+            <h3 className="mb-1 text-sm font-semibold text-foreground">Sections &amp; shows</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Choose which sections appear on your site, and list your upcoming dates.
+            </p>
+            <div className="mb-4 flex flex-wrap gap-5">
+              {SECTION_KEYS.map((key) => (
+                <label key={key} className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    name={`section_${key}`}
+                    defaultChecked={!hidden.includes(key)}
+                    className="h-4 w-4 rounded border-input"
+                  />
+                  Show {SECTION_LABELS[key]}
+                </label>
+              ))}
+            </div>
+            <Field label="Upcoming shows">
+              <textarea
+                name="shows"
+                defaultValue={showsText}
+                rows={4}
+                placeholder={"Aug 3, 2026 | Moxi Theater | Greeley, CO | https://tickets.example.com"}
+                className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              />
+              <span className="text-xs text-muted-foreground">
+                One show per line: <code>date | venue | city | ticket link</code>. City and link are optional. Leave empty to show &ldquo;dates to be announced.&rdquo;
+              </span>
+            </Field>
+          </div>
 
           <div>
             <h3 className="mb-3 text-sm font-semibold text-foreground">Social &amp; streaming links</h3>

@@ -26,6 +26,16 @@ const SOCIAL_KEYS: (keyof SocialLinks)[] = [
   "website",
 ];
 
+// Sections the artist can hide on their public site.
+export const SECTION_KEYS = ["gallery", "shows"] as const;
+
+export type Show = {
+  date: string;
+  venue: string;
+  city: string;
+  ticketUrl: string;
+};
+
 function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -59,6 +69,28 @@ export async function saveArtistSite(formData: FormData) {
     return { ok: false, error: "Accent color must be a 6-digit hex like #e0a530." };
   }
   const themeColor = rawTheme ? rawTheme.toLowerCase() : null;
+
+  const heroCtaPrimary = String(formData.get("heroCtaPrimary") || "").trim() || null;
+  const heroCtaSecondary = String(formData.get("heroCtaSecondary") || "").trim() || null;
+
+  // Section visibility: a checkbox per toggleable section (checked = visible).
+  const hiddenSections = SECTION_KEYS.filter((k) => !formData.get(`section_${k}`));
+
+  // Shows: one per line, "date | venue | city | ticket url" (city/url optional).
+  const shows: Show[] = String(formData.get("shows") || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [date, venue, city, ticketUrl] = line.split("|").map((s) => s.trim());
+      return {
+        date: date || "",
+        venue: venue || "",
+        city: city || "",
+        ticketUrl: ticketUrl || "",
+      };
+    })
+    .filter((s) => s.date || s.venue);
 
   const email = (field: string) => {
     const v = String(formData.get(field) || "").trim();
@@ -111,10 +143,26 @@ export async function saveArtistSite(formData: FormData) {
     mailReplyTo: mailReplyTo as string | null,
   };
 
+  const siteFields = {
+    slug,
+    displayName,
+    tagline,
+    location,
+    bio,
+    heroSubtext,
+    themeColor,
+    heroCtaPrimary,
+    heroCtaSecondary,
+    hiddenSections,
+    shows,
+    socialLinks,
+    ...emailFields,
+  };
+
   await prisma.artistSite.upsert({
     where: { userId },
-    create: { userId, slug, displayName, tagline, location, bio, heroSubtext, themeColor, socialLinks, ...emailFields },
-    update: { slug, displayName, tagline, location, bio, heroSubtext, themeColor, socialLinks, ...emailFields },
+    create: { userId, ...siteFields },
+    update: siteFields,
   });
 
   // Keep this artist's existing subscribers pointed at the (possibly new) slug.

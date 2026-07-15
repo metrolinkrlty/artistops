@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireUserId } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import type { SocialLinks } from "@/app/website/actions";
+import type { SocialLinks, Show } from "@/app/website/actions";
 
 // Tier 1 "vibe editor": the artist chats in plain English and Claude edits
 // their ArtistSite config through a small set of tools. The brain lives here in
@@ -38,6 +38,8 @@ const tools: Anthropic.Tool[] = [
         location: { type: "string", description: "Home base, e.g. 'Greeley, Colorado'. Shown above the name in the hero and in the footer." },
         bio: { type: "string", description: "The About-section text. Separate paragraphs with a blank line (\\n\\n)." },
         heroSubtext: { type: "string", description: "The one-paragraph pitch under the artist's name at the very top of the site." },
+        heroCtaPrimary: { type: "string", description: "Label for the primary hero button (default 'Listen Now')." },
+        heroCtaSecondary: { type: "string", description: "Label for the secondary hero button (default 'Join the Mailing List')." },
       },
       additionalProperties: false,
     },
@@ -70,6 +72,62 @@ const tools: Anthropic.Tool[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: "add_show",
+    description:
+      "Add a single upcoming show/tour date to the Shows section. Use this for 'add a show' requests.",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "The date as it should appear, e.g. 'Aug 3, 2026' or 'Fri, Aug 3 · 8pm'." },
+        venue: { type: "string", description: "Venue name, e.g. 'Moxi Theater'." },
+        city: { type: "string", description: "City/state, e.g. 'Greeley, CO'. Optional." },
+        ticketUrl: { type: "string", description: "Ticket link (http/https). Optional." },
+      },
+      required: ["date", "venue"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_shows",
+    description:
+      "Replace the entire list of upcoming shows. Use for editing, removing, reordering, or clearing shows. Pass an empty array to clear all shows (the section then reads 'dates to be announced').",
+    input_schema: {
+      type: "object",
+      properties: {
+        shows: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              date: { type: "string" },
+              venue: { type: "string" },
+              city: { type: "string" },
+              ticketUrl: { type: "string" },
+            },
+            required: ["date", "venue"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["shows"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_section_visibility",
+    description:
+      "Show or hide an optional section of the site. Sections you can toggle: 'gallery' and 'shows'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        section: { type: "string", enum: ["gallery", "shows"], description: "Which section." },
+        visible: { type: "boolean", description: "true to show it, false to hide it." },
+      },
+      required: ["section", "visible"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 type SiteRecord = {
@@ -80,6 +138,10 @@ type SiteRecord = {
   bio: string | null;
   heroSubtext: string | null;
   themeColor: string | null;
+  heroCtaPrimary: string | null;
+  heroCtaSecondary: string | null;
+  hiddenSections: string[];
+  shows: Show[];
   socialLinks: unknown;
 };
 
@@ -89,6 +151,13 @@ function siteSummary(site: SiteRecord): string {
     SOCIAL_KEYS.filter((k) => social[k])
       .map((k) => `  - ${k}: ${social[k]}`)
       .join("\n") || "  (none set)";
+  const showLines =
+    site.shows.length > 0
+      ? site.shows
+          .map((s, i) => `  ${i + 1}. ${s.date} — ${s.venue}${s.city ? `, ${s.city}` : ""}${s.ticketUrl ? ` (${s.ticketUrl})` : ""}`)
+          .join("\n")
+      : "  (none — section reads 'dates to be announced')";
+  const hidden = site.hiddenSections.length ? site.hiddenSections.join(", ") : "(all sections visible)";
   return [
     `slug: ${site.slug}`,
     `displayName: ${site.displayName}`,
@@ -97,6 +166,10 @@ function siteSummary(site: SiteRecord): string {
     `heroSubtext: ${site.heroSubtext ?? "(none)"}`,
     `bio: ${site.bio ?? "(none)"}`,
     `themeColor (accent): ${site.themeColor ?? "(default amber)"}`,
+    `hero buttons: primary="${site.heroCtaPrimary ?? "Listen Now"}", secondary="${site.heroCtaSecondary ?? "Join the Mailing List"}"`,
+    `hidden sections: ${hidden}`,
+    `upcoming shows:`,
+    showLines,
     `social links:`,
     socialLines,
   ].join("\n");
@@ -108,9 +181,10 @@ function systemPrompt(site: SiteRecord): string {
     "You help a musician edit their own public website by chatting in plain English.",
     "Changes you make are saved immediately and the artist's live site updates to match.",
     "",
-    "You can edit: display name, tagline, location, hero subtext, bio, the accent color,",
-    "and social/streaming links, using the update_profile, set_theme_color, and",
-    "set_social_links tools. Make the smallest change that",
+    "You can edit: display name, tagline, location, hero subtext, bio, hero button labels,",
+    "the accent color, social/streaming links, upcoming shows, and which sections are shown,",
+    "using update_profile, set_theme_color, set_social_links, add_show, set_shows, and",
+    "set_section_visibility. Make the smallest change that",
     "satisfies the request. When the artist asks you to rewrite or improve copy, write it",
     "in their voice and genre; keep it concise and never invent facts (tour dates, awards,",
     "streaming numbers) they didn't give you.",
@@ -176,8 +250,18 @@ export async function POST(req: Request) {
 
   const changed: string[] = [];
   const pending: {
-    profile: { displayName?: string; tagline?: string | null; location?: string | null; bio?: string | null; heroSubtext?: string | null };
+    profile: {
+      displayName?: string;
+      tagline?: string | null;
+      location?: string | null;
+      bio?: string | null;
+      heroSubtext?: string | null;
+      heroCtaPrimary?: string | null;
+      heroCtaSecondary?: string | null;
+    };
     themeColor?: string;
+    shows?: Show[];
+    hiddenSections?: string[];
     social: SocialLinks | null;
   } = { profile: {}, social: null };
 
@@ -190,6 +274,10 @@ export async function POST(req: Request) {
     bio: site.bio,
     heroSubtext: site.heroSubtext,
     themeColor: site.themeColor,
+    heroCtaPrimary: site.heroCtaPrimary,
+    heroCtaSecondary: site.heroCtaSecondary,
+    hiddenSections: site.hiddenSections ?? [],
+    shows: Array.isArray(site.shows) ? (site.shows as Show[]) : [],
     socialLinks: site.socialLinks,
   };
 
@@ -203,7 +291,7 @@ export async function POST(req: Request) {
         current.displayName = v;
         results.push(`display name → "${v}"`);
       }
-      for (const key of ["tagline", "location", "bio", "heroSubtext"] as const) {
+      for (const key of ["tagline", "location", "bio", "heroSubtext", "heroCtaPrimary", "heroCtaSecondary"] as const) {
         if (typeof input[key] === "string") {
           const v = (input[key] as string).trim();
           pending.profile[key] = v || null;
@@ -224,6 +312,52 @@ export async function POST(req: Request) {
       current.themeColor = v;
       if (!changed.includes("accent color")) changed.push("accent color");
       return `Applied: accent color → ${v}.`;
+    }
+    if (name === "add_show" || name === "set_shows") {
+      const normalize = (raw: unknown): Show | string => {
+        const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+        const date = typeof o.date === "string" ? o.date.trim() : "";
+        const venue = typeof o.venue === "string" ? o.venue.trim() : "";
+        const city = typeof o.city === "string" ? o.city.trim() : "";
+        const ticketUrl = typeof o.ticketUrl === "string" ? o.ticketUrl.trim() : "";
+        if (!date || !venue) return "each show needs a date and a venue";
+        if (ticketUrl && !isValidUrl(ticketUrl)) return `"${ticketUrl}" is not a valid http(s) ticket URL`;
+        return { date, venue, city, ticketUrl };
+      };
+      if (name === "add_show") {
+        const s = normalize(input);
+        if (typeof s === "string") return `Error: ${s}.`;
+        current.shows = [...current.shows, s];
+        pending.shows = current.shows;
+        if (!changed.includes("shows updated")) changed.push("shows updated");
+        return `Applied: added ${s.date} — ${s.venue}. Now ${current.shows.length} show(s).`;
+      }
+      const raw = Array.isArray(input.shows) ? input.shows : null;
+      if (!raw) return "Error: set_shows needs a 'shows' array.";
+      const out: Show[] = [];
+      for (const item of raw) {
+        const s = normalize(item);
+        if (typeof s === "string") return `Error: ${s}.`;
+        out.push(s);
+      }
+      current.shows = out;
+      pending.shows = out;
+      if (!changed.includes("shows updated")) changed.push("shows updated");
+      return `Applied: shows set to ${out.length} show(s).`;
+    }
+    if (name === "set_section_visibility") {
+      const section = typeof input.section === "string" ? input.section : "";
+      const visible = input.visible;
+      if (section !== "gallery" && section !== "shows") return `Error: unknown section "${section}".`;
+      if (typeof visible !== "boolean") return "Error: 'visible' must be true or false.";
+      const set = new Set(current.hiddenSections);
+      if (visible) set.delete(section);
+      else set.add(section);
+      current.hiddenSections = Array.from(set);
+      pending.hiddenSections = current.hiddenSections;
+      const label = `${section} ${visible ? "shown" : "hidden"}`;
+      if (!changed.includes(label)) changed.push(label);
+      return `Applied: ${label}.`;
     }
     if (name === "set_social_links") {
       const social: SocialLinks = { ...((current.socialLinks as SocialLinks) || {}) };
@@ -290,12 +424,20 @@ export async function POST(req: Request) {
   }
 
   // Persist any accumulated edits in one write.
-  if (Object.keys(pending.profile).length || pending.social || pending.themeColor) {
+  if (
+    Object.keys(pending.profile).length ||
+    pending.social ||
+    pending.themeColor ||
+    pending.shows ||
+    pending.hiddenSections
+  ) {
     await prisma.artistSite.update({
       where: { userId },
       data: {
         ...pending.profile,
         ...(pending.themeColor ? { themeColor: pending.themeColor } : {}),
+        ...(pending.shows ? { shows: pending.shows } : {}),
+        ...(pending.hiddenSections ? { hiddenSections: pending.hiddenSections } : {}),
         ...(pending.social ? { socialLinks: pending.social } : {}),
       },
     });

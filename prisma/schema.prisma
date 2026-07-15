@@ -480,6 +480,10 @@ model ArtistSite {
   heroImageUrl    String?
   heroSubtext     String?  // the longer hero paragraph under the artist name
   themeColor      String?  // accent/highlight hex, e.g. "#e0a530"
+  hiddenSections  String[] @default([]) // section keys to hide, e.g. ["gallery","shows"]
+  shows           Json?    // [{date, venue, city?, ticketUrl?}]
+  heroCtaPrimary  String?  // label for the primary hero button (default "Listen Now")
+  heroCtaSecondary String? // label for the secondary hero button
   socialLinks     Json?
   featuredSongIds String[]
   previewSeconds  Int      @default(30)
