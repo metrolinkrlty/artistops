@@ -12,6 +12,8 @@ type ArtistSite = {
   tagline: string | null;
   location: string | null;
   bio: string | null;
+  heroSubtext: string | null;
+  themeColor: string | null;
   socialLinks: unknown;
   availableEmails: string[];
   contactEmail: string | null;
@@ -135,13 +137,38 @@ export default function WebsiteClient({
             <Field label="Location">
               <Input name="location" defaultValue={site?.location ?? ""} placeholder="Greeley, Colorado" />
             </Field>
+            <Field label="Accent color">
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  defaultValue={site?.themeColor ?? "#e0a530"}
+                  onChange={(e) => {
+                    const hex = e.currentTarget.parentElement?.querySelector<HTMLInputElement>('input[name="themeColor"]');
+                    if (hex) hex.value = e.currentTarget.value;
+                  }}
+                  className="h-8 w-10 shrink-0 cursor-pointer rounded border border-input bg-transparent"
+                  aria-label="Pick accent color"
+                />
+                <Input name="themeColor" defaultValue={site?.themeColor ?? ""} placeholder="#e0a530" />
+              </div>
+              <span className="text-xs text-muted-foreground">Highlight color used across your site (buttons, links, headings).</span>
+            </Field>
           </div>
+          <Field label="Hero subtext">
+            <textarea
+              name="heroSubtext"
+              defaultValue={site?.heroSubtext ?? ""}
+              rows={3}
+              placeholder="The line under your name at the top of the site…"
+              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            />
+          </Field>
           <Field label="Bio">
             <textarea
               name="bio"
               defaultValue={site?.bio ?? ""}
-              rows={4}
-              placeholder="Short artist bio…"
+              rows={5}
+              placeholder="Your About section. Separate paragraphs with a blank line."
               className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
             />
           </Field>

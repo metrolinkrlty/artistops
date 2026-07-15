@@ -478,6 +478,8 @@ model ArtistSite {
   bio             String?
   location        String?
   heroImageUrl    String?
+  heroSubtext     String?  // the longer hero paragraph under the artist name
+  themeColor      String?  // accent/highlight hex, e.g. "#e0a530"
   socialLinks     Json?
   featuredSongIds String[]
   previewSeconds  Int      @default(30)

@@ -29,15 +29,29 @@ const tools: Anthropic.Tool[] = [
   {
     name: "update_profile",
     description:
-      "Update the artist's core profile text. Only include the fields you are changing; omit the rest. Pass an empty string to clear an optional field (tagline, location, bio).",
+      "Update the artist's core profile text. Only include the fields you are changing; omit the rest. Pass an empty string to clear an optional field (tagline, location, bio, heroSubtext).",
     input_schema: {
       type: "object",
       properties: {
         displayName: { type: "string", description: "The artist's public name, e.g. 'Luke Corliss'. Cannot be blank." },
         tagline: { type: "string", description: "Short genre/vibe line, e.g. 'Honky-tonk, rockabilly & western rock'." },
-        location: { type: "string", description: "Home base, e.g. 'Greeley, Colorado'." },
-        bio: { type: "string", description: "The artist bio paragraph(s)." },
+        location: { type: "string", description: "Home base, e.g. 'Greeley, Colorado'. Shown above the name in the hero and in the footer." },
+        bio: { type: "string", description: "The About-section text. Separate paragraphs with a blank line (\\n\\n)." },
+        heroSubtext: { type: "string", description: "The one-paragraph pitch under the artist's name at the very top of the site." },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_theme_color",
+    description:
+      "Set the site's accent/highlight color (buttons, links, section headings). Provide a 6-digit hex like '#e0a530'. When the artist describes a color in words, convert it to a fitting hex.",
+    input_schema: {
+      type: "object",
+      properties: {
+        hex: { type: "string", description: "A 6-digit hex color, e.g. '#c2452a'." },
+      },
+      required: ["hex"],
       additionalProperties: false,
     },
   },
@@ -64,6 +78,8 @@ type SiteRecord = {
   tagline: string | null;
   location: string | null;
   bio: string | null;
+  heroSubtext: string | null;
+  themeColor: string | null;
   socialLinks: unknown;
 };
 
@@ -78,7 +94,9 @@ function siteSummary(site: SiteRecord): string {
     `displayName: ${site.displayName}`,
     `tagline: ${site.tagline ?? "(none)"}`,
     `location: ${site.location ?? "(none)"}`,
+    `heroSubtext: ${site.heroSubtext ?? "(none)"}`,
     `bio: ${site.bio ?? "(none)"}`,
+    `themeColor (accent): ${site.themeColor ?? "(default amber)"}`,
     `social links:`,
     socialLines,
   ].join("\n");
@@ -90,8 +108,9 @@ function systemPrompt(site: SiteRecord): string {
     "You help a musician edit their own public website by chatting in plain English.",
     "Changes you make are saved immediately and the artist's live site updates to match.",
     "",
-    "You can edit: display name, tagline, location, bio, and social/streaming links,",
-    "using the update_profile and set_social_links tools. Make the smallest change that",
+    "You can edit: display name, tagline, location, hero subtext, bio, the accent color,",
+    "and social/streaming links, using the update_profile, set_theme_color, and",
+    "set_social_links tools. Make the smallest change that",
     "satisfies the request. When the artist asks you to rewrite or improve copy, write it",
     "in their voice and genre; keep it concise and never invent facts (tour dates, awards,",
     "streaming numbers) they didn't give you.",
@@ -157,7 +176,8 @@ export async function POST(req: Request) {
 
   const changed: string[] = [];
   const pending: {
-    profile: { displayName?: string; tagline?: string | null; location?: string | null; bio?: string | null };
+    profile: { displayName?: string; tagline?: string | null; location?: string | null; bio?: string | null; heroSubtext?: string | null };
+    themeColor?: string;
     social: SocialLinks | null;
   } = { profile: {}, social: null };
 
@@ -168,6 +188,8 @@ export async function POST(req: Request) {
     tagline: site.tagline,
     location: site.location,
     bio: site.bio,
+    heroSubtext: site.heroSubtext,
+    themeColor: site.themeColor,
     socialLinks: site.socialLinks,
   };
 
@@ -181,7 +203,7 @@ export async function POST(req: Request) {
         current.displayName = v;
         results.push(`display name → "${v}"`);
       }
-      for (const key of ["tagline", "location", "bio"] as const) {
+      for (const key of ["tagline", "location", "bio", "heroSubtext"] as const) {
         if (typeof input[key] === "string") {
           const v = (input[key] as string).trim();
           pending.profile[key] = v || null;
@@ -192,6 +214,16 @@ export async function POST(req: Request) {
       if (!results.length) return "No profile fields were provided.";
       for (const r of results) if (!changed.includes(r)) changed.push(r);
       return "Applied: " + results.join(", ") + ".";
+    }
+    if (name === "set_theme_color") {
+      const v = typeof input.hex === "string" ? input.hex.trim().toLowerCase() : "";
+      if (!/^#[0-9a-f]{6}$/.test(v)) {
+        return `Error: "${input.hex}" is not a 6-digit hex color (e.g. "#c2452a").`;
+      }
+      pending.themeColor = v;
+      current.themeColor = v;
+      if (!changed.includes("accent color")) changed.push("accent color");
+      return `Applied: accent color → ${v}.`;
     }
     if (name === "set_social_links") {
       const social: SocialLinks = { ...((current.socialLinks as SocialLinks) || {}) };
@@ -258,11 +290,12 @@ export async function POST(req: Request) {
   }
 
   // Persist any accumulated edits in one write.
-  if (Object.keys(pending.profile).length || pending.social) {
+  if (Object.keys(pending.profile).length || pending.social || pending.themeColor) {
     await prisma.artistSite.update({
       where: { userId },
       data: {
         ...pending.profile,
+        ...(pending.themeColor ? { themeColor: pending.themeColor } : {}),
         ...(pending.social ? { socialLinks: pending.social } : {}),
       },
     });

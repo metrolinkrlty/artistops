@@ -30,6 +30,8 @@ export async function GET(
       location: true,
       bio: true,
       heroImageUrl: true,
+      heroSubtext: true,
+      themeColor: true,
       socialLinks: true,
       contactEmail: true,
     },

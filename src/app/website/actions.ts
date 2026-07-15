@@ -52,6 +52,13 @@ export async function saveArtistSite(formData: FormData) {
   const tagline = String(formData.get("tagline") || "").trim() || null;
   const location = String(formData.get("location") || "").trim() || null;
   const bio = String(formData.get("bio") || "").trim() || null;
+  const heroSubtext = String(formData.get("heroSubtext") || "").trim() || null;
+
+  const rawTheme = String(formData.get("themeColor") || "").trim();
+  if (rawTheme && !/^#[0-9a-fA-F]{6}$/.test(rawTheme)) {
+    return { ok: false, error: "Accent color must be a 6-digit hex like #e0a530." };
+  }
+  const themeColor = rawTheme ? rawTheme.toLowerCase() : null;
 
   const email = (field: string) => {
     const v = String(formData.get(field) || "").trim();
@@ -106,8 +113,8 @@ export async function saveArtistSite(formData: FormData) {
 
   await prisma.artistSite.upsert({
     where: { userId },
-    create: { userId, slug, displayName, tagline, location, bio, socialLinks, ...emailFields },
-    update: { slug, displayName, tagline, location, bio, socialLinks, ...emailFields },
+    create: { userId, slug, displayName, tagline, location, bio, heroSubtext, themeColor, socialLinks, ...emailFields },
+    update: { slug, displayName, tagline, location, bio, heroSubtext, themeColor, socialLinks, ...emailFields },
   });
 
   // Keep this artist's existing subscribers pointed at the (possibly new) slug.
