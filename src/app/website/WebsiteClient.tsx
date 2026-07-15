@@ -12,11 +12,15 @@ type ArtistSite = {
   location: string | null;
   bio: string | null;
   socialLinks: unknown;
+  availableEmails: string[];
   contactEmail: string | null;
   notifyEmail: string | null;
   mailFromEmail: string | null;
   mailReplyTo: string | null;
 } | null;
+
+// Platform addresses only admins may select in the dropdowns.
+const ADMIN_ONLY_EMAILS = ["hello@artistops.net"];
 
 const EMAIL_FIELDS: { key: "contactEmail" | "notifyEmail" | "mailFromEmail" | "mailReplyTo"; label: string; hint: string; placeholder: string }[] = [
   { key: "contactEmail", label: "Contact / booking email", hint: "Shown publicly on your website for fans and bookers.", placeholder: "booking@yourdomain.com" },
@@ -48,13 +52,30 @@ const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: strin
 export default function WebsiteClient({
   site,
   subscribers,
+  isAdmin,
 }: {
   site: ArtistSite;
   subscribers: Subscriber[];
+  isAdmin: boolean;
 }) {
   const social = (site?.socialLinks as SocialLinks) || {};
   const [status, setStatus] = useState<{ ok?: boolean; error?: string } | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // The address pool that drives the dropdowns. Editing the list updates the
+  // dropdown options live.
+  const [availableText, setAvailableText] = useState(
+    (site?.availableEmails ?? []).join("\n")
+  );
+  const emailOptions = Array.from(
+    new Set([
+      ...availableText
+        .split(/[\n,]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
+      ...(isAdmin ? ADMIN_ONLY_EMAILS : []),
+    ])
+  );
 
   async function onSave(formData: FormData) {
     setStatus(null);
@@ -140,17 +161,44 @@ export default function WebsiteClient({
           <div>
             <h3 className="mb-1 text-sm font-semibold text-foreground">Email</h3>
             <p className="mb-3 text-xs text-muted-foreground">
-              Control the email addresses tied to your website and mailing list.
+              List the mailboxes you&rsquo;ve created, then choose which one to use for each purpose.
             </p>
-            <div className="grid gap-4 sm:grid-cols-2">
+
+            <Field label="Your email addresses">
+              <textarea
+                name="availableEmails"
+                value={availableText}
+                onChange={(e) => setAvailableText(e.target.value)}
+                rows={3}
+                placeholder={"luke@lukecorliss.com\nadmin@lukecorliss.com\nhello@lukecorliss.com"}
+                className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              />
+              <span className="text-xs text-muted-foreground">
+                One per line. These populate the dropdowns below.
+                {isAdmin && " Admin addresses are always available."}
+              </span>
+            </Field>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
               {EMAIL_FIELDS.map((f) => (
                 <Field key={f.key} label={f.label}>
-                  <Input
+                  <select
                     name={f.key}
                     defaultValue={site?.[f.key] ?? ""}
-                    placeholder={f.placeholder}
-                    type="email"
-                  />
+                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                  >
+                    <option value="">— none —</option>
+                    {emailOptions.map((addr) => (
+                      <option key={addr} value={addr}>
+                        {addr}
+                        {ADMIN_ONLY_EMAILS.includes(addr) ? " (admin)" : ""}
+                      </option>
+                    ))}
+                    {/* Keep a previously-saved value selectable even if not in the pool */}
+                    {site?.[f.key] && !emailOptions.includes(site[f.key]!) && (
+                      <option value={site[f.key]!}>{site[f.key]}</option>
+                    )}
+                  </select>
                   <span className="text-xs text-muted-foreground">{f.hint}</span>
                 </Field>
               ))}

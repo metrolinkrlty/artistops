@@ -74,6 +74,16 @@ export async function saveArtistSite(formData: FormData) {
     }
   }
 
+  // The pool of addresses the dropdowns pick from (comma/newline separated).
+  const availableEmails = Array.from(
+    new Set(
+      String(formData.get("availableEmails") || "")
+        .split(/[\n,]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+    )
+  );
+
   const socialLinks: SocialLinks = {};
   for (const key of SOCIAL_KEYS) {
     const val = String(formData.get(`social_${key}`) || "").trim();
@@ -87,6 +97,7 @@ export async function saveArtistSite(formData: FormData) {
   }
 
   const emailFields = {
+    availableEmails,
     contactEmail: contactEmail as string | null,
     notifyEmail: notifyEmail as string | null,
     mailFromEmail: mailFromEmail as string | null,
