@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { APP_VERSION } from "@/lib/version";
 import {
   LayoutDashboard,
@@ -23,7 +23,6 @@ import {
   FileLock,
   TrendingUp,
   Sparkles,
-  LogOut,
   ShieldCheck,
   MonitorSmartphone,
 } from "lucide-react";
@@ -54,18 +53,7 @@ const navItems = [
 
 export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpersonating = false }: { artistName?: string; isAdmin?: boolean; isImpersonating?: boolean }) {
   const pathname = usePathname();
-  const router = useRouter();
   const initials = artistName.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "A";
-
-  async function handleLogout() {
-    try {
-      await fetch("/api/logout", { method: "POST" });
-    } catch {
-      // ignore
-    }
-    router.push("/login");
-    router.refresh();
-  }
 
   return (
     <aside className="w-64 min-h-screen bg-[#1a1d27] border-r border-[#2a2d3a] flex flex-col">
@@ -77,7 +65,7 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
           <span className="text-white font-bold text-lg">ArtistOps<sup className="text-[10px] font-normal text-[#8b8fa8] ml-0.5">™</sup></span>
         </div>
         <p className="text-[#8b8fa8] text-xs mt-1">Music Business Manager</p>
-        <p className="text-[#5a5e72] text-[10px] mt-0.5">v{APP_VERSION}</p>
+        <p className="text-indigo-400 text-sm font-semibold mt-1">v{APP_VERSION}</p>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
@@ -119,9 +107,6 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
             <p className="text-white text-sm font-medium truncate">{artistName}</p>
             <p className="text-[#8b8fa8] text-xs">Artist</p>
           </div>
-          <button onClick={handleLogout} title="Sign out" className="text-[#8b8fa8] hover:text-red-400 transition-colors">
-            <LogOut className="w-4 h-4" />
-          </button>
         </div>
       </div>
     </aside>

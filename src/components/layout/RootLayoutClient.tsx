@@ -2,6 +2,7 @@
 import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import Sidebar from "./Sidebar";
+import LogoutPill from "./LogoutPill";
 import InactivityTimeout from "@/components/InactivityTimeout";
 import WelcomeSplash from "@/components/WelcomeSplash";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
@@ -31,6 +32,7 @@ export default function RootLayoutClient({
   return (
     <div className="flex min-h-screen flex-col">
       <InactivityTimeout />
+      <LogoutPill topClass={viewingAs ? "top-14" : "top-3"} />
       {viewingAs && <ImpersonationBanner artistName={viewingAs.artistName} />}
       <div className="flex flex-1">
         <Suspense fallback={null}>
