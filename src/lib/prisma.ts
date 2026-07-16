@@ -1,5 +1,8 @@
 // Prisma 7 client using the node-postgres driver adapter.
-// DATABASE_URL points at the Supabase transaction pooler (port 6543) in production.
+// For serverless (Netlify functions), DATABASE_URL should be Supabase's
+// TRANSACTION pooler — host on port 6543 with `?pgbouncer=true`. The session
+// pooler (port 5432) caps connections (~15); with each function holding its own
+// pool it exhausts quickly → slow logins and sluggish navigation.
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -12,9 +15,10 @@ function createClient() {
   // clients (pool_size 15), and serverless functions each open their own pool.
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
-    // Transaction pooler (port 6543) handles multiplexing — keep client pool minimal.
+    // Keep each function's pool minimal, and release idle connections back to
+    // the pooler instead of hoarding them for the instance's whole life.
     max: 2,
-    idleTimeoutMillis: 0,
+    idleTimeoutMillis: 10000,
   });
   return new PrismaClient({ adapter });
 }
