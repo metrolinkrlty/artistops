@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -6,13 +7,32 @@ import { SESSION_COOKIE, verifySession } from "@/lib/auth";
 
 const IMPERSONATE_COOKIE = "ao_impersonate";
 
-async function getSessionUserId(): Promise<string | null> {
+// Cached per request: the layout, the page, and impersonation checks all read
+// the session user, so memoizing collapses them to a single verify + query.
+const getSessionUserId = cache(async (): Promise<string | null> => {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   return verifySession(token);
-}
+});
 
-// Returns the effective userId — impersonated target if admin is impersonating
+// Cached per request. Excludes passwordHash (never needed off the session user)
+// and dedupes the repeated by-id lookups the hot path otherwise fires.
+const getUserById = cache(async (id: string) => {
+  return prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      artistName: true,
+      isAdmin: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+});
+
+// Returns the effective userId — impersonated target if admin is impersonating.
 export async function getCurrentUserId(): Promise<string | null> {
   const store = await cookies();
   const sessionId = await getSessionUserId();
@@ -21,16 +41,13 @@ export async function getCurrentUserId(): Promise<string | null> {
   const impersonateId = store.get(IMPERSONATE_COOKIE)?.value;
   if (!impersonateId) return sessionId;
 
-  // Verify the session user is actually admin before honouring the impersonate cookie.
-  // Use a fast single-column query to minimise pool pressure.
+  // Honour the impersonate cookie only if the session user is actually admin.
+  // Shares the cached lookup, so repeated requireUserId() calls cost one query.
   try {
-    const row = await prisma.user.findUnique({
-      where: { id: sessionId },
-      select: { isAdmin: true },
-    });
+    const row = await getUserById(sessionId);
     if (row?.isAdmin) return impersonateId;
   } catch {
-    // Pool exhausted or DB error — fall back to the real session user
+    // DB error — fall back to the real session user.
   }
   return sessionId;
 }
@@ -46,7 +63,7 @@ export async function requireUserId(): Promise<string> {
 export async function getCurrentUser() {
   const sessionId = await getSessionUserId();
   if (!sessionId) return null;
-  return prisma.user.findUnique({ where: { id: sessionId } });
+  return getUserById(sessionId);
 }
 
 // Returns admin context for the layout banner.
@@ -58,18 +75,16 @@ export async function getAdminContext(): Promise<{
   const sessionId = await getSessionUserId();
   if (!sessionId) return { adminUser: null, viewingAs: null };
 
-  const adminUser = await prisma.user
-    .findUnique({ where: { id: sessionId }, select: { id: true, artistName: true, isAdmin: true } })
-    .catch(() => null);
-
-  if (!adminUser?.isAdmin) return { adminUser: null, viewingAs: null };
+  const user = await getUserById(sessionId).catch(() => null);
+  if (!user?.isAdmin) return { adminUser: null, viewingAs: null };
+  const adminUser = { id: user.id, artistName: user.artistName, isAdmin: user.isAdmin };
 
   const impersonateId = store.get(IMPERSONATE_COOKIE)?.value;
   if (!impersonateId) return { adminUser, viewingAs: null };
 
-  const target = await prisma.user
-    .findUnique({ where: { id: impersonateId }, select: { id: true, artistName: true } })
-    .catch(() => null);
-
-  return { adminUser, viewingAs: target };
+  const target = await getUserById(impersonateId).catch(() => null);
+  return {
+    adminUser,
+    viewingAs: target ? { id: target.id, artistName: target.artistName } : null,
+  };
 }
