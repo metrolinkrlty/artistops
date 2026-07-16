@@ -47,5 +47,6 @@ export const CHECKLIST_TASKS: ChecklistTask[] = [
   { key: "smart-links", category: "Marketing", label: "Create a smart link", description: "One link to every platform.", href: "/smart-links", auto: true },
   { key: "pixel", category: "Marketing", label: "Set up website pixel tracking", description: "Measure visits & conversions on your site.", href: "/pixel-tracking", auto: true },
   { key: "social", category: "Marketing", label: "Connect your social media", description: "Centralize your channels and links.", href: "/social", auto: true },
-  { key: "presave", category: "Marketing", label: "Set up a pre-save campaign", description: "Build momentum before release day.", href: "/smart-links" },
+  { key: "presave", category: "Marketing", label: "Set up a pre-save campaign", description: "Show.co or HyperFollow — then capture the link here.", href: "/smart-links" },
+  { key: "run-ads", category: "Marketing", label: "Run a promo ad campaign", description: "Boost a release with ads (Show.co, Meta, TikTok, YouTube).", href: "/advertising" },
 ];
