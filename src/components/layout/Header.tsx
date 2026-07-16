@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, Search } from "lucide-react";
+import LogoutPill from "./LogoutPill";
 
 interface HeaderProps {
   title: string;
@@ -27,6 +28,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <Bell className="w-4 h-4" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full"></span>
         </button>
+        <LogoutPill />
       </div>
     </div>
   );
