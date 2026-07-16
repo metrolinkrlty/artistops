@@ -11,7 +11,7 @@ export type ChecklistState = { key: string; done: boolean; auto: boolean };
 async function detectAuto(userId: string): Promise<Set<string>> {
   const done = new Set<string>();
   try {
-    const [songs, audio, meta, copyrights, distributors, smartLinks, pixels, site] =
+    const [songs, audio, meta, copyrights, distributors, smartLinks, pixels, adPixels, site] =
       await Promise.all([
         prisma.song.count({ where: { userId } }),
         prisma.song.count({ where: { userId, audioFileRef: { not: null } } }),
@@ -20,6 +20,7 @@ async function detectAuto(userId: string): Promise<Set<string>> {
         prisma.distributor.count({ where: { userId } }),
         prisma.smartLink.count({ where: { userId } }),
         prisma.pixel.count({ where: { userId } }),
+        prisma.adPixel.count({ where: { userId } }).catch(() => 0),
         prisma.artistSite.findUnique({
           where: { userId },
           select: { displayName: true, socialLinks: true, websitePixelId: true },
@@ -35,6 +36,7 @@ async function detectAuto(userId: string): Promise<Set<string>> {
     if (distributors > 0) done.add("distributor");
     if (smartLinks > 0) done.add("smart-links");
     if (pixels > 0 || site?.websitePixelId) done.add("pixel");
+    if (adPixels > 0) done.add("ad-pixels");
     const social = (site?.socialLinks as Record<string, string> | null) || null;
     if (social && Object.values(social).some((v) => v)) done.add("social");
   } catch {

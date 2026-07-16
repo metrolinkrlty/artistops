@@ -65,6 +65,49 @@ export async function setWebsitePixel(
   return { ok: true };
 }
 
+export type AdPixels = { meta: string; tiktok: string; google: string };
+const AD_PLATFORMS = ["meta", "tiktok", "google"] as const;
+
+// Third-party ad pixels the artist wants on their site. Read defensively so an
+// un-migrated DB still renders the page (all blank until the table exists).
+export async function getAdPixels(): Promise<AdPixels> {
+  const userId = await requireUserId();
+  const out: AdPixels = { meta: "", tiktok: "", google: "" };
+  try {
+    const rows = await prisma.adPixel.findMany({ where: { userId }, select: { platform: true, pixelId: true } });
+    for (const r of rows) if (r.platform in out) out[r.platform as keyof AdPixels] = r.pixelId;
+  } catch {
+    // table not migrated yet
+  }
+  return out;
+}
+
+export async function setAdPixel(
+  platform: string,
+  pixelId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  if (!AD_PLATFORMS.includes(platform as (typeof AD_PLATFORMS)[number])) {
+    return { ok: false, error: "Unknown platform." };
+  }
+  const clean = pixelId.trim().slice(0, 100);
+  try {
+    if (!clean) {
+      await prisma.adPixel.deleteMany({ where: { userId, platform } });
+    } else {
+      await prisma.adPixel.upsert({
+        where: { userId_platform: { userId, platform } },
+        create: { userId, platform, pixelId: clean },
+        update: { pixelId: clean },
+      });
+    }
+  } catch {
+    return { ok: false, error: "Couldn't save — ad pixels aren't set up yet." };
+  }
+  revalidatePath("/pixel-tracking");
+  return { ok: true };
+}
+
 export async function getPixelEvents() {
   const userId = await requireUserId();
   const events = await prisma.pixelEvent.findMany({

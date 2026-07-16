@@ -46,6 +46,8 @@ export const CHECKLIST_TASKS: ChecklistTask[] = [
   // Marketing
   { key: "smart-links", category: "Marketing", label: "Create a smart link", description: "One link to every platform.", href: "/smart-links", auto: true },
   { key: "pixel", category: "Marketing", label: "Set up website pixel tracking", description: "Measure visits & conversions on your site.", href: "/pixel-tracking", auto: true },
+  { key: "ad-pixels", category: "Marketing", label: "Add your ad pixels (Meta, TikTok, Google)", description: "Retarget your site visitors with ads across platforms.", href: "/pixel-tracking", auto: true },
+  { key: "ig-bio-link", category: "Marketing", label: "Set your site as your Instagram bio link", description: "Route all your IG traffic through your site so it's tracked.", href: "/website" },
   { key: "social", category: "Marketing", label: "Connect your social media", description: "Centralize your channels and links.", href: "/social", auto: true },
   { key: "presave", category: "Marketing", label: "Set up a pre-save campaign", description: "Show.co or HyperFollow — then capture the link here.", href: "/smart-links" },
   { key: "run-ads", category: "Marketing", label: "Run a promo ad campaign", description: "Boost a release with ads (Show.co, Meta, TikTok, YouTube).", href: "/advertising" },

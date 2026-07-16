@@ -2,7 +2,7 @@
 import { Search, Copy, Check, Plus, Trash2, Globe } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createPixel, deletePixel, setWebsitePixel } from "./actions";
+import { createPixel, deletePixel, setWebsitePixel, setAdPixel, type AdPixels } from "./actions";
 
 const eventColors: Record<string, string> = {
   page_view: "bg-blue-500/20 text-blue-400",
@@ -63,7 +63,7 @@ type Event = {
   utmSource: string | null; utmCampaign: string | null; createdAt: string;
 };
 
-export default function PixelClient({ pixels, events, websitePixelId }: { pixels: Pixel[]; events: Event[]; websitePixelId: string | null }) {
+export default function PixelClient({ pixels, events, websitePixelId, adPixels }: { pixels: Pixel[]; events: Event[]; websitePixelId: string | null; adPixels: AdPixels }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -181,6 +181,20 @@ export default function PixelClient({ pixels, events, websitePixelId }: { pixels
         </div>
       )}
 
+      {/* Ad pixels */}
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
+        <h2 className="text-white font-semibold mb-1">Ad pixels</h2>
+        <p className="text-[#8b8fa8] text-sm mb-4">
+          Add your ad-platform pixel IDs — ArtistOps installs them on your website so you can retarget
+          visitors and track conversions. Instagram &amp; Facebook both use the Meta pixel.
+        </p>
+        <div className="space-y-3 max-w-xl">
+          <AdPixelRow label="Meta Pixel ID — Instagram & Facebook" platform="meta" initial={adPixels.meta} placeholder="e.g. 123456789012345" />
+          <AdPixelRow label="TikTok Pixel ID" platform="tiktok" initial={adPixels.tiktok} placeholder="e.g. C1A2B3D4E5F6G7H8" />
+          <AdPixelRow label="Google tag / GA4 Measurement ID" platform="google" initial={adPixels.google} placeholder="e.g. G-XXXXXXXXXX" />
+        </div>
+      </div>
+
       {/* Events */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -214,6 +228,37 @@ export default function PixelClient({ pixels, events, websitePixelId }: { pixels
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AdPixelRow({ label, platform, initial, placeholder }: { label: string; platform: string; initial: string; placeholder: string }) {
+  const [val, setVal] = useState(initial);
+  const [saved, setSaved] = useState(false);
+  const [pending, startTransition] = useTransition();
+  function save() {
+    if (val.trim() === initial.trim()) return;
+    startTransition(async () => {
+      await setAdPixel(platform, val);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    });
+  }
+  return (
+    <div>
+      <label className="block text-[#8b8fa8] text-xs mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onBlur={save}
+          placeholder={placeholder}
+          className="flex-1 bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500"
+        />
+        <span className="text-xs w-14 shrink-0">
+          {pending ? <span className="text-[#8b8fa8]">Saving…</span> : saved ? <span className="text-green-400">Saved</span> : null}
+        </span>
       </div>
     </div>
   );

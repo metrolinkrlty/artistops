@@ -514,6 +514,19 @@ model ChecklistItem {
   @@index([userId])
 }
 
+// Third-party ad/analytics pixels the artist wants injected on their external
+// website (Meta, TikTok, Google). Isolated table so it never touches other
+// queries — the site reads these from config and installs them with no redeploy.
+model AdPixel {
+  id        String   @id @default(cuid())
+  userId    String
+  platform  String   // "meta" | "tiktok" | "google"
+  pixelId   String
+  updatedAt DateTime @updatedAt
+  @@unique([userId, platform])
+  @@index([userId])
+}
+
 // A track featured on an artist's public website. Audio lives in the private
 // `audio` bucket at previewPath/fullPath; the site streams previews via signed
 // URLs and the full track only after an email unlock. Managed per ArtistSite slug.

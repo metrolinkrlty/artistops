@@ -52,15 +52,23 @@ export async function GET(
   // installs the pixel with no redeploy. Queried separately and defensively so
   // that a DB not yet carrying `websitePixelId` still serves site content.
   let pixelId: string | null = null;
+  const adPixels: Record<string, string> = {};
   try {
     const p = await prisma.artistSite.findUnique({
       where: { slug },
-      select: { websitePixelId: true },
+      select: { websitePixelId: true, userId: true },
     });
     pixelId = p?.websitePixelId ?? null;
+    if (p?.userId) {
+      const rows = await prisma.adPixel.findMany({
+        where: { userId: p.userId },
+        select: { platform: true, pixelId: true },
+      });
+      for (const r of rows) adPixels[r.platform] = r.pixelId;
+    }
   } catch {
     pixelId = null;
   }
 
-  return NextResponse.json({ ok: true, site: { ...site, pixelId } }, { headers: CORS });
+  return NextResponse.json({ ok: true, site: { ...site, pixelId, adPixels } }, { headers: CORS });
 }
