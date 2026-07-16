@@ -46,3 +46,32 @@ export const DISTROKID_GENRES: string[] = [
   "World",
   "Xigaza",
 ];
+
+// Subgenres, mirrored from DistroKid. Only genres that actually offer a subgenre
+// appear here — on DistroKid, that's Electronic. Keyed by primary genre name.
+export const DISTROKID_SUBGENRES: Record<string, string[]> = {
+  Electronic: [
+    "Big Room",
+    "Breaks",
+    "Chill Out",
+    "Deep House",
+    "Drum & Bass",
+    "Dubstep",
+    "Electro House",
+    "Electronica / Downtempo",
+    "Funk / Soul / Disco",
+    "Glitch Hop",
+    "Hard Dance",
+    "Hardcore / Hard Techno",
+    "Hip-Hop / R&B",
+    "House",
+    "Indie Dance / Nu Disco",
+    "Minimal / Deep Tech",
+    "Progressive House",
+    "Psy-Trance",
+    "Reggae / Dancehall / Dub",
+    "Tech House",
+    "Techno",
+    "Trance",
+  ],
+};

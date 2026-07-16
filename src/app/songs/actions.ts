@@ -71,6 +71,7 @@ function parseForm(formData: FormData) {
     upc: String(formData.get("upc") || "").trim() || null,
     releaseDate: releaseRaw ? new Date(releaseRaw) : null,
     genre: String(formData.get("genre") || "").trim() || null,
+    subgenre: String(formData.get("subgenre") || "").trim() || null,
     bpm: bpmRaw ? Number(bpmRaw) : null,
     key: String(formData.get("key") || "").trim() || null,
     notes: String(formData.get("notes") || "").trim() || null,

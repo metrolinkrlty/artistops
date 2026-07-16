@@ -29,6 +29,7 @@ model Song {
   upc           String?
   releaseDate   DateTime?
   genre         String?
+  subgenre      String?  // DistroKid subgenre (only some genres have them, e.g. Electronic)
   bpm           Int?
   key           String?
   lyrics        String?

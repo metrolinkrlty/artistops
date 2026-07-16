@@ -1,12 +1,12 @@
 "use client";
 import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
 import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl } from "./actions";
 import { supabaseBrowser, AUDIO_BUCKET } from "@/lib/supabaseClient";
-import { DISTROKID_GENRES } from "@/lib/genres";
+import { DISTROKID_GENRES, DISTROKID_SUBGENRES } from "@/lib/genres";
 
 const statusColors: Record<string, string> = {
   DEMO: "bg-gray-500/20 text-gray-400",
@@ -35,6 +35,7 @@ type Song = {
   upc: string | null;
   releaseDate: string | null;
   genre: string | null;
+  subgenre: string | null;
   bpm: number | null;
   key: string | null;
   notes: string | null;
@@ -63,6 +64,11 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Song | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [genreSel, setGenreSel] = useState("");
+  useEffect(() => {
+    if (showForm) setGenreSel(editing?.genre || "");
+  }, [showForm, editing]);
+  const subgenreOptions = DISTROKID_SUBGENRES[genreSel] || [];
   const [saving, setSaving] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [metaJson, setMetaJson] = useState<string>("");
@@ -283,7 +289,7 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
               <Field label="ISRC"><input name="isrc" defaultValue={editing?.isrc || ""} className={inputClass} placeholder="USRC12345678" /></Field>
               <Field label="UPC"><input name="upc" defaultValue={editing?.upc || ""} className={inputClass} /></Field>
               <Field label="Genre">
-                <select name="genre" defaultValue={editing?.genre || ""} className={inputClass}>
+                <select name="genre" value={genreSel} onChange={(e) => setGenreSel(e.target.value)} className={inputClass}>
                   <option value="">Select a genre…</option>
                   {editing?.genre && !DISTROKID_GENRES.includes(editing.genre) && (
                     <option value={editing.genre}>{editing.genre} (current)</option>
@@ -293,6 +299,19 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                   ))}
                 </select>
               </Field>
+              {subgenreOptions.length > 0 && (
+                <Field label="Subgenre">
+                  <select name="subgenre" defaultValue={editing?.subgenre || ""} className={inputClass}>
+                    <option value="">Select subgenre…</option>
+                    {editing?.subgenre && !subgenreOptions.includes(editing.subgenre) && (
+                      <option value={editing.subgenre}>{editing.subgenre} (current)</option>
+                    )}
+                    {subgenreOptions.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
+              )}
               <Field label="Release Date"><input name="releaseDate" type="date" defaultValue={editing?.releaseDate ? editing.releaseDate.slice(0, 10) : ""} className={inputClass} /></Field>
               <Field label="BPM"><input name="bpm" type="number" defaultValue={editing?.bpm ?? ""} className={inputClass} /></Field>
               <Field label="Key"><input name="key" defaultValue={editing?.key || ""} className={inputClass} placeholder="C Major" /></Field>
