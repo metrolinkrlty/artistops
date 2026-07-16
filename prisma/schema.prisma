@@ -500,6 +500,19 @@ model ArtistSite {
   @@index([userId])
 }
 
+// Per-artist setup/release checklist completion. The task list itself is
+// defined in code (src/app/checklist/tasks.ts); this only records which keys an
+// artist has marked done. Isolated table so it never touches other queries.
+model ChecklistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  done      Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  @@unique([userId, key])
+  @@index([userId])
+}
+
 // A track featured on an artist's public website. Audio lives in the private
 // `audio` bucket at previewPath/fullPath; the site streams previews via signed
 // URLs and the full track only after an email unlock. Managed per ArtistSite slug.
