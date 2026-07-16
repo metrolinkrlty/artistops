@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
 import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl } from "./actions";
 import { supabaseBrowser, AUDIO_BUCKET } from "@/lib/supabaseClient";
+import { DISTROKID_GENRES } from "@/lib/genres";
 
 const statusColors: Record<string, string> = {
   DEMO: "bg-gray-500/20 text-gray-400",
@@ -281,7 +282,17 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
               <Field label="Publishers (comma-separated)"><input name="publishers" defaultValue={editing?.publishers.join(", ") || ""} className={inputClass} /></Field>
               <Field label="ISRC"><input name="isrc" defaultValue={editing?.isrc || ""} className={inputClass} placeholder="USRC12345678" /></Field>
               <Field label="UPC"><input name="upc" defaultValue={editing?.upc || ""} className={inputClass} /></Field>
-              <Field label="Genre"><input name="genre" defaultValue={editing?.genre || ""} className={inputClass} /></Field>
+              <Field label="Genre">
+                <select name="genre" defaultValue={editing?.genre || ""} className={inputClass}>
+                  <option value="">Select a genre…</option>
+                  {editing?.genre && !DISTROKID_GENRES.includes(editing.genre) && (
+                    <option value={editing.genre}>{editing.genre} (current)</option>
+                  )}
+                  {DISTROKID_GENRES.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Release Date"><input name="releaseDate" type="date" defaultValue={editing?.releaseDate ? editing.releaseDate.slice(0, 10) : ""} className={inputClass} /></Field>
               <Field label="BPM"><input name="bpm" type="number" defaultValue={editing?.bpm ?? ""} className={inputClass} /></Field>
               <Field label="Key"><input name="key" defaultValue={editing?.key || ""} className={inputClass} placeholder="C Major" /></Field>
