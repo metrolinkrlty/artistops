@@ -6,31 +6,35 @@ import { Bell, Check } from "lucide-react";
 import { CHECKLIST_TASKS, CHECKLIST_CATEGORIES } from "@/app/checklist/tasks";
 import { getChecklist, toggleChecklistItem } from "@/app/checklist/actions";
 
+type ItemState = { done: boolean; auto: boolean };
+
 export default function ChecklistBell() {
   const [open, setOpen] = useState(false);
-  const [done, setDone] = useState<Record<string, boolean>>({});
+  const [state, setState] = useState<Record<string, ItemState>>({});
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     getChecklist()
       .then((rows) => {
-        const map: Record<string, boolean> = {};
-        for (const r of rows) map[r.key] = r.done;
-        setDone(map);
+        const map: Record<string, ItemState> = {};
+        for (const r of rows) map[r.key] = { done: r.done, auto: r.auto };
+        setState(map);
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
 
   const total = CHECKLIST_TASKS.length;
-  const completed = CHECKLIST_TASKS.filter((t) => done[t.key]).length;
+  const completed = CHECKLIST_TASKS.filter((t) => state[t.key]?.done).length;
   const remaining = total - completed;
 
   function toggle(key: string) {
-    const next = !done[key];
-    setDone((d) => ({ ...d, [key]: next })); // optimistic
+    const cur = state[key];
+    if (!cur || cur.auto) return; // auto tasks are data-driven
+    const next = !cur.done;
+    setState((s) => ({ ...s, [key]: { ...s[key], done: next } })); // optimistic
     toggleChecklistItem(key, next).then((res) => {
-      if (!res.ok) setDone((d) => ({ ...d, [key]: !next })); // revert on failure
+      if (!res.ok) setState((s) => ({ ...s, [key]: { ...s[key], done: !next } })); // revert
     });
   }
 
@@ -73,18 +77,32 @@ export default function ChecklistBell() {
                       {cat}
                     </p>
                     {tasks.map((t) => {
-                      const isDone = !!done[t.key];
+                      const st = state[t.key] || { done: false, auto: !!t.auto };
+                      const isDone = st.done;
                       return (
                         <div key={t.key} className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#2a2d3a]/50">
-                          <button
-                            onClick={() => toggle(t.key)}
-                            title={isDone ? "Mark as not done" : "Mark as done"}
-                            className={`mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors ${
-                              isDone ? "bg-indigo-600 border-indigo-600" : "border-[#3a3d4a] hover:border-indigo-500"
-                            }`}
-                          >
-                            {isDone && <Check className="w-3 h-3 text-white" />}
-                          </button>
+                          {t.auto ? (
+                            // Auto: reflects real data, not clickable. Circle = automatic.
+                            <div
+                              title="Completes automatically from your data"
+                              className={`mt-0.5 w-4 h-4 shrink-0 rounded-full border flex items-center justify-center ${
+                                isDone ? "bg-indigo-600 border-indigo-600" : "border-[#3a3d4a]"
+                              }`}
+                            >
+                              {isDone && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                          ) : (
+                            // Manual: check off yourself. Square = manual.
+                            <button
+                              onClick={() => toggle(t.key)}
+                              title={isDone ? "Mark as not done" : "Mark as done"}
+                              className={`mt-0.5 w-4 h-4 shrink-0 rounded border flex items-center justify-center transition-colors ${
+                                isDone ? "bg-indigo-600 border-indigo-600" : "border-[#3a3d4a] hover:border-indigo-500"
+                              }`}
+                            >
+                              {isDone && <Check className="w-3 h-3 text-white" />}
+                            </button>
+                          )}
                           <div className="flex-1 min-w-0">
                             <Link
                               href={t.href}
@@ -101,6 +119,9 @@ export default function ChecklistBell() {
                   </div>
                 );
               })}
+            </div>
+            <div className="px-4 py-2.5 border-t border-[#2a2d3a] text-[10px] text-[#8b8fa8]">
+              ● Square = check off yourself &nbsp;·&nbsp; ○ Circle = fills in automatically
             </div>
           </div>
         </>
