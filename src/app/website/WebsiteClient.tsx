@@ -13,6 +13,7 @@ import {
   reorderGalleryImages,
   hideGalleryImage,
   showGalleryImage,
+  reorderSiteTracks,
   setHeroImage,
   type SocialLinks,
 } from "./actions";
@@ -85,10 +86,12 @@ export default function WebsiteClient({
   site,
   subscribers,
   isAdmin,
+  siteTracks,
 }: {
   site: ArtistSite;
   subscribers: Subscriber[];
   isAdmin: boolean;
+  siteTracks: { id: string; title: string }[];
 }) {
   const router = useRouter();
   const social = (site?.socialLinks as SocialLinks) || {};
@@ -382,6 +385,8 @@ export default function WebsiteClient({
       {/* Images */}
       <ImageManager heroImageUrl={site?.heroImageUrl ?? null} galleryImages={site?.galleryImages ?? []} hiddenGalleryImages={site?.hiddenGalleryImages ?? []} disabled={!site?.slug} />
 
+      <TrackOrder tracks={siteTracks} />
+
       {/* Mailing list */}
       <section className="rounded-xl border border-border bg-card p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -424,6 +429,50 @@ export default function WebsiteClient({
         )}
       </section>
     </div>
+  );
+}
+
+function TrackOrder({ tracks }: { tracks: { id: string; title: string }[] }) {
+  const router = useRouter();
+  const [order, setOrder] = useState(tracks);
+  useEffect(() => { setOrder(tracks); }, [tracks]);
+  const dragId = useRef<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  if (!tracks.length) return null;
+
+  function reorderTo(targetId: string) {
+    const from = order.findIndex((t) => t.id === dragId.current);
+    const to = order.findIndex((t) => t.id === targetId);
+    if (from < 0 || to < 0 || from === to) return;
+    const next = [...order];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    setOrder(next);
+    startTransition(() => { reorderSiteTracks(next.map((t) => t.id)).then(() => router.refresh()); });
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-6">
+      <h2 className="mb-1 text-lg font-semibold">Song order</h2>
+      <p className="mb-4 text-sm text-muted-foreground">Drag to set the order songs appear on your site — the first one plays first.</p>
+      <ul className="space-y-2">
+        {order.map((t, i) => (
+          <li
+            key={t.id}
+            draggable
+            onDragStart={() => { dragId.current = t.id; }}
+            onDragOver={(e) => { if (dragId.current && dragId.current !== t.id) e.preventDefault(); }}
+            onDrop={(e) => { e.preventDefault(); reorderTo(t.id); }}
+            onDragEnd={() => { dragId.current = null; }}
+            className="flex cursor-grab items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2 transition active:cursor-grabbing hover:border-ring"
+          >
+            <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>
+            <span className="text-sm text-foreground">{t.title}</span>
+            <span className="ml-auto select-none text-muted-foreground">⠿</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

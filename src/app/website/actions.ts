@@ -345,6 +345,31 @@ export async function setHeroImage(url: string) {
   revalidatePath("/website");
 }
 
+// The tracks featured on the artist's website, in display order.
+export async function getSiteTracks() {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return [];
+  const tracks = await prisma.siteTrack.findMany({
+    where: { site: site.slug },
+    orderBy: { order: "asc" },
+    select: { id: true, title: true },
+  });
+  return tracks;
+}
+
+// Persist a new order for the website's tracks (the first one plays first).
+export async function reorderSiteTracks(ids: string[]) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return;
+  const owned = await prisma.siteTrack.findMany({ where: { site: site.slug }, select: { id: true } });
+  const ownedIds = new Set(owned.map((t) => t.id));
+  const seq = ids.filter((id) => ownedIds.has(id));
+  await prisma.$transaction(seq.map((id, i) => prisma.siteTrack.update({ where: { id }, data: { order: i } })));
+  revalidatePath("/website");
+}
+
 export async function deleteSubscriber(id: string) {
   const userId = await requireUserId();
   const site = await prisma.artistSite.findUnique({
