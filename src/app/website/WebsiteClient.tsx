@@ -230,31 +230,10 @@ export default function WebsiteClient({
           </div>
 
           <Field label="Heading font">
-            {/* Load the option fonts so the preview renders in the chosen typeface. */}
+            {/* Load the option fonts so each choice renders in its own typeface. */}
             <link rel="stylesheet" href={FONT_PREVIEW_HREF} />
             <input type="hidden" name="fontFamily" value={font} />
-            <select
-              value={font}
-              onChange={(e) => setFont(e.target.value)}
-              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
-            >
-              {FONT_CATEGORIES.map((cat) => (
-                <optgroup key={cat} label={cat}>
-                  {SITE_FONTS.filter((f) => f.category === cat).map((f) => (
-                    <option key={f.key} value={f.key}>{f.label} — {f.note}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            {/* Live preview in the selected font */}
-            <div className="mt-2 rounded-lg border border-border bg-background/40 px-4 py-3">
-              <span
-                className="block text-2xl leading-tight text-foreground"
-                style={{ fontFamily: SITE_FONTS.find((f) => f.key === font)?.css }}
-              >
-                {site?.displayName || "Your Artist Name"}
-              </span>
-            </div>
+            <FontDropdown value={font} onChange={setFont} />
             <span className="text-xs text-muted-foreground">Sets the big headings on your public site. Changes go live after you save.</span>
           </Field>
 
@@ -465,6 +444,60 @@ export default function WebsiteClient({
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+// Custom dropdown so each option renders in its own font (native <select>
+// options don't honor font-family in Chrome). Closed by default, like a select.
+function FontDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = SITE_FONTS.find((f) => f.key === value) ?? SITE_FONTS[0];
+
+  useEffect(() => {
+    if (!open) return;
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-left outline-none focus-visible:border-ring dark:bg-input/30"
+      >
+        <span className="truncate text-xl leading-tight text-foreground" style={{ fontFamily: selected.css }}>
+          {selected.label}
+        </span>
+        <span className="ml-2 shrink-0 text-xs text-muted-foreground">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-lg">
+          {FONT_CATEGORIES.map((cat) => (
+            <div key={cat}>
+              <div className="sticky top-0 bg-muted/80 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur">
+                {cat}
+              </div>
+              {SITE_FONTS.filter((f) => f.category === cat).map((f) => (
+                <button
+                  type="button"
+                  key={f.key}
+                  onClick={() => { onChange(f.key); setOpen(false); }}
+                  className={`flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left hover:bg-accent ${f.key === value ? "bg-accent" : ""}`}
+                >
+                  <span className="truncate text-xl leading-tight text-foreground" style={{ fontFamily: f.css }}>{f.label}</span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{f.note}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
