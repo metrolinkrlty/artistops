@@ -303,7 +303,7 @@ export default function LoginPage() {
               <AuthForm />
             </Suspense>
           </div>
-          <p className="text-center text-[#8b8fa8] text-xs mt-6">New accounts include sample data to explore · Sessions time out after 30 min of inactivity.</p>
+          <p className="text-center text-[#8b8fa8] text-xs mt-6">Add your catalog so you can track it · Sessions time out after 30 min of inactivity.</p>
           <p className="text-center text-[#5a5e72] text-xs mt-2">ArtistOps v{APP_VERSION}</p>
         </div>
       </div>
