@@ -5,12 +5,16 @@ import { Music, Check, Calendar } from "lucide-react";
 // The fan-facing pre-save page. Anonymous — no ArtistOps account involved.
 export const dynamic = "force-dynamic";
 
+// A release date is a calendar date, not a moment in time: an artist who picks
+// Sept 4 must never see "Out September 3" because the fan is west of UTC. Store
+// and render it in UTC.
 function formatReleaseDate(d: Date) {
   return d.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -115,10 +119,9 @@ export default async function PreSavePage({
                 </a>
 
                 <p className="text-[#5a5e72] text-xs mt-4 leading-snug">
-                  We only use this to add the song to your library
-                  {willFollow ? " and follow the artist" : ""} on release day. We can&rsquo;t
-                  see your password, and you can remove access any time in your Spotify
-                  settings.
+                  {`We only use this to add the song to your library${
+                    willFollow ? " and follow the artist" : ""
+                  } on release day. We can’t see your password, and you can remove access any time in your Spotify settings.`}
                 </p>
               </>
             )}
