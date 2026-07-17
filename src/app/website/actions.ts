@@ -266,6 +266,20 @@ export async function removeGalleryImage(url: string) {
   revalidatePath("/website");
 }
 
+// Promote an existing gallery photo to the hero background (used by drag-to-hero).
+export async function setHeroImage(url: string) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { galleryImages: true },
+  });
+  if (!site) return;
+  // Only allow images the artist already owns (a gallery photo).
+  if (!site.galleryImages.includes(url)) return;
+  await prisma.artistSite.update({ where: { userId }, data: { heroImageUrl: url } });
+  revalidatePath("/website");
+}
+
 export async function deleteSubscriber(id: string) {
   const userId = await requireUserId();
   const site = await prisma.artistSite.findUnique({

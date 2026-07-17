@@ -10,6 +10,7 @@ import {
   uploadSiteImage,
   clearHeroImage,
   removeGalleryImage,
+  setHeroImage,
   type SocialLinks,
 } from "./actions";
 import { SECTION_KEYS, type Show } from "./site-fields";
@@ -406,6 +407,7 @@ function ImageManager({
   const heroInput = useRef<HTMLInputElement>(null);
   const galleryInput = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
+  const [dragOver, setDragOver] = useState(false);
 
   async function upload(kind: "hero" | "gallery", input: HTMLInputElement | null) {
     const file = input?.files?.[0];
@@ -432,14 +434,26 @@ function ImageManager({
       <div className="space-y-6">
         <div>
           <h3 className="mb-2 text-sm font-semibold text-foreground">Hero background</h3>
-          <div className="flex flex-wrap items-center gap-4">
+          <div
+            onDragOver={(e) => { if (!disabled) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDragOver(true); } }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              if (disabled) return;
+              const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+              if (url) startTransition(() => { setHeroImage(url).then(() => router.refresh()); });
+            }}
+            className={`flex flex-wrap items-center gap-4 rounded-lg border-2 border-dashed p-3 transition-colors ${dragOver ? "border-primary bg-primary/10" : "border-transparent"}`}
+          >
             {heroImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={heroImageUrl} alt="Hero" className="h-20 w-32 rounded-lg border border-border object-cover" />
+              <img src={heroImageUrl} alt="Hero" draggable={false} className="h-20 w-32 rounded-lg border border-border object-cover" />
             )}
             <div className="flex items-center gap-2">
               <input ref={heroInput} type="file" accept="image/*" disabled={disabled || busy === "hero"} onChange={() => upload("hero", heroInput.current)} className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-foreground" />
               {busy === "hero" && <span className="text-xs text-muted-foreground">Uploading…</span>}
+              {(pending && dragOver) && <span className="text-xs text-muted-foreground">Setting…</span>}
               {heroImageUrl && (
                 <Button variant="ghost" size="xs" disabled={pending} onClick={() => startTransition(() => { clearHeroImage().then(() => router.refresh()); })}>
                   Remove
@@ -447,6 +461,9 @@ function ImageManager({
               )}
             </div>
           </div>
+          {galleryImages.length > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">Tip: drag a gallery photo here to make it the hero background.</p>
+          )}
         </div>
 
         <div>
@@ -454,9 +471,19 @@ function ImageManager({
           {galleryImages.length > 0 && (
             <div className="mb-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
               {galleryImages.map((url) => (
-                <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
+                <div
+                  key={url}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/uri-list", url);
+                    e.dataTransfer.setData("text/plain", url);
+                    e.dataTransfer.effectAllowed = "copy";
+                  }}
+                  title="Drag to the hero background to use it there"
+                  className="group relative cursor-grab overflow-hidden rounded-lg border border-border active:cursor-grabbing"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="aspect-square w-full object-cover" />
+                  <img src={url} alt="" draggable={false} className="aspect-square w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => startTransition(() => { removeGalleryImage(url).then(() => router.refresh()); })}
