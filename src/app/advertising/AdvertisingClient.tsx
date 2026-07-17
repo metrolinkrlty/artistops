@@ -1,8 +1,8 @@
 "use client";
-import { Plus, Search, Pencil, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { Plus, Search, Pencil, Trash2, X, Upload } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createAdCampaign, updateAdCampaign, deleteAdCampaign } from "./actions";
+import { createAdCampaign, updateAdCampaign, deleteAdCampaign, uploadCampaignFlyer } from "./actions";
 
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-500/20 text-gray-400",
@@ -17,7 +17,7 @@ type Campaign = {
   id: string; name: string; platform: string; objective: string | null; songId: string | null;
   budget: number | null; startDate: string | null; endDate: string | null; targetAudience: string | null;
   status: string; impressions: number | null; clicks: number | null; ctr: number | null;
-  conversions: number | null; revenueAttributed: number | null;
+  conversions: number | null; revenueAttributed: number | null; creativeAssets: string[];
 };
 type SongOpt = { id: string; title: string };
 
@@ -29,6 +29,29 @@ export default function AdvertisingClient({ campaigns, songs }: { campaigns: Cam
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [flyers, setFlyers] = useState<string[]>([]);
+  const [uploadingFlyer, setUploadingFlyer] = useState(false);
+  const [flyerError, setFlyerError] = useState("");
+  const flyerInput = useRef<HTMLInputElement>(null);
+
+  // Seed the flyer list whenever the form opens (new = empty, edit = existing).
+  useEffect(() => {
+    if (showForm) { setFlyers(editing?.creativeAssets ?? []); setFlyerError(""); }
+  }, [showForm, editing]);
+
+  async function handleFlyerUpload() {
+    const file = flyerInput.current?.files?.[0];
+    if (!file) return;
+    setUploadingFlyer(true);
+    setFlyerError("");
+    const fd = new FormData();
+    fd.set("file", file);
+    const res = await uploadCampaignFlyer(fd);
+    setUploadingFlyer(false);
+    if (flyerInput.current) flyerInput.current.value = "";
+    if (!res.ok || !res.url) { setFlyerError(res.error || "Upload failed."); return; }
+    setFlyers((f) => [...f, res.url!]);
+  }
 
   const filtered = campaigns.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) || c.platform.toLowerCase().includes(search.toLowerCase())
@@ -117,6 +140,32 @@ export default function AdvertisingClient({ campaigns, songs }: { campaigns: Cam
               <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Clicks</label><input name="clicks" type="number" defaultValue={editing?.clicks ?? ""} className={inputClass} /></div>
               <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Conversions</label><input name="conversions" type="number" defaultValue={editing?.conversions ?? ""} className={inputClass} /></div>
               <div><label className="block text-[#8b8fa8] text-xs mb-1.5">Revenue Attributed ($)</label><input name="revenueAttributed" type="number" step="0.01" defaultValue={editing?.revenueAttributed ?? ""} className={inputClass} /></div>
+
+              {/* Flyers / creative — uploaded to storage, URLs submitted via hidden field */}
+              <div className="col-span-2">
+                <label className="block text-[#8b8fa8] text-xs mb-1.5">Flyers / ad creative</label>
+                <input type="hidden" name="creativeAssets" value={flyers.join(",")} />
+                {flyers.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 mb-2">
+                    {flyers.map((url) => (
+                      <div key={url} className="group relative overflow-hidden rounded-lg border border-[#2a2d3a]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="aspect-square w-full object-cover" />
+                        <button type="button" onClick={() => setFlyers((f) => f.filter((u) => u !== url))} title="Remove" className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <input ref={flyerInput} type="file" accept="image/*" onChange={handleFlyerUpload} disabled={uploadingFlyer} className="hidden" id="flyer-input" />
+                  <label htmlFor="flyer-input" className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#2a2d3a] px-3 py-1.5 text-xs text-[#c7cad8] hover:text-white hover:border-indigo-500">
+                    <Upload className="w-3.5 h-3.5" /> {uploadingFlyer ? "Uploading…" : "Upload flyer"}
+                  </label>
+                  <span className="text-[#5a5e72] text-xs">JPG/PNG/WebP, under 8 MB. Add as many as you like.</span>
+                </div>
+                {flyerError && <p className="text-red-400 text-xs mt-1">{flyerError}</p>}
+              </div>
+
               <div className="col-span-2 flex justify-end gap-3 mt-2">
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-[#8b8fa8] hover:text-white text-sm">Cancel</button>
                 <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Saving..." : "Save"}</button>
