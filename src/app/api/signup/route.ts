@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { seedSampleDataForUser } from "@/lib/sampleData";
 import { sendEmail, adminSignupNotificationHtml } from "@/lib/email";
 
 const VALID_ROLES = ["artist", "band", "manager", "label", "producer", "educator", "other"];
@@ -91,8 +90,8 @@ export async function POST(req: NextRequest) {
     email
   ).catch(console.error);
 
-  // Seed sample data in the background so the account is ready if approved.
-  seedSampleDataForUser(user.id, artistName).catch((e) => console.error("Sample data seed failed:", e));
+  // New accounts start empty — real artists see only their own data, and the
+  // admin view stays honest. (Sample data used to be seeded here.)
 
   // No confirmation email to the applicant — the on-screen thank-you is the
   // acknowledgement, and they hear from us only if approved.
