@@ -35,7 +35,10 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return toB64(bits) === parts[2];
 }
 
-// ---------- Signed session token: "<userId>.<hmac>" ----------
+// ---------- Signed session token: "<userId>.<status>.<admin>.<hmac(payload)>" ----------
+// The status + admin flag ride inside the signed token so middleware can gate
+// access with zero DB or network round-trips on every request. HMAC covers the
+// whole payload, so the claims can't be tampered with.
 
 async function hmac(data: string): Promise<string> {
   const secret = process.env.SESSION_TOKEN || "dev-secret";
@@ -44,22 +47,35 @@ async function hmac(data: string): Promise<string> {
   return toB64(sig);
 }
 
-export async function signSession(userId: string): Promise<string> {
-  return `${userId}.${await hmac(userId)}`;
+export type SessionClaims = { userId: string; status: string; isAdmin: boolean };
+
+export async function signSession(userId: string, status: string = "APPROVED", isAdmin: boolean = false): Promise<string> {
+  const payload = `${userId}.${status}.${isAdmin ? "1" : "0"}`;
+  return `${payload}.${await hmac(payload)}`;
 }
 
-export async function verifySession(value: string | undefined | null): Promise<string | null> {
+// Verify signature and return all claims. Rejects the old 2-part token format
+// (those sessions simply re-authenticate once).
+export async function verifySessionClaims(value: string | undefined | null): Promise<SessionClaims | null> {
   if (!value) return null;
   const idx = value.lastIndexOf(".");
   if (idx <= 0) return null;
-  const userId = value.slice(0, idx);
+  const payload = value.slice(0, idx);
   const sig = value.slice(idx + 1);
-  const expected = await hmac(userId);
-  // constant-ish time compare
+  const expected = await hmac(payload);
   if (sig.length !== expected.length) return null;
   let diff = 0;
   for (let i = 0; i < sig.length; i++) diff |= sig.charCodeAt(i) ^ expected.charCodeAt(i);
-  return diff === 0 ? userId : null;
+  if (diff !== 0) return null;
+  const parts = payload.split(".");
+  if (parts.length !== 3) return null; // old format or malformed
+  return { userId: parts[0], status: parts[1], isAdmin: parts[2] === "1" };
+}
+
+// Back-compat: callers that only need the user id.
+export async function verifySession(value: string | undefined | null): Promise<string | null> {
+  const claims = await verifySessionClaims(value);
+  return claims?.userId ?? null;
 }
 
 export const SESSION_COOKIE = "ao_session";

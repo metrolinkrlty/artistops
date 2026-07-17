@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Incorrect email or password" }, { status: 401 });
   }
 
-  const token = await signSession(user.id);
+  const token = await signSession(user.id, user.status, user.isAdmin);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,

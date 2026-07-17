@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "This reset link is invalid or has expired." }, { status: 400 });
   }
 
-  await prisma.user.update({ where: { id: reset.userId }, data: { passwordHash: await hashPassword(password) } });
+  const updated = await prisma.user.update({ where: { id: reset.userId }, data: { passwordHash: await hashPassword(password) } });
   await prisma.passwordReset.update({ where: { id: reset.id }, data: { usedAt: new Date() } });
 
   // Sign the user in directly after a successful reset.
-  const sessionToken = await signSession(reset.userId);
+  const sessionToken = await signSession(reset.userId, updated.status, updated.isAdmin);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
