@@ -256,12 +256,51 @@ export async function removeGalleryImage(url: string) {
   const userId = await requireUserId();
   const site = await prisma.artistSite.findUnique({
     where: { userId },
-    select: { galleryImages: true },
+    select: { galleryImages: true, hiddenGalleryImages: true },
   });
   if (!site) return;
   await prisma.artistSite.update({
     where: { userId },
-    data: { galleryImages: site.galleryImages.filter((u) => u !== url) },
+    data: {
+      galleryImages: site.galleryImages.filter((u) => u !== url),
+      hiddenGalleryImages: site.hiddenGalleryImages.filter((u) => u !== url),
+    },
+  });
+  revalidatePath("/website");
+}
+
+// Hide a photo from the public gallery but keep it in the library.
+export async function hideGalleryImage(url: string) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { galleryImages: true, hiddenGalleryImages: true },
+  });
+  if (!site || !site.galleryImages.includes(url)) return;
+  await prisma.artistSite.update({
+    where: { userId },
+    data: {
+      galleryImages: site.galleryImages.filter((u) => u !== url),
+      hiddenGalleryImages: Array.from(new Set([...site.hiddenGalleryImages, url])),
+    },
+  });
+  revalidatePath("/website");
+}
+
+// Restore a hidden photo to the public gallery.
+export async function showGalleryImage(url: string) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { galleryImages: true, hiddenGalleryImages: true },
+  });
+  if (!site || !site.hiddenGalleryImages.includes(url)) return;
+  await prisma.artistSite.update({
+    where: { userId },
+    data: {
+      hiddenGalleryImages: site.hiddenGalleryImages.filter((u) => u !== url),
+      galleryImages: Array.from(new Set([...site.galleryImages, url])),
+    },
   });
   revalidatePath("/website");
 }

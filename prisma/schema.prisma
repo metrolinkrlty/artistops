@@ -485,7 +485,8 @@ model ArtistSite {
   shows           Json?    // [{date, venue, city?, ticketUrl?}]
   heroCtaPrimary  String?  // label for the primary hero button (default "Listen Now")
   heroCtaSecondary String? // label for the secondary hero button
-  galleryImages   String[] @default([]) // public URLs of gallery photos
+  galleryImages   String[] @default([]) // public URLs of gallery photos (the shown set)
+  hiddenGalleryImages String[] @default([]) // photos kept in the library but hidden from the public gallery
   socialLinks     Json?
   websitePixelId  String?  // which Pixel powers the artist's external website (data-driven install, no redeploy)
   featuredSongIds String[]

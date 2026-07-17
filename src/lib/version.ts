@@ -1,2 +1,2 @@
 // Auto-bumped by the .githooks/pre-commit hook on every commit.
-export const APP_VERSION = "1.76";
+export const APP_VERSION = "1.77";

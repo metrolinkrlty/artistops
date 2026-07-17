@@ -11,6 +11,8 @@ import {
   clearHeroImage,
   removeGalleryImage,
   reorderGalleryImages,
+  hideGalleryImage,
+  showGalleryImage,
   setHeroImage,
   type SocialLinks,
 } from "./actions";
@@ -35,6 +37,7 @@ type ArtistSite = {
   heroCtaSecondary: string | null;
   heroImageUrl: string | null;
   galleryImages: string[];
+  hiddenGalleryImages: string[];
   hiddenSections: string[];
   shows: unknown;
   socialLinks: unknown;
@@ -346,7 +349,7 @@ export default function WebsiteClient({
       </section>
 
       {/* Images */}
-      <ImageManager heroImageUrl={site?.heroImageUrl ?? null} galleryImages={site?.galleryImages ?? []} disabled={!site?.slug} />
+      <ImageManager heroImageUrl={site?.heroImageUrl ?? null} galleryImages={site?.galleryImages ?? []} hiddenGalleryImages={site?.hiddenGalleryImages ?? []} disabled={!site?.slug} />
 
       {/* Mailing list */}
       <section className="rounded-xl border border-border bg-card p-6">
@@ -396,10 +399,12 @@ export default function WebsiteClient({
 function ImageManager({
   heroImageUrl,
   galleryImages,
+  hiddenGalleryImages,
   disabled,
 }: {
   heroImageUrl: string | null;
   galleryImages: string[];
+  hiddenGalleryImages: string[];
   disabled: boolean;
 }) {
   const router = useRouter();
@@ -518,13 +523,53 @@ function ImageManager({
                   <img src={url} alt="" draggable={false} className="aspect-square w-full object-cover" />
                   <button
                     type="button"
+                    onClick={() => startTransition(() => { hideGalleryImage(url).then(() => router.refresh()); })}
+                    title="Hide from public gallery (keeps it in your library)"
+                    className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                  >
+                    Hide
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => startTransition(() => { removeGalleryImage(url).then(() => router.refresh()); })}
+                    title="Delete permanently"
                     className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
                   >
                     ✕
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+          {hiddenGalleryImages.length > 0 && (
+            <div className="mb-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                Hidden from your public gallery ({hiddenGalleryImages.length}) — kept in your library
+              </p>
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                {hiddenGalleryImages.map((url) => (
+                  <div key={url} className="group relative overflow-hidden rounded-lg border border-border opacity-60">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="aspect-square w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => startTransition(() => { showGalleryImage(url).then(() => router.refresh()); })}
+                      title="Show in public gallery"
+                      className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground opacity-0 transition group-hover:opacity-100"
+                    >
+                      Show
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startTransition(() => { removeGalleryImage(url).then(() => router.refresh()); })}
+                      title="Delete permanently"
+                      className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex items-center gap-2">
