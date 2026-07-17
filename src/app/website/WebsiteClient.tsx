@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import {
   uploadSiteImage,
   clearHeroImage,
   removeGalleryImage,
+  reorderGalleryImages,
   setHeroImage,
   type SocialLinks,
 } from "./actions";
@@ -409,19 +410,45 @@ function ImageManager({
   const [pending, startTransition] = useTransition();
   const [dragOver, setDragOver] = useState(false);
 
+  // Local gallery order for optimistic drag-to-reorder; synced from the server.
+  const [order, setOrder] = useState<string[]>(galleryImages);
+  useEffect(() => { setOrder(galleryImages); }, [galleryImages]);
+  const dragUrl = useRef<string | null>(null);
+  const [overUrl, setOverUrl] = useState<string | null>(null);
+
   async function upload(kind: "hero" | "gallery", input: HTMLInputElement | null) {
-    const file = input?.files?.[0];
-    if (!file) return;
+    const files = input?.files ? Array.from(input.files) : [];
+    if (!files.length) return;
     setBusy(kind);
     setError(null);
-    const fd = new FormData();
-    fd.set("kind", kind);
-    fd.set("file", file);
-    const res = await uploadSiteImage(fd);
-    setBusy(null);
-    if (input) input.value = "";
-    if (!res.ok) setError(res.error || "Upload failed.");
-    else router.refresh();
+    try {
+      // Hero takes one photo; gallery accepts all selected files.
+      for (const file of kind === "hero" ? files.slice(0, 1) : files) {
+        const fd = new FormData();
+        fd.set("kind", kind);
+        fd.set("file", file);
+        const res = await uploadSiteImage(fd);
+        if (!res.ok) { setError(res.error || "Upload failed."); break; }
+      }
+      router.refresh();
+    } catch {
+      setError("Upload failed — an image may be too large (max 8 MB).");
+    } finally {
+      setBusy(null);
+      if (input) input.value = "";
+    }
+  }
+
+  function reorderTo(targetUrl: string) {
+    const dragged = dragUrl.current;
+    if (!dragged || dragged === targetUrl) return;
+    const from = order.indexOf(dragged);
+    const to = order.indexOf(targetUrl);
+    if (from < 0 || to < 0) return;
+    const next = [...order];
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    setOrder(next);
+    startTransition(() => { reorderGalleryImages(next).then(() => router.refresh()); });
   }
 
   return (
@@ -468,19 +495,24 @@ function ImageManager({
 
         <div>
           <h3 className="mb-2 text-sm font-semibold text-foreground">Gallery</h3>
-          {galleryImages.length > 0 && (
+          {order.length > 0 && (
             <div className="mb-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
-              {galleryImages.map((url) => (
+              {order.map((url) => (
                 <div
                   key={url}
                   draggable
                   onDragStart={(e) => {
+                    dragUrl.current = url;
                     e.dataTransfer.setData("text/uri-list", url);
                     e.dataTransfer.setData("text/plain", url);
-                    e.dataTransfer.effectAllowed = "copy";
+                    e.dataTransfer.effectAllowed = "copyMove";
                   }}
-                  title="Drag to the hero background to use it there"
-                  className="group relative cursor-grab overflow-hidden rounded-lg border border-border active:cursor-grabbing"
+                  onDragOver={(e) => { if (dragUrl.current && dragUrl.current !== url) { e.preventDefault(); setOverUrl(url); } }}
+                  onDragLeave={() => setOverUrl((u) => (u === url ? null : u))}
+                  onDrop={(e) => { e.preventDefault(); reorderTo(url); setOverUrl(null); }}
+                  onDragEnd={() => { dragUrl.current = null; setOverUrl(null); }}
+                  title="Drag onto another photo to reorder, or onto the hero to set it as the hero"
+                  className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${overUrl === url ? "border-primary ring-2 ring-primary" : "border-border"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" draggable={false} className="aspect-square w-full object-cover" />
@@ -496,9 +528,12 @@ function ImageManager({
             </div>
           )}
           <div className="flex items-center gap-2">
-            <input ref={galleryInput} type="file" accept="image/*" disabled={disabled || busy === "gallery"} onChange={() => upload("gallery", galleryInput.current)} className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-foreground" />
+            <input ref={galleryInput} type="file" accept="image/*" multiple disabled={disabled || busy === "gallery"} onChange={() => upload("gallery", galleryInput.current)} className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-foreground" />
             {busy === "gallery" && <span className="text-xs text-muted-foreground">Uploading…</span>}
           </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Select multiple photos to upload at once. Drag a photo to reorder it (or onto the hero to feature it), and hover + click ✕ to remove one.
+          </p>
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

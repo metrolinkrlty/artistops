@@ -266,6 +266,22 @@ export async function removeGalleryImage(url: string) {
   revalidatePath("/website");
 }
 
+// Reorder the gallery to the given sequence (must be the same set of photos).
+export async function reorderGalleryImages(urls: string[]) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { galleryImages: true },
+  });
+  if (!site) return;
+  const current = new Set(site.galleryImages);
+  const next = urls.filter((u) => current.has(u));
+  // Append any the client didn't include, so nothing is lost.
+  for (const u of site.galleryImages) if (!next.includes(u)) next.push(u);
+  await prisma.artistSite.update({ where: { userId }, data: { galleryImages: next } });
+  revalidatePath("/website");
+}
+
 // Promote an existing gallery photo to the hero background (used by drag-to-hero).
 export async function setHeroImage(url: string) {
   const userId = await requireUserId();
