@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Music, DollarSign, Shield, BarChart2, Link2, Megaphone, Sparkles, Globe, Lock, Mail, User, Eye, EyeOff,
+  Music, DollarSign, Shield, BarChart2, Link2, Megaphone, Sparkles, Globe, Lock, Mail, User, Eye, EyeOff, CheckCircle2,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -27,6 +27,7 @@ const ROLE_OPTIONS = [
   { value: "manager", label: "Artist manager" },
   { value: "label", label: "Label / industry professional" },
   { value: "producer", label: "Producer / engineer" },
+  { value: "educator", label: "Educator" },
   { value: "other", label: "Other" },
 ];
 const GOAL_OPTIONS = [
@@ -58,8 +59,10 @@ function AuthForm() {
   const [goals, setGoals] = useState<string[]>([]);
   const [catalogSize, setCatalogSize] = useState("");
   const [location, setLocation] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   function toggleGoal(goal: string) {
     setGoals((g) => (g.includes(goal) ? g.filter((x) => x !== goal) : [...g, goal]));
@@ -67,11 +70,15 @@ function AuthForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === "signup" && !agreedToTerms) {
+      setError("Please agree to the beta terms to continue.");
+      return;
+    }
     setLoading(true);
     setError("");
     const endpoint = mode === "signup" ? "/api/signup" : "/api/login";
     const payload = mode === "signup"
-      ? { artistName, email, password, role, referredBy, workLink, goals, catalogSize, location }
+      ? { artistName, email, password, role, referredBy, workLink, goals, catalogSize, location, agreedToTerms }
       : { email, password };
     const res = await fetch(endpoint, {
       method: "POST",
@@ -82,14 +89,39 @@ function AuthForm() {
     setLoading(false);
     if (res.ok) {
       if (mode === "signup") {
-        router.push("/pending-approval");
+        setSubmitted(true); // friendly thank-you, no redirect
       } else {
         router.push(params.get("from") || "/");
+        router.refresh();
       }
-      router.refresh();
     } else {
       setError(data.error || "Something went wrong");
     }
+  }
+
+  if (submitted) {
+    return (
+      <div className="text-center py-4">
+        <div className="w-14 h-14 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle2 className="w-7 h-7 text-green-400" />
+        </div>
+        <h3 className="text-white text-lg font-semibold mb-2">Thanks for taking the time!</h3>
+        <p className="text-[#8b8fa8] text-sm leading-relaxed max-w-xs mx-auto">
+          Your request is in. We review each one personally — if you&rsquo;re approved,
+          you&rsquo;ll be able to sign in and get started. Talk soon.
+        </p>
+        <button
+          onClick={() => {
+            setSubmitted(false);
+            setMode("login");
+            setPassword("");
+          }}
+          className="mt-6 text-indigo-400 text-sm hover:text-indigo-300"
+        >
+          Back to sign in
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -101,10 +133,10 @@ function AuthForm() {
 
       {mode === "signup" && (
         <div className="bg-indigo-500/10 border border-indigo-500/25 rounded-lg p-3.5 mb-5">
-          <p className="text-white text-sm font-medium">ArtistOps is in development.</p>
+          <p className="text-white text-sm font-medium">👋 Welcome — we&rsquo;re glad you&rsquo;re here.</p>
           <p className="text-[#c7cad8] text-xs leading-relaxed mt-1">
-            For now, membership is by invitation or referral only. Tell us a little about
-            yourself and we&rsquo;ll review your request — you&rsquo;ll hear back by email.
+            ArtistOps is still growing, so we&rsquo;re onboarding new folks by invitation and
+            referral for now. Tell us a bit about yourself and we&rsquo;ll take it from there.
           </p>
         </div>
       )}
@@ -207,6 +239,20 @@ function AuthForm() {
               </label>
               <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, country" className={plainInputClass} />
             </div>
+
+            <label className="flex items-start gap-2.5 pt-1 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 accent-indigo-500 flex-shrink-0"
+              />
+              <span className="text-[#8b8fa8] text-xs leading-relaxed">
+                I understand ArtistOps is early-stage <span className="text-[#c7cad8]">beta software, provided
+                &ldquo;as-is&rdquo; with no warranty</span>. Things may change or break, and I&rsquo;ll keep my own
+                copies of anything important. I&rsquo;m using it at my own risk.
+              </span>
+            </label>
           </>
         )}
 

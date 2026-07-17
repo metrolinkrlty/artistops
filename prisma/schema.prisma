@@ -539,13 +539,14 @@ model MembershipApplication {
   id          String   @id @default(cuid())
   userId      String?  @unique
   email       String
-  role        String // artist | band | manager | label | producer | other
-  referredBy  String
-  workLink    String?
-  goals       String[] @default([])
-  catalogSize String?
-  location    String?
-  createdAt   DateTime @default(now())
+  role           String // artist | band | manager | label | producer | educator | other
+  referredBy     String
+  workLink       String?
+  goals          String[] @default([])
+  catalogSize    String?
+  location       String?
+  termsAcceptedAt DateTime? // beta as-is disclaimer accepted at signup
+  createdAt      DateTime @default(now())
   @@index([email])
 }
 

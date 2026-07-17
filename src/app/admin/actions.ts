@@ -29,6 +29,41 @@ export async function rejectUser(id: string) {
   return { ok: true };
 }
 
+// Email an applicant/user directly from the admin panel — e.g. to ask a pending
+// applicant who referred them before approving. Reply-to is the admin so their
+// answer comes back to you.
+export async function messageUser(
+  id: string,
+  subject: string,
+  message: string
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const cleanSubject = subject.trim();
+  const cleanMessage = message.trim();
+  if (!cleanSubject) return { ok: false, error: "Add a subject." };
+  if (!cleanMessage) return { ok: false, error: "Write a message." };
+
+  const user = await prisma.user.findUnique({ where: { id }, select: { email: true, artistName: true } });
+  if (!user) return { ok: false, error: "User not found." };
+
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
+  const html = `
+  <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:480px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="width:40px;height:40px;background:#6366f1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎵</div>
+      <span style="font-size:20px;font-weight:700">ArtistOps</span>
+    </div>
+    <p style="color:#c7cad8;white-space:pre-wrap;line-height:1.6;margin:0">${cleanMessage.replace(/</g, "&lt;")}</p>
+    <p style="color:#5a5e72;font-size:12px;margin:20px 0 0">Reply to this email to reach us directly.</p>
+  </div>`;
+
+  const res = await sendEmail(user.email, cleanSubject, html, adminEmail);
+  if (!res.ok) {
+    return { ok: false, error: res.skipped ? "Email isn't configured on the server." : "Couldn't send the message." };
+  }
+  return { ok: true };
+}
+
 export type MembershipApplicationView = {
   role: string;
   referredBy: string;

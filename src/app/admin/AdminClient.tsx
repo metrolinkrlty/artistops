@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle } from "lucide-react";
-import { createUser, updateUser, deleteUser, approveUser, rejectUser } from "./actions";
+import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Mail } from "lucide-react";
+import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser } from "./actions";
 
 type MembershipApplicationView = {
   role: string; referredBy: string; workLink: string | null;
@@ -30,6 +30,27 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [messaging, setMessaging] = useState<UserRow | null>(null);
+  const [msgSubject, setMsgSubject] = useState("");
+  const [msgBody, setMsgBody] = useState("");
+  const [msgSent, setMsgSent] = useState(false);
+
+  function openMessage(u: UserRow) {
+    setMessaging(u);
+    setMsgSubject("A quick question about your ArtistOps request");
+    setMsgBody("");
+    setMsgSent(false);
+    setError("");
+  }
+
+  async function handleSendMessage() {
+    if (!messaging) return;
+    setSaving(true); setError("");
+    const res = await messageUser(messaging.id, msgSubject, msgBody);
+    setSaving(false);
+    if (!res.ok) { setError(res.error || "Couldn't send."); return; }
+    setMsgSent(true);
+  }
 
   const pending = users.filter(u => u.status === "PENDING");
   const approved = users.filter(u => u.status !== "PENDING");
@@ -101,7 +122,7 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
                   <p className="text-[#8b8fa8] text-sm">{u.email} · Signed up {new Date(u.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleViewAs(u)} className="flex items-center gap-1 px-3 py-1.5 border border-[#2a2d3a] text-[#8b8fa8] hover:text-white rounded-lg text-xs"><Eye className="w-3 h-3" /> View</button>
+                  <button onClick={() => openMessage(u)} className="flex items-center gap-1 px-3 py-1.5 border border-[#2a2d3a] text-[#8b8fa8] hover:text-white rounded-lg text-xs"><Mail className="w-3 h-3" /> Message</button>
                   <button onClick={() => handleApprove(u)} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"><CheckCircle className="w-3 h-3" /> Approve</button>
                   <button onClick={() => handleReject(u)} className="flex items-center gap-1 px-3 py-1.5 bg-red-600/20 text-red-400 border border-red-600/30 rounded-lg text-xs hover:bg-red-600/40"><XCircle className="w-3 h-3" /> Reject</button>
                 </div>
@@ -272,6 +293,39 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
               <button type="submit" disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Saving…" : "Save Changes"}</button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* Message applicant modal */}
+      {messaging && (
+        <Modal title={`Message ${messaging.artistName}`} onClose={() => setMessaging(null)}>
+          {msgSent ? (
+            <div className="text-center py-4">
+              <div className="w-12 h-12 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-6 h-6 text-green-400" />
+              </div>
+              <p className="text-white font-medium">Message sent to {messaging.email}</p>
+              <p className="text-[#8b8fa8] text-sm mt-1">Their reply comes back to your admin inbox.</p>
+              <button onClick={() => setMessaging(null)} className="mt-5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Done</button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-[#8b8fa8] text-sm">
+                Sends an email to <span className="text-white">{messaging.email}</span>. Replies come back to your admin inbox — handy for asking a pending applicant who referred them before you approve.
+              </p>
+              <Field label="Subject">
+                <input value={msgSubject} onChange={(e) => setMsgSubject(e.target.value)} className={inputClass} />
+              </Field>
+              <Field label="Message">
+                <textarea value={msgBody} onChange={(e) => setMsgBody(e.target.value)} rows={5} placeholder={`Hi ${messaging.artistName},\n\n`} className={`${inputClass} resize-y`} />
+              </Field>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleSendMessage} disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Sending…" : "Send message"}</button>
+                <button onClick={() => setMessaging(null)} className="px-4 py-2 text-[#8b8fa8] hover:text-white text-sm">Cancel</button>
+              </div>
+            </div>
+          )}
         </Modal>
       )}
     </div>
