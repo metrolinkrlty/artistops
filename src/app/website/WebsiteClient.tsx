@@ -604,7 +604,7 @@ function ImageManager({
           <h3 className="mb-2 text-sm font-semibold text-foreground">Gallery</h3>
           {order.length > 0 && (
             <div className="mb-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
-              {order.map((url) => (
+              {order.map((url, i) => (
                 <div
                   key={url}
                   draggable
@@ -618,11 +618,16 @@ function ImageManager({
                   onDragLeave={() => setOverUrl((u) => (u === url ? null : u))}
                   onDrop={(e) => { e.preventDefault(); reorderTo(url); setOverUrl(null); }}
                   onDragEnd={() => { dragUrl.current = null; setOverUrl(null); }}
-                  title="Drag onto another photo to reorder, or onto the hero to set it as the hero"
-                  className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${overUrl === url ? "border-primary ring-2 ring-primary" : "border-border"}`}
+                  title={i === 0 ? "This is your primary photo — drag another photo here to make it primary" : "Drag onto another photo to reorder, or onto the hero to set it as the hero"}
+                  className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${overUrl === url ? "border-primary ring-2 ring-primary" : i === 0 ? "border-primary" : "border-border"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" draggable={false} className="aspect-square w-full object-cover" />
+                  {i === 0 && (
+                    <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-primary/90 px-1.5 py-0.5 text-center text-[10px] font-semibold text-primary-foreground">
+                      ★ Primary photo
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => startTransition(() => { hideGalleryImage(url).then(() => router.refresh()); })}
@@ -679,7 +684,7 @@ function ImageManager({
             {busy === "gallery" && <span className="text-xs text-muted-foreground">Uploading…</span>}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Select multiple photos to upload at once. Drag a photo to reorder it (or onto the hero to feature it), and hover + click ✕ to remove one.
+            The first photo is your <span className="font-medium text-foreground">primary photo</span> — it leads your gallery. Drag any photo to the front to make it primary (or onto the hero to feature it). Select multiple photos to upload at once, and hover + click ✕ to remove one.
           </p>
         </div>
 
