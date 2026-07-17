@@ -532,37 +532,38 @@ model AdPixel {
   @@index([userId])
 }
 
-// A pre-save campaign for an upcoming release. Fans authorize via Spotify; on
-// release day their library is updated. Isolated tables — never touched by other
-// queries.
-model PreSaveCampaign {
-  id         String    @id @default(cuid())
-  userId     String
-  slug       String    @unique
-  title      String
-  spotifyUri String? // track/album URI, once the release is scheduled at the distributor
-  releaseAt  DateTime
-  actions    String[]  @default(["save", "follow"]) // "save" | "follow" | "playlist"
-  status     String    @default("scheduled") // scheduled | released | canceled
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  presaves   PreSave[]
+// An upcoming release fans can ask to be told about. On release day every signup
+// gets one email with the link — concentrating plays into the first hours, which
+// is the algorithmic signal a new track otherwise has none of.
+//
+// Not a Spotify pre-save: Spotify's API requires 250k monthly active users for
+// the library-write scope, so we own the audience relationship instead.
+// Isolated tables — never touched by other queries.
+model ReleaseCampaign {
+  id          String          @id @default(cuid())
+  userId      String
+  slug        String          @unique
+  title       String
+  releaseAt   DateTime // a calendar date — always render in UTC
+  linkUrl     String? // where release-day email sends fans (Spotify/smart link)
+  status      String          @default("scheduled") // scheduled | announced | canceled
+  announcedAt DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  signups     ReleaseNotify[]
   @@index([userId])
 }
 
-// One fan's pre-save: their AES-encrypted Spotify refresh token, executed on
-// release day.
-model PreSave {
-  id            String          @id @default(cuid())
-  campaignId    String
-  campaign      PreSaveCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  email         String?
-  spotifyUserId String
-  refreshToken  String // AES-256-GCM encrypted
-  status        String          @default("pending") // pending | executed | failed
-  createdAt     DateTime        @default(now())
-  executedAt    DateTime?
-  @@unique([campaignId, spotifyUserId])
+// One fan waiting on a release. Deduped per campaign so a re-submit is a no-op.
+model ReleaseNotify {
+  id         String          @id @default(cuid())
+  campaignId String
+  campaign   ReleaseCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email      String
+  status     String          @default("pending") // pending | notified
+  createdAt  DateTime        @default(now())
+  notifiedAt DateTime?
+  @@unique([campaignId, email])
   @@index([campaignId])
 }
 

@@ -6,9 +6,9 @@ const PUBLIC_PREFIXES = [
   "/api/login", "/api/signup", "/api/logout", "/api/forgot-password", "/api/reset-password",
   "/api/user-status", "/listen/", "/api/pixel", "/api/smart-link-click",
   "/api/site/", "/sites/",
-  // Pre-save: fans are never logged into ArtistOps — the landing page and the
-  // Spotify OAuth handshake must both be reachable anonymously.
-  "/presave/", "/api/presave/",
+  // Release notify: fans are never logged into ArtistOps, so this page must be
+  // reachable anonymously.
+  "/notify/",
 ];
 
 const IMPERSONATE_COOKIE = "ao_impersonate";
