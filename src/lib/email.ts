@@ -113,7 +113,7 @@ export function approvedEmailHtml(artistName: string): string {
     <h2 style="margin:0 0 8px">You're approved, ${artistName}! 🎉</h2>
     <p style="color:#8b8fa8;margin:0 0 20px">Your ArtistOps account has been approved. You can now sign in and start managing your music business.</p>
     <a href="https://artistops.net/login" style="display:inline-block;background:#6366f1;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">Sign in to ArtistOps</a>
-    <p style="color:#8b8fa8;font-size:13px;margin:20px 0 0">Welcome aboard — your dashboard is ready with sample data to explore every feature.</p>
+    <p style="color:#8b8fa8;font-size:13px;margin:20px 0 0">Welcome aboard! Questions as you get started? You can message us anytime — it&rsquo;s built right into ArtistOps, no need to leave the app.</p>
   </div>`;
 }
 

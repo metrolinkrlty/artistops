@@ -31,18 +31,18 @@ export default function WelcomeSplash() {
         </div>
         <h2 className="text-white text-xl font-bold mb-2">Welcome to ArtistOps!</h2>
         <p className="text-[#8b8fa8] text-sm mb-4">
-          Your account is ready. We&apos;ve pre-loaded your dashboard with a{" "}
-          <span className="text-white font-medium">sample catalog</span> — songs, revenue, rights,
-          playlists, and analytics — so you can explore every feature right away.
+          Your account is ready. Start by adding your{" "}
+          <span className="text-white font-medium">songs</span> — everything else (revenue,
+          rights, royalties, analytics) links up from there.
         </p>
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6">
-          <p className="text-amber-400 text-xs">
-            ⚠️ This sample data is for <span className="font-semibold">demonstration purposes only</span>.
-            Edit or delete it anytime and start adding your own music.
+        <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-3 mb-6">
+          <p className="text-[#c7cad8] text-xs">
+            💬 Stuck or have a question? <span className="font-semibold text-white">Message us anytime</span> —
+            it&apos;s built right into ArtistOps, up in the top bar. We&apos;re happy to help you get set up.
           </p>
         </div>
         <button onClick={dismiss} className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
-          Explore my dashboard
+          Let&apos;s get started
         </button>
       </div>
     </div>
