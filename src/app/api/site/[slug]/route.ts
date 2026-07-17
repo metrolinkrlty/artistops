@@ -32,6 +32,7 @@ export async function GET(
       heroImageUrl: true,
       heroSubtext: true,
       themeColor: true,
+      galleryImages: true,
       hiddenSections: true,
       shows: true,
       heroCtaPrimary: true,
