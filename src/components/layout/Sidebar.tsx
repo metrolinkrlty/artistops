@@ -25,6 +25,7 @@ import {
   Sparkles,
   ShieldCheck,
   MonitorSmartphone,
+  BellRing,
 } from "lucide-react";
 
 const navItems = [
@@ -42,6 +43,7 @@ const navItems = [
   { href: "/advertising", label: "Advertising", icon: Megaphone },
   { href: "/pixel-tracking", label: "Pixel Tracking", icon: Target },
   { href: "/smart-links", label: "Smart Links", icon: Link2 },
+  { href: "/release-notify", label: "Release Notify", icon: BellRing },
   { href: "/website", label: "Website", icon: MonitorSmartphone },
   { href: "/analytics", label: "Website Analytics", icon: Globe },
   { href: "/integrations", label: "Integrations", icon: Plug },
