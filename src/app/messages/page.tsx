@@ -1,6 +1,6 @@
 import Header from "@/components/layout/Header";
 import { getCurrentUser } from "@/lib/session";
-import { getMyThread, getConversations } from "./actions";
+import { getMyThread, getConversations, getEmailPref } from "./actions";
 import MessagesClient from "./MessagesClient";
 import AdminInbox from "./AdminInbox";
 
@@ -19,11 +19,11 @@ export default async function MessagesPage() {
     );
   }
 
-  const thread = await getMyThread();
+  const [thread, emailPref] = await Promise.all([getMyThread(), getEmailPref()]);
   return (
     <div className="flex-1">
       <Header title="Messages" subtitle="Talk directly with the ArtistOps team" />
-      <MessagesClient initialThread={thread} />
+      <MessagesClient initialThread={thread} emailPref={emailPref} />
     </div>
   );
 }

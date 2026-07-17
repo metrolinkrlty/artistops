@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendEmail, approvedEmailHtml } from "@/lib/email";
+import { artistWantsEmail } from "@/app/messages/actions";
 
 async function requireAdmin() {
   const userId = await requireUserId();
@@ -120,16 +121,69 @@ export async function adminSendMessage(
 
   await prisma.message.create({ data: { userId, fromAdmin: true, body: text } });
 
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
-  sendEmail(
-    user.email,
-    "New message from the ArtistOps team",
-    `<div style="font-family:Inter,Arial,sans-serif;color:#333;padding:16px"><p>Hi ${user.artistName}, you have a new message in ArtistOps:</p><blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</blockquote><p><a href="https://artistops.net/messages">Open ArtistOps to reply</a></p></div>`,
-    adminEmail
-  ).catch(console.error);
+  // Email the artist a copy only if they've opted in (default on).
+  if (await artistWantsEmail(userId)) {
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
+    sendEmail(
+      user.email,
+      "New message from the ArtistOps team",
+      `<div style="font-family:Inter,Arial,sans-serif;color:#333;padding:16px"><p>Hi ${user.artistName}, you have a new message in ArtistOps:</p><blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</blockquote><p><a href="https://artistops.net/messages">Open ArtistOps to reply</a></p></div>`,
+      adminEmail
+    ).catch(console.error);
+  }
 
   revalidatePath("/admin");
   return { ok: true };
+}
+
+// Recipient groups for a blast.
+function blastWhere(scope: string) {
+  if (scope === "everyone") return {};
+  if (scope === "approved") return { status: "APPROVED" };
+  // default: approved non-admin artists
+  return { status: "APPROVED", isAdmin: false };
+}
+
+export async function countBlastRecipients(scope: string): Promise<number> {
+  await requireAdmin();
+  return prisma.user.count({ where: blastWhere(scope) });
+}
+
+// Send an announcement email to a group of users. Each gets their own email
+// (never CC — no leaking addresses), with replies routed to the admin.
+export async function sendBlast(
+  subject: string,
+  message: string,
+  scope: string
+): Promise<{ ok: boolean; sent?: number; failed?: number; error?: string }> {
+  await requireAdmin();
+  const cleanSubject = subject.trim();
+  const cleanMessage = message.trim();
+  if (!cleanSubject) return { ok: false, error: "Add a subject." };
+  if (!cleanMessage) return { ok: false, error: "Write a message." };
+
+  const recipients = await prisma.user.findMany({ where: blastWhere(scope), select: { email: true, artistName: true } });
+  if (recipients.length === 0) return { ok: false, error: "No recipients in that group." };
+
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
+  const bodyHtml = (name: string) => `
+  <div style="font-family:Inter,Arial,sans-serif;background:#0f1117;color:#fff;padding:32px;border-radius:12px;max-width:520px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <div style="width:40px;height:40px;background:#6366f1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px">🎵</div>
+      <span style="font-size:20px;font-weight:700">ArtistOps</span>
+    </div>
+    <p style="color:#8b8fa8;margin:0 0 12px">Hi ${name},</p>
+    <div style="color:#c7cad8;white-space:pre-wrap;line-height:1.6">${cleanMessage.replace(/</g, "&lt;")}</div>
+    <p style="color:#5a5e72;font-size:12px;margin:20px 0 0">Reply to this email to reach us.</p>
+  </div>`;
+
+  let sent = 0, failed = 0;
+  // Sequential to stay under shared-hosting SMTP rate limits.
+  for (const r of recipients) {
+    const res = await sendEmail(r.email, cleanSubject, bodyHtml(r.artistName || "there"), adminEmail);
+    if (res.ok) sent++; else failed++;
+  }
+  return { ok: true, sent, failed };
 }
 
 export async function getUsers() {

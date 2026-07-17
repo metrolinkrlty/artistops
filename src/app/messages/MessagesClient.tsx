@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, MessageSquare } from "lucide-react";
-import { sendMyMessage, type MessageView } from "./actions";
+import { sendMyMessage, setEmailPref, type MessageView } from "./actions";
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString("en-US", {
@@ -13,12 +13,19 @@ function formatTime(iso: string) {
   });
 }
 
-export default function MessagesClient({ initialThread }: { initialThread: MessageView[] }) {
+export default function MessagesClient({ initialThread, emailPref }: { initialThread: MessageView[]; emailPref: boolean }) {
   const [thread, setThread] = useState(initialThread);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [emailOn, setEmailOn] = useState(emailPref);
   const endRef = useRef<HTMLDivElement>(null);
+
+  function toggleEmail() {
+    const next = !emailOn;
+    setEmailOn(next); // optimistic
+    setEmailPref(next).catch(() => setEmailOn(!next));
+  }
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -54,10 +61,25 @@ export default function MessagesClient({ initialThread }: { initialThread: Messa
         <MessageSquare className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-[#c7cad8] leading-relaxed">
           This is your direct line to the ArtistOps team. Ask a question, report
-          something that looks off, or tell us what you need — we&rsquo;ll reply here, and
-          you&rsquo;ll get an email when we do.
+          something that looks off, or tell us what you need — we&rsquo;ll reply here.
         </p>
       </div>
+
+      <label className="flex items-center justify-between gap-3 bg-[#1a1d27] border border-[#2a2d3a] rounded-xl px-4 py-3 mb-5 cursor-pointer">
+        <span className="text-sm text-[#c7cad8]">
+          Email me a copy of new messages
+          <span className="block text-xs text-[#8b8fa8]">Get replies in your inbox so you don&rsquo;t have to check back here.</span>
+        </span>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={emailOn}
+          onClick={toggleEmail}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${emailOn ? "bg-indigo-600" : "bg-[#2a2d3a]"}`}
+        >
+          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${emailOn ? "translate-x-6" : "translate-x-1"}`} />
+        </button>
+      </label>
 
       <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl flex flex-col" style={{ minHeight: "24rem" }}>
         <div className="flex-1 p-5 space-y-3 overflow-y-auto" style={{ maxHeight: "60vh" }}>

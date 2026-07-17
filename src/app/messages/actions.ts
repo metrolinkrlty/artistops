@@ -95,6 +95,41 @@ export async function getConversations(): Promise<ConversationSummary[]> {
     .sort((a, b) => b.lastAt.localeCompare(a.lastAt));
 }
 
+const EMAIL_PREF_KEY = "email_messages";
+
+// Whether this artist wants a copy of new team messages emailed to them.
+// Default ON — they can opt out on the Messages page.
+export async function getEmailPref(): Promise<boolean> {
+  const userId = await requireUserId();
+  try {
+    const s = await prisma.setting.findUnique({ where: { userId_key: { userId, key: EMAIL_PREF_KEY } } });
+    return s ? s.value === "true" : true;
+  } catch {
+    return true;
+  }
+}
+
+export async function setEmailPref(on: boolean): Promise<{ ok: boolean }> {
+  const userId = await requireUserId();
+  await prisma.setting.upsert({
+    where: { userId_key: { userId, key: EMAIL_PREF_KEY } },
+    create: { userId, key: EMAIL_PREF_KEY, value: on ? "true" : "false" },
+    update: { value: on ? "true" : "false" },
+  });
+  return { ok: true };
+}
+
+// Used by adminSendMessage to decide whether to email the artist. Any error or
+// missing setting means "yes" — better to over-notify than drop a message.
+export async function artistWantsEmail(userId: string): Promise<boolean> {
+  try {
+    const s = await prisma.setting.findUnique({ where: { userId_key: { userId, key: EMAIL_PREF_KEY } } });
+    return s ? s.value === "true" : true;
+  } catch {
+    return true;
+  }
+}
+
 // Artist sends a message to the team.
 export async function sendMyMessage(body: string): Promise<{ ok: boolean; error?: string }> {
   const userId = await requireUserId();

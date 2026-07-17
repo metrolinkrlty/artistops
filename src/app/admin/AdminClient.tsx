@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Mail, MessageSquare, Send } from "lucide-react";
-import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, type AdminMessageView } from "./actions";
+import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, sendBlast, countBlastRecipients, type AdminMessageView } from "./actions";
 
 type MembershipApplicationView = {
   role: string; referredBy: string; workLink: string | null;
@@ -79,6 +79,40 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
     if (!res.ok) { setError(res.error || "Couldn't send."); return; }
     setThreadMsgs((m) => [...m, { id: `tmp-${Date.now()}`, fromAdmin: true, body: text, createdAt: new Date().toISOString() }]);
     setThreadBody("");
+  }
+
+  // Blast email
+  const [blastOpen, setBlastOpen] = useState(false);
+  const [blastScope, setBlastScope] = useState("artists");
+  const [blastSubject, setBlastSubject] = useState("");
+  const [blastBody, setBlastBody] = useState("");
+  const [blastCount, setBlastCount] = useState<number | null>(null);
+  const [blastResult, setBlastResult] = useState<string | null>(null);
+
+  function openBlast() {
+    setBlastOpen(true);
+    setBlastScope("artists");
+    setBlastSubject("");
+    setBlastBody("");
+    setBlastResult(null);
+    setError("");
+    countBlastRecipients("artists").then(setBlastCount).catch(() => setBlastCount(null));
+  }
+
+  function changeBlastScope(scope: string) {
+    setBlastScope(scope);
+    setBlastCount(null);
+    countBlastRecipients(scope).then(setBlastCount).catch(() => setBlastCount(null));
+  }
+
+  async function handleBlastSend() {
+    if (!blastSubject.trim() || !blastBody.trim()) { setError("Add a subject and message."); return; }
+    if (!confirm(`Send this email to ${blastCount ?? "the selected"} recipient(s)?`)) return;
+    setSaving(true); setError("");
+    const res = await sendBlast(blastSubject, blastBody, blastScope);
+    setSaving(false);
+    if (!res.ok) { setError(res.error || "Couldn't send."); return; }
+    setBlastResult(`Sent to ${res.sent} recipient${res.sent === 1 ? "" : "s"}${res.failed ? `, ${res.failed} failed` : ""}.`);
   }
 
   const pending = users.filter(u => u.status === "PENDING");
@@ -164,9 +198,14 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
       {/* All accounts */}
       <div className="flex items-center justify-between">
         <h2 className="text-white font-semibold">All Accounts ({users.length})</h2>
-        <button onClick={() => { setShowCreate(true); setError(""); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
-          <Plus className="w-4 h-4" /> Create Account
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={openBlast} className="flex items-center gap-2 px-4 py-2 border border-[#2a2d3a] text-[#c7cad8] rounded-lg text-sm hover:text-white hover:border-indigo-500">
+            <Mail className="w-4 h-4" /> Email members
+          </button>
+          <button onClick={() => { setShowCreate(true); setError(""); }} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+            <Plus className="w-4 h-4" /> Create Account
+          </button>
+        </div>
       </div>
 
       <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-hidden">
@@ -365,6 +404,43 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
               <div className="flex gap-2">
                 <button onClick={handleSendMessage} disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Sending…" : "Send message"}</button>
                 <button onClick={() => setMessaging(null)} className="px-4 py-2 text-[#8b8fa8] hover:text-white text-sm">Cancel</button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* Blast email modal */}
+      {blastOpen && (
+        <Modal title="Email members" onClose={() => setBlastOpen(false)}>
+          {blastResult ? (
+            <div className="text-center py-4">
+              <div className="w-12 h-12 rounded-full bg-green-500/15 flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-6 h-6 text-green-400" />
+              </div>
+              <p className="text-white font-medium">{blastResult}</p>
+              <p className="text-[#8b8fa8] text-sm mt-1">Replies come back to your admin inbox.</p>
+              <button onClick={() => setBlastOpen(false)} className="mt-5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Done</button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Field label="Send to">
+                <select value={blastScope} onChange={(e) => changeBlastScope(e.target.value)} className={inputClass}>
+                  <option value="artists">Approved artists</option>
+                  <option value="approved">All approved members (incl. admins)</option>
+                  <option value="everyone">Everyone (incl. pending)</option>
+                </select>
+              </Field>
+              <p className="text-[#8b8fa8] text-sm -mt-2">
+                {blastCount === null ? "Counting recipients…" : `${blastCount} recipient${blastCount === 1 ? "" : "s"}. Each gets their own email; replies go to you.`}
+              </p>
+              <Field label="Subject"><input value={blastSubject} onChange={(e) => setBlastSubject(e.target.value)} className={inputClass} placeholder="A quick update from ArtistOps" /></Field>
+              <Field label="Message"><textarea value={blastBody} onChange={(e) => setBlastBody(e.target.value)} rows={6} className={`${inputClass} resize-y`} placeholder="Write your announcement…" /></Field>
+              <p className="text-[#5a5e72] text-xs">Sent one at a time to stay within mail-server limits — a large list may take a moment. For big blasts later, a dedicated email service is more reliable.</p>
+              {error && <p className="text-red-400 text-sm">{error}</p>}
+              <div className="flex gap-2">
+                <button onClick={handleBlastSend} disabled={saving} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Sending…" : `Send${blastCount ? ` to ${blastCount}` : ""}`}</button>
+                <button onClick={() => setBlastOpen(false)} className="px-4 py-2 text-[#8b8fa8] hover:text-white text-sm">Cancel</button>
               </div>
             </div>
           )}
