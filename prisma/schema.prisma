@@ -532,6 +532,23 @@ model AdPixel {
   @@index([userId])
 }
 
+// The signup questionnaire, captured while ArtistOps is invite-only. Feeds the
+// admin's approval decision. Isolated table — never touched by other queries, so
+// it can't break user auth if a column is added later.
+model MembershipApplication {
+  id          String   @id @default(cuid())
+  userId      String?  @unique
+  email       String
+  role        String // artist | band | manager | label | producer | other
+  referredBy  String
+  workLink    String?
+  goals       String[] @default([])
+  catalogSize String?
+  location    String?
+  createdAt   DateTime @default(now())
+  @@index([email])
+}
+
 // An upcoming release fans can ask to be told about. On release day every signup
 // gets one email with the link — concentrating plays into the first hours, which
 // is the algorithmic signal a new track otherwise has none of.

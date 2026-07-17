@@ -19,6 +19,30 @@ const highlights = [
 ];
 
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white pl-10 pr-4 py-2.5 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
+const plainInputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-4 py-2.5 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
+
+const ROLE_OPTIONS = [
+  { value: "artist", label: "Artist" },
+  { value: "band", label: "Band member" },
+  { value: "manager", label: "Artist manager" },
+  { value: "label", label: "Label / industry professional" },
+  { value: "producer", label: "Producer / engineer" },
+  { value: "other", label: "Other" },
+];
+const GOAL_OPTIONS = [
+  "Catalog & copyrights",
+  "Royalties & revenue",
+  "Distribution",
+  "Marketing & ads",
+  "Building a website",
+  "Not sure yet",
+];
+const CATALOG_OPTIONS = [
+  "Nothing released yet",
+  "1–5 songs",
+  "6–20 songs",
+  "20+ songs",
+];
 
 function AuthForm() {
   const router = useRouter();
@@ -28,15 +52,27 @@ function AuthForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState("");
+  const [referredBy, setReferredBy] = useState("");
+  const [workLink, setWorkLink] = useState("");
+  const [goals, setGoals] = useState<string[]>([]);
+  const [catalogSize, setCatalogSize] = useState("");
+  const [location, setLocation] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function toggleGoal(goal: string) {
+    setGoals((g) => (g.includes(goal) ? g.filter((x) => x !== goal) : [...g, goal]));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
     const endpoint = mode === "signup" ? "/api/signup" : "/api/login";
-    const payload = mode === "signup" ? { artistName, email, password } : { email, password };
+    const payload = mode === "signup"
+      ? { artistName, email, password, role, referredBy, workLink, goals, catalogSize, location }
+      : { email, password };
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -63,13 +99,23 @@ function AuthForm() {
         <button onClick={() => { setMode("signup"); setError(""); }} className={`flex-1 py-2 text-sm font-medium ${mode === "signup" ? "bg-indigo-600 text-white" : "text-[#8b8fa8] hover:text-white"}`}>Create Account</button>
       </div>
 
+      {mode === "signup" && (
+        <div className="bg-indigo-500/10 border border-indigo-500/25 rounded-lg p-3.5 mb-5">
+          <p className="text-white text-sm font-medium">ArtistOps is in development.</p>
+          <p className="text-[#c7cad8] text-xs leading-relaxed mt-1">
+            For now, membership is by invitation or referral only. Tell us a little about
+            yourself and we&rsquo;ll review your request — you&rsquo;ll hear back by email.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === "signup" && (
           <div>
-            <label className="block text-[#8b8fa8] text-sm mb-1.5">Artist / Band Name</label>
+            <label className="block text-[#8b8fa8] text-sm mb-1.5">Artist / band / company name</label>
             <div className="relative">
               <User className="w-4 h-4 text-[#8b8fa8] absolute left-3 top-1/2 -translate-y-1/2" />
-              <input value={artistName} onChange={(e) => setArtistName(e.target.value)} required placeholder="Your artist name" className={inputClass} />
+              <input value={artistName} onChange={(e) => setArtistName(e.target.value)} required placeholder="Your artist or company name" className={inputClass} />
             </div>
           </div>
         )}
@@ -96,9 +142,77 @@ function AuthForm() {
             </button>
           </div>
         </div>
+
+        {mode === "signup" && (
+          <>
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-1.5">I am a…</label>
+              <select value={role} onChange={(e) => setRole(e.target.value)} required className={`${plainInputClass} [color-scheme:dark]`}>
+                <option value="" disabled>Select one</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-1.5">Referred by</label>
+              <input value={referredBy} onChange={(e) => setReferredBy(e.target.value)} required placeholder="Who invited you, or where you heard about us" className={plainInputClass} />
+            </div>
+
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-1.5">
+                A link to your music or work <span className="text-[#5a5e72]">(recommended)</span>
+              </label>
+              <input value={workLink} onChange={(e) => setWorkLink(e.target.value)} placeholder="Spotify, website, or Instagram" className={plainInputClass} />
+              <p className="text-[#5a5e72] text-xs mt-1">Helps us confirm your request faster.</p>
+            </div>
+
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-2">
+                What do you most want help with? <span className="text-[#5a5e72]">(optional)</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {GOAL_OPTIONS.map((g) => {
+                  const on = goals.includes(g);
+                  return (
+                    <button
+                      type="button"
+                      key={g}
+                      onClick={() => toggleGoal(g)}
+                      className={`text-left text-xs px-3 py-2 rounded-lg border transition-colors ${on ? "bg-indigo-600 border-indigo-600 text-white" : "bg-[#0f1117] border-[#2a2d3a] text-[#8b8fa8] hover:border-indigo-500"}`}
+                    >
+                      {g}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-1.5">
+                How big is your catalog? <span className="text-[#5a5e72]">(optional)</span>
+              </label>
+              <select value={catalogSize} onChange={(e) => setCatalogSize(e.target.value)} className={`${plainInputClass} [color-scheme:dark]`}>
+                <option value="">Prefer not to say</option>
+                {CATALOG_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[#8b8fa8] text-sm mb-1.5">
+                Where are you based? <span className="text-[#5a5e72]">(optional)</span>
+              </label>
+              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, country" className={plainInputClass} />
+            </div>
+          </>
+        )}
+
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-          {loading ? (mode === "signup" ? "Creating account…" : "Signing in…") : mode === "signup" ? "Create Account" : "Sign In"}
+          {loading ? (mode === "signup" ? "Sending request…" : "Signing in…") : mode === "signup" ? "Request access" : "Sign In"}
         </button>
         {mode === "login" && (
           <p className="text-center">
