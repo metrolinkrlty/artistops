@@ -82,13 +82,16 @@ export async function POST(req: NextRequest) {
     catalogSize && `Catalog: ${catalogSize}`,
     location && `Based in: ${location}`,
   ].filter(Boolean).join("\n");
-  sendEmail(
+  // Await the send: on serverless, the function freezes once we return, which
+  // would kill an in-flight email. (This regressed when the trailing sign-in /
+  // seeding work that used to keep the function alive was removed.)
+  await sendEmail(
     adminEmail,
     `New ArtistOps signup request from ${email}`,
     adminSignupNotificationHtml(artistName, email) +
       `<pre style="font-family:Inter,Arial,sans-serif;background:#1a1d27;color:#c7cad8;padding:16px;border-radius:10px;white-space:pre-wrap;font-size:13px;max-width:480px;margin:12px auto 0">${applicationDetail}</pre>`,
     email
-  ).catch(console.error);
+  ).catch((e) => console.error("Signup admin email failed:", e));
 
   // New accounts start empty — real artists see only their own data, and the
   // admin view stays honest. (Sample data used to be seeded here.)

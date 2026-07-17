@@ -18,7 +18,8 @@ async function requireAdmin() {
 export async function approveUser(id: string) {
   await requireAdmin();
   const user = await prisma.user.update({ where: { id }, data: { status: "APPROVED" } });
-  sendEmail(user.email, "Your ArtistOps account is approved! 🎉", approvedEmailHtml(user.artistName), user.email).catch(console.error);
+  // Await so the serverless function doesn't freeze before the email sends.
+  await sendEmail(user.email, "Your ArtistOps account is approved! 🎉", approvedEmailHtml(user.artistName), user.email).catch((e) => console.error("Approval email failed:", e));
   revalidatePath("/admin");
   return { ok: true };
 }
@@ -124,12 +125,12 @@ export async function adminSendMessage(
   // Email the artist a copy only if they've opted in (default on).
   if (await artistWantsEmail(userId)) {
     const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
-    sendEmail(
+    await sendEmail(
       user.email,
       "New message from the ArtistOps team",
       `<div style="font-family:Inter,Arial,sans-serif;color:#333;padding:16px"><p>Hi ${user.artistName}, you have a new message in ArtistOps:</p><blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</blockquote><p><a href="https://artistops.net/messages">Open ArtistOps to reply</a></p></div>`,
       adminEmail
-    ).catch(console.error);
+    ).catch((e) => console.error("Message email failed:", e));
   }
 
   revalidatePath("/admin");

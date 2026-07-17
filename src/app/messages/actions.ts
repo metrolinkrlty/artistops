@@ -140,14 +140,15 @@ export async function sendMyMessage(body: string): Promise<{ ok: boolean; error?
   const me = await prisma.user.findUnique({ where: { id: userId }, select: { artistName: true, email: true } });
   await prisma.message.create({ data: { userId, fromAdmin: false, body: text } });
 
-  // Nudge the admin by email so replies don't sit unseen.
+  // Nudge the admin by email so replies don't sit unseen. Awaited so the
+  // serverless function doesn't freeze mid-send.
   const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
-  sendEmail(
+  await sendEmail(
     adminEmail,
     `New message from ${me?.artistName || "an artist"} in ArtistOps`,
     `<div style="font-family:Inter,Arial,sans-serif;color:#333;padding:16px"><p>${me?.artistName || "An artist"} sent a message in ArtistOps:</p><blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</blockquote><p><a href="https://artistops.net/admin">Open the admin panel to reply</a></p></div>`,
     me?.email || undefined
-  ).catch(console.error);
+  ).catch((e) => console.error("Message email failed:", e));
 
   revalidatePath("/messages");
   return { ok: true };
