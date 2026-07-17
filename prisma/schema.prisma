@@ -532,6 +532,18 @@ model AdPixel {
   @@index([userId])
 }
 
+// A two-way message between the ArtistOps team (admin) and an approved artist.
+// A "thread" is simply all messages sharing a userId. Isolated table.
+model Message {
+  id        String    @id @default(cuid())
+  userId    String // the artist this thread belongs to
+  fromAdmin Boolean // true = team → artist, false = artist → team
+  body      String
+  readAt    DateTime? // when the *recipient* first saw it
+  createdAt DateTime  @default(now())
+  @@index([userId])
+}
+
 // The signup questionnaire, captured while ArtistOps is invite-only. Feeds the
 // admin's approval decision. Isolated table — never touched by other queries, so
 // it can't break user auth if a column is added later.

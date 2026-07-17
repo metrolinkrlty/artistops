@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Mail } from "lucide-react";
-import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser } from "./actions";
+import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Mail, MessageSquare, Send } from "lucide-react";
+import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, type AdminMessageView } from "./actions";
 
 type MembershipApplicationView = {
   role: string; referredBy: string; workLink: string | null;
@@ -13,6 +13,7 @@ type UserRow = {
   id: string; email: string; artistName: string; isAdmin: boolean;
   status: string; createdAt: string; songs: number; totalRevenue: number;
   application: MembershipApplicationView | null;
+  unreadMessages: number;
 };
 
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
@@ -50,6 +51,34 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
     setSaving(false);
     if (!res.ok) { setError(res.error || "Couldn't send."); return; }
     setMsgSent(true);
+  }
+
+  // In-app thread (approved artists)
+  const [thread, setThread] = useState<UserRow | null>(null);
+  const [threadMsgs, setThreadMsgs] = useState<AdminMessageView[]>([]);
+  const [threadBody, setThreadBody] = useState("");
+  const [threadLoading, setThreadLoading] = useState(false);
+
+  async function openThread(u: UserRow) {
+    setThread(u);
+    setThreadBody("");
+    setError("");
+    setThreadLoading(true);
+    const msgs = await getUserThread(u.id);
+    setThreadMsgs(msgs);
+    setThreadLoading(false);
+  }
+
+  async function handleThreadSend() {
+    if (!thread) return;
+    const text = threadBody.trim();
+    if (!text) return;
+    setSaving(true); setError("");
+    const res = await adminSendMessage(thread.id, text);
+    setSaving(false);
+    if (!res.ok) { setError(res.error || "Couldn't send."); return; }
+    setThreadMsgs((m) => [...m, { id: `tmp-${Date.now()}`, fromAdmin: true, body: text, createdAt: new Date().toISOString() }]);
+    setThreadBody("");
   }
 
   const pending = users.filter(u => u.status === "PENDING");
@@ -165,6 +194,11 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
                       </div>
                       <span className="text-white font-medium">{u.artistName}</span>
                       {u.id === currentUserId && <span className="text-xs bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">You</span>}
+                      {u.unreadMessages > 0 && (
+                        <button onClick={() => openThread(u)} className="inline-flex items-center gap-1 text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded hover:bg-red-500/30" title="Unread messages">
+                          <MessageSquare className="w-3 h-3" /> {u.unreadMessages}
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-[#8b8fa8] text-sm">{u.email}</td>
@@ -184,6 +218,14 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
                       <button onClick={() => setExpandedId(expandedId === u.id ? null : u.id)} className="text-[#8b8fa8] hover:text-white" title="Details">
                         {expandedId === u.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
+                      {!u.isAdmin && u.status === "APPROVED" && (
+                        <button onClick={() => openThread(u)} className="relative text-[#8b8fa8] hover:text-indigo-400" title="Messages">
+                          <MessageSquare className="w-4 h-4" />
+                          {u.unreadMessages > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{u.unreadMessages}</span>
+                          )}
+                        </button>
+                      )}
                       {!u.isAdmin && u.status === "APPROVED" && (
                         <button onClick={() => handleViewAs(u)} className="text-[#8b8fa8] hover:text-indigo-400" title="View as this artist"><Eye className="w-4 h-4" /></button>
                       )}
@@ -326,6 +368,46 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
               </div>
             </div>
           )}
+        </Modal>
+      )}
+
+      {/* In-app thread with an approved artist */}
+      {thread && (
+        <Modal title={`Messages with ${thread.artistName}`} onClose={() => setThread(null)}>
+          <div className="flex flex-col" style={{ minHeight: "18rem" }}>
+            <div className="flex-1 space-y-2.5 overflow-y-auto mb-3" style={{ maxHeight: "50vh" }}>
+              {threadLoading ? (
+                <p className="text-[#8b8fa8] text-sm text-center py-8">Loading…</p>
+              ) : threadMsgs.length === 0 ? (
+                <p className="text-[#8b8fa8] text-sm text-center py-8">No messages yet. Start the conversation below.</p>
+              ) : (
+                threadMsgs.map((m) => (
+                  <div key={m.id} className={`flex ${m.fromAdmin ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${m.fromAdmin ? "bg-indigo-600 text-white" : "bg-[#2a2d3a] text-white"}`}>
+                      <p className="text-[10px] uppercase tracking-wide opacity-60 mb-0.5">{m.fromAdmin ? "You (team)" : thread.artistName}</p>
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">{m.body}</p>
+                      <p className="text-[10px] opacity-50 mt-1">{new Date(m.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {error && <p className="text-red-400 text-sm mb-2">{error}</p>}
+            <div className="flex items-end gap-2 border-t border-[#2a2d3a] pt-3">
+              <textarea
+                value={threadBody}
+                onChange={(e) => setThreadBody(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleThreadSend(); } }}
+                rows={2}
+                placeholder={`Reply to ${thread.artistName}…`}
+                className={`${inputClass} resize-none`}
+              />
+              <button onClick={handleThreadSend} disabled={saving || !threadBody.trim()} className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 flex-shrink-0">
+                <Send className="w-4 h-4" /> Send
+              </button>
+            </div>
+            <p className="text-[#5a5e72] text-xs mt-2">They&rsquo;ll get an email that a new message is waiting, and can reply from their Messages page.</p>
+          </div>
         </Modal>
       )}
     </div>

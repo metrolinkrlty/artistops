@@ -82,6 +82,56 @@ const ROLE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+export type AdminMessageView = {
+  id: string;
+  fromAdmin: boolean;
+  body: string;
+  createdAt: string;
+};
+
+// The full thread with one artist, for the admin panel.
+export async function getUserThread(userId: string): Promise<AdminMessageView[]> {
+  await requireAdmin();
+  const rows = await prisma.message.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, fromAdmin: true, body: true, createdAt: true },
+  });
+  // Mark artist → team messages read now that the admin is viewing them.
+  await prisma.message.updateMany({
+    where: { userId, fromAdmin: false, readAt: null },
+    data: { readAt: new Date() },
+  });
+  return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
+}
+
+// Admin replies to an artist in-app, and emails them a nudge to come read it.
+export async function adminSendMessage(
+  userId: string,
+  body: string
+): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const text = body.trim();
+  if (!text) return { ok: false, error: "Write a message first." };
+  if (text.length > 5000) return { ok: false, error: "That message is too long." };
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, artistName: true } });
+  if (!user) return { ok: false, error: "Artist not found." };
+
+  await prisma.message.create({ data: { userId, fromAdmin: true, body: text } });
+
+  const adminEmail = process.env.ADMIN_EMAIL || "admin@artistops.net";
+  sendEmail(
+    user.email,
+    "New message from the ArtistOps team",
+    `<div style="font-family:Inter,Arial,sans-serif;color:#333;padding:16px"><p>Hi ${user.artistName}, you have a new message in ArtistOps:</p><blockquote style="border-left:3px solid #6366f1;padding-left:12px;color:#555;white-space:pre-wrap">${text.replace(/</g, "&lt;")}</blockquote><p><a href="https://artistops.net/messages">Open ArtistOps to reply</a></p></div>`,
+    adminEmail
+  ).catch(console.error);
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
 export async function getUsers() {
   await requireAdmin();
   const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
@@ -108,6 +158,19 @@ export async function getUsers() {
     // Table not migrated yet — no applications to show.
   }
 
+  // Unread artist → team messages per user, for an admin badge. Defensive.
+  const unreadByUser = new Map<string, number>();
+  try {
+    const grouped = await prisma.message.groupBy({
+      by: ["userId"],
+      where: { fromAdmin: false, readAt: null },
+      _count: { _all: true },
+    });
+    for (const g of grouped) unreadByUser.set(g.userId, g._count._all);
+  } catch {
+    // Table not migrated yet.
+  }
+
   const counts = await Promise.all(
     users.map(async (u) => ({
       userId: u.id,
@@ -127,6 +190,7 @@ export async function getUsers() {
       songs: c.songs,
       totalRevenue: c.revenue._sum.amount ?? 0,
       application: appsByUser.get(u.id) ?? null,
+      unreadMessages: unreadByUser.get(u.id) ?? 0,
     };
   });
 }
