@@ -26,7 +26,6 @@ import {
   ShieldCheck,
   MonitorSmartphone,
   BellRing,
-  MessageSquare,
 } from "lucide-react";
 
 const navItems = [
@@ -51,7 +50,6 @@ const navItems = [
   { href: "/forecasting", label: "Forecasting", icon: TrendingUp },
   { href: "/ai-insights", label: "AI Insights", icon: Sparkles },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/messages", label: "Messages", icon: MessageSquare },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
