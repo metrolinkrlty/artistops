@@ -5,6 +5,7 @@ import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
 import { SECTION_KEYS, type Show } from "./site-fields";
+import { FONT_KEYS } from "@/lib/siteFonts";
 
 export type SocialLinks = {
   instagram?: string;
@@ -62,6 +63,10 @@ export async function saveArtistSite(formData: FormData) {
     return { ok: false, error: "Accent color must be a 6-digit hex like #e0a530." };
   }
   const themeColor = rawTheme ? rawTheme.toLowerCase() : null;
+
+  // Website heading font — only accept a known key, else leave unset (default).
+  const rawFont = String(formData.get("fontFamily") || "").trim();
+  const fontFamily = FONT_KEYS.includes(rawFont) ? rawFont : null;
 
   const heroCtaPrimary = String(formData.get("heroCtaPrimary") || "").trim() || null;
   const heroCtaSecondary = String(formData.get("heroCtaSecondary") || "").trim() || null;
@@ -153,6 +158,7 @@ export async function saveArtistSite(formData: FormData) {
     bio,
     heroSubtext,
     themeColor,
+    fontFamily,
     heroCtaPrimary,
     heroCtaSecondary,
     previewSeconds,

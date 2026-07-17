@@ -19,6 +19,7 @@ import {
   type SocialLinks,
 } from "./actions";
 import { SECTION_KEYS, type Show } from "./site-fields";
+import { SITE_FONTS, DEFAULT_FONT } from "@/lib/siteFonts";
 import AiEditor from "./AiEditor";
 import ImportWebsite from "./ImportWebsite";
 
@@ -35,6 +36,7 @@ type ArtistSite = {
   bio: string | null;
   heroSubtext: string | null;
   themeColor: string | null;
+  fontFamily: string | null;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
   previewSeconds: number;
@@ -108,6 +110,7 @@ export default function WebsiteClient({
     .join("\n");
   const [status, setStatus] = useState<{ ok?: boolean; error?: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [font, setFont] = useState(site?.fontFamily ?? DEFAULT_FONT);
 
   // The address pool that drives the dropdowns. Editing the list updates the
   // dropdown options live.
@@ -225,6 +228,27 @@ export default function WebsiteClient({
               <span className="text-xs text-muted-foreground">Highlight color used across your site (buttons, links, headings).</span>
             </Field>
           </div>
+
+          <Field label="Heading font">
+            {/* Load the option fonts so each preview renders in its own typeface. */}
+            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Bebas+Neue&family=Playfair+Display:wght@700&family=Montserrat:wght@700&family=Lora:wght@700&display=swap" />
+            <input type="hidden" name="fontFamily" value={font} />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {SITE_FONTS.map((f) => (
+                <button
+                  type="button"
+                  key={f.key}
+                  onClick={() => setFont(f.key)}
+                  className={`rounded-lg border px-3 py-2 text-left transition ${font === f.key ? "border-primary ring-2 ring-primary" : "border-border hover:border-ring"}`}
+                >
+                  <span className="block text-lg leading-tight text-foreground" style={{ fontFamily: f.css }}>{f.label}</span>
+                  <span className="block text-xs text-muted-foreground">{f.note}</span>
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">Sets the big headings on your public site. Changes go live after you save.</span>
+          </Field>
+
           <Field label="Hero subtext">
             <textarea
               name="heroSubtext"
