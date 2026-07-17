@@ -532,6 +532,40 @@ model AdPixel {
   @@index([userId])
 }
 
+// A pre-save campaign for an upcoming release. Fans authorize via Spotify; on
+// release day their library is updated. Isolated tables — never touched by other
+// queries.
+model PreSaveCampaign {
+  id         String    @id @default(cuid())
+  userId     String
+  slug       String    @unique
+  title      String
+  spotifyUri String? // track/album URI, once the release is scheduled at the distributor
+  releaseAt  DateTime
+  actions    String[]  @default(["save", "follow"]) // "save" | "follow" | "playlist"
+  status     String    @default("scheduled") // scheduled | released | canceled
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  presaves   PreSave[]
+  @@index([userId])
+}
+
+// One fan's pre-save: their AES-encrypted Spotify refresh token, executed on
+// release day.
+model PreSave {
+  id            String          @id @default(cuid())
+  campaignId    String
+  campaign      PreSaveCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  email         String?
+  spotifyUserId String
+  refreshToken  String // AES-256-GCM encrypted
+  status        String          @default("pending") // pending | executed | failed
+  createdAt     DateTime        @default(now())
+  executedAt    DateTime?
+  @@unique([campaignId, spotifyUserId])
+  @@index([campaignId])
+}
+
 // A track featured on an artist's public website. Audio lives in the private
 // `audio` bucket at previewPath/fullPath; the site streams previews via signed
 // URLs and the full track only after an email unlock. Managed per ArtistSite slug.

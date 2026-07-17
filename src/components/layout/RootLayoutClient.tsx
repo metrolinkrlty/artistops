@@ -21,6 +21,7 @@ export default function RootLayoutClient({
   const isPublic =
     pathname.startsWith("/listen/") ||
     pathname.startsWith("/sites/") ||
+    pathname.startsWith("/presave/") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password") ||
