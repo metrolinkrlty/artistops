@@ -4,9 +4,15 @@ import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle } from "lucide-react";
 import { createUser, updateUser, deleteUser, approveUser, rejectUser } from "./actions";
 
+type MembershipApplicationView = {
+  role: string; referredBy: string; workLink: string | null;
+  goals: string[]; catalogSize: string | null; location: string | null;
+};
+
 type UserRow = {
   id: string; email: string; artistName: string; isAdmin: boolean;
   status: string; createdAt: string; songs: number; totalRevenue: number;
+  application: MembershipApplicationView | null;
 };
 
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
@@ -176,6 +182,34 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
                         <div><p className="text-[#8b8fa8]">Total revenue tracked</p><p className="text-green-400">${u.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p></div>
                         <div><p className="text-[#8b8fa8]">Account status</p><p className={statusBadge[u.status] ? `text-${u.status === "APPROVED" ? "green" : u.status === "PENDING" ? "amber" : "red"}-400` : "text-white"}>{u.status}</p></div>
                       </div>
+
+                      {/* Signup questionnaire — the context for approving this account */}
+                      <div className="mt-4 pt-4 border-t border-[#2a2d3a]">
+                        <p className="text-[#8b8fa8] text-xs uppercase tracking-wide mb-3">Signup questionnaire</p>
+                        {u.application ? (
+                          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                            <div><p className="text-[#8b8fa8]">Role</p><p className="text-white">{u.application.role}</p></div>
+                            <div><p className="text-[#8b8fa8]">Referred by</p><p className="text-white">{u.application.referredBy}</p></div>
+                            <div>
+                              <p className="text-[#8b8fa8]">Music / work link</p>
+                              {u.application.workLink ? (
+                                <a href={u.application.workLink} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline break-all">{u.application.workLink}</a>
+                              ) : <p className="text-[#5a5e72]">—</p>}
+                            </div>
+                            <div><p className="text-[#8b8fa8]">Catalog size</p><p className="text-white">{u.application.catalogSize || "—"}</p></div>
+                            <div><p className="text-[#8b8fa8]">Based in</p><p className="text-white">{u.application.location || "—"}</p></div>
+                            <div>
+                              <p className="text-[#8b8fa8]">Wants help with</p>
+                              {u.application.goals.length ? (
+                                <p className="text-white">{u.application.goals.join(", ")}</p>
+                              ) : <p className="text-[#5a5e72]">—</p>}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-[#5a5e72] text-sm">No questionnaire on file — this account was created before the questionnaire, or by an admin.</p>
+                        )}
+                      </div>
+
                       {!u.isAdmin && u.status === "APPROVED" && (
                         <button onClick={() => handleViewAs(u)} className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/40">
                           <Eye className="w-3 h-3" /> View and edit this artist&apos;s full dashboard

@@ -29,9 +29,50 @@ export async function rejectUser(id: string) {
   return { ok: true };
 }
 
+export type MembershipApplicationView = {
+  role: string;
+  referredBy: string;
+  workLink: string | null;
+  goals: string[];
+  catalogSize: string | null;
+  location: string | null;
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  artist: "Artist",
+  band: "Band member",
+  manager: "Artist manager",
+  label: "Label / industry professional",
+  producer: "Producer / engineer",
+  other: "Other",
+};
+
 export async function getUsers() {
   await requireAdmin();
   const users = await prisma.user.findMany({ orderBy: { createdAt: "desc" } });
+
+  // Signup questionnaires, keyed by userId. Defensive: users who signed up before
+  // the questionnaire existed simply have no application.
+  const appsByUser = new Map<string, MembershipApplicationView>();
+  try {
+    const apps = await prisma.membershipApplication.findMany({
+      where: { userId: { in: users.map((u) => u.id) } },
+    });
+    for (const a of apps) {
+      if (!a.userId) continue;
+      appsByUser.set(a.userId, {
+        role: ROLE_LABELS[a.role] || a.role,
+        referredBy: a.referredBy,
+        workLink: a.workLink,
+        goals: a.goals,
+        catalogSize: a.catalogSize,
+        location: a.location,
+      });
+    }
+  } catch {
+    // Table not migrated yet — no applications to show.
+  }
+
   const counts = await Promise.all(
     users.map(async (u) => ({
       userId: u.id,
@@ -50,6 +91,7 @@ export async function getUsers() {
       createdAt: u.createdAt.toISOString(),
       songs: c.songs,
       totalRevenue: c.revenue._sum.amount ?? 0,
+      application: appsByUser.get(u.id) ?? null,
     };
   });
 }
