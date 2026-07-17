@@ -40,6 +40,8 @@ export async function GET(
       previewSeconds: true,
       unlockGate: true,
       unlockFollowUrl: true,
+      fbLikeShare: true,
+      fbPageUrl: true,
       socialLinks: true,
       contactEmail: true,
     },

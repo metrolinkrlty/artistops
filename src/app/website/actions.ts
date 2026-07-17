@@ -72,6 +72,8 @@ export async function saveArtistSite(formData: FormData) {
   const gateRaw = String(formData.get("unlockGate") || "email");
   const unlockGate = ["email", "share", "follow"].includes(gateRaw) ? gateRaw : "email";
   const unlockFollowUrl = String(formData.get("unlockFollowUrl") || "").trim() || null;
+  const fbLikeShare = !!formData.get("fbLikeShare");
+  const fbPageUrl = String(formData.get("fbPageUrl") || "").trim() || null;
 
   // Section visibility: a checkbox per toggleable section (checked = visible).
   const hiddenSections = SECTION_KEYS.filter((k) => !formData.get(`section_${k}`));
@@ -156,6 +158,8 @@ export async function saveArtistSite(formData: FormData) {
     previewSeconds,
     unlockGate,
     unlockFollowUrl,
+    fbLikeShare,
+    fbPageUrl,
     hiddenSections,
     shows,
     socialLinks,

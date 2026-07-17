@@ -493,6 +493,8 @@ model ArtistSite {
   previewSeconds  Int      @default(30)
   unlockGate      String   @default("email") // how a visitor unlocks full songs: "email" | "share" | "follow"
   unlockFollowUrl String?  // for the "follow" gate: the profile URL the visitor is sent to
+  fbLikeShare     Boolean  @default(false) // show real Facebook Like & Share buttons on the site
+  fbPageUrl       String?  // the artist's Facebook Page URL (target of the Like button)
   // Artist-controlled email settings (Phase 3):
   availableEmails String[] // the mailboxes this artist can pick from (dropdown source)
   contactEmail    String?  // public booking/contact address shown on the site

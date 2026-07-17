@@ -39,6 +39,8 @@ type ArtistSite = {
   previewSeconds: number;
   unlockGate: string;
   unlockFollowUrl: string | null;
+  fbLikeShare: boolean;
+  fbPageUrl: string | null;
   heroImageUrl: string | null;
   galleryImages: string[];
   hiddenGalleryImages: string[];
@@ -266,6 +268,18 @@ export default function WebsiteClient({
             <p className="mt-2 text-xs text-muted-foreground">
               Only Email gives you data you own; Share/Follow unlock on click and can&rsquo;t be verified.
             </p>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" name="fbLikeShare" defaultChecked={site?.fbLikeShare ?? false} className="accent-primary" />
+              Show Facebook Like &amp; Share buttons
+            </label>
+            <p className="mb-3 mt-1 text-xs text-muted-foreground">
+              Adds real Facebook Like &amp; Share buttons to your site (for growth). Visitors stay on your page — Like is inline, Share opens a Facebook popup. Great for reach, but they can&rsquo;t gate songs.
+            </p>
+            <Field label="Facebook Page URL (target of the Like button)">
+              <Input name="fbPageUrl" defaultValue={site?.fbPageUrl ?? ""} placeholder="https://facebook.com/yourpage" />
+            </Field>
           </div>
           <Field label="Bio">
             <textarea
