@@ -19,7 +19,7 @@ import {
   type SocialLinks,
 } from "./actions";
 import { SECTION_KEYS, type Show } from "./site-fields";
-import { SITE_FONTS, DEFAULT_FONT } from "@/lib/siteFonts";
+import { SITE_FONTS, DEFAULT_FONT, FONT_CATEGORIES, FONT_PREVIEW_HREF } from "@/lib/siteFonts";
 import AiEditor from "./AiEditor";
 import ImportWebsite from "./ImportWebsite";
 
@@ -230,21 +230,30 @@ export default function WebsiteClient({
           </div>
 
           <Field label="Heading font">
-            {/* Load the option fonts so each preview renders in its own typeface. */}
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Bebas+Neue&family=Playfair+Display:wght@700&family=Montserrat:wght@700&family=Lora:wght@700&display=swap" />
+            {/* Load the option fonts so the preview renders in the chosen typeface. */}
+            <link rel="stylesheet" href={FONT_PREVIEW_HREF} />
             <input type="hidden" name="fontFamily" value={font} />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {SITE_FONTS.map((f) => (
-                <button
-                  type="button"
-                  key={f.key}
-                  onClick={() => setFont(f.key)}
-                  className={`rounded-lg border px-3 py-2 text-left transition ${font === f.key ? "border-primary ring-2 ring-primary" : "border-border hover:border-ring"}`}
-                >
-                  <span className="block text-lg leading-tight text-foreground" style={{ fontFamily: f.css }}>{f.label}</span>
-                  <span className="block text-xs text-muted-foreground">{f.note}</span>
-                </button>
+            <select
+              value={font}
+              onChange={(e) => setFont(e.target.value)}
+              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+            >
+              {FONT_CATEGORIES.map((cat) => (
+                <optgroup key={cat} label={cat}>
+                  {SITE_FONTS.filter((f) => f.category === cat).map((f) => (
+                    <option key={f.key} value={f.key}>{f.label} — {f.note}</option>
+                  ))}
+                </optgroup>
               ))}
+            </select>
+            {/* Live preview in the selected font */}
+            <div className="mt-2 rounded-lg border border-border bg-background/40 px-4 py-3">
+              <span
+                className="block text-2xl leading-tight text-foreground"
+                style={{ fontFamily: SITE_FONTS.find((f) => f.key === font)?.css }}
+              >
+                {site?.displayName || "Your Artist Name"}
+              </span>
             </div>
             <span className="text-xs text-muted-foreground">Sets the big headings on your public site. Changes go live after you save.</span>
           </Field>
