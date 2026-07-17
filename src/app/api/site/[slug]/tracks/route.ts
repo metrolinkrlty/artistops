@@ -37,6 +37,7 @@ export async function GET(
       return {
         trackId: t.trackId,
         title: t.title,
+        gate: t.gate,
         previewUrl: data?.signedUrl ?? null,
       };
     })

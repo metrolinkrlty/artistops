@@ -357,9 +357,22 @@ export async function getSiteTracks() {
   const tracks = await prisma.siteTrack.findMany({
     where: { site: site.slug },
     orderBy: { order: "asc" },
-    select: { id: true, title: true },
+    select: { id: true, title: true, gate: true },
   });
   return tracks;
+}
+
+// Set how a single song unlocks: "email" | "share" | "follow" | "free".
+export async function setSiteTrackGate(id: string, gate: string) {
+  const userId = await requireUserId();
+  if (!["email", "share", "follow", "free"].includes(gate)) return;
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return;
+  // Only this artist's own tracks.
+  const owned = await prisma.siteTrack.findFirst({ where: { id, site: site.slug }, select: { id: true } });
+  if (!owned) return;
+  await prisma.siteTrack.update({ where: { id }, data: { gate } });
+  revalidatePath("/website");
 }
 
 // Persist a new order for the website's tracks (the first one plays first).

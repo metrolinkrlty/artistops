@@ -542,6 +542,7 @@ model SiteTrack {
   trackId     String
   title       String
   order       Int      @default(0)
+  gate        String   @default("email") // per-song unlock: "email" | "share" | "follow" | "free"
   previewPath String
   fullPath    String
   durationSec Int?

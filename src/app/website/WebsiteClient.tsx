@@ -14,6 +14,7 @@ import {
   hideGalleryImage,
   showGalleryImage,
   reorderSiteTracks,
+  setSiteTrackGate,
   setHeroImage,
   type SocialLinks,
 } from "./actions";
@@ -93,7 +94,7 @@ export default function WebsiteClient({
   site: ArtistSite;
   subscribers: Subscriber[];
   isAdmin: boolean;
-  siteTracks: { id: string; title: string }[];
+  siteTracks: { id: string; title: string; gate: string }[];
 }) {
   const router = useRouter();
   const social = (site?.socialLinks as SocialLinks) || {};
@@ -242,29 +243,18 @@ export default function WebsiteClient({
             </Field>
           </div>
           <div className="rounded-lg border border-border p-4">
-            <h3 className="mb-1 text-sm font-semibold">Song unlock gate</h3>
+            <h3 className="mb-1 text-sm font-semibold">Song unlock</h3>
             <p className="mb-3 text-xs text-muted-foreground">
-              Fans hear a preview, then unlock the full songs. Choose how they unlock.
+              Fans hear a preview, then unlock the full song. Set each song&rsquo;s unlock method (Email / Share / Follow / Free) <strong>per song in &ldquo;Song order&rdquo; below.</strong>
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Preview length (seconds)">
                 <Input name="previewSeconds" type="number" min={5} max={30} defaultValue={site?.previewSeconds ?? 30} />
               </Field>
-              <Field label="Unlock method">
-                <select
-                  name="unlockGate"
-                  defaultValue={site?.unlockGate ?? "email"}
-                  className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-                >
-                  <option value="email">Email — captures the address (recommended)</option>
-                  <option value="share">Share — optimistic, grows reach</option>
-                  <option value="follow">Follow — optimistic, grows a profile</option>
-                </select>
+              <Field label="Follow / profile URL (for Follow-gated songs)">
+                <Input name="unlockFollowUrl" defaultValue={site?.unlockFollowUrl ?? ""} placeholder="https://instagram.com/yourhandle" />
               </Field>
             </div>
-            <Field label="Follow / profile URL (used by the Follow method)">
-              <Input name="unlockFollowUrl" defaultValue={site?.unlockFollowUrl ?? ""} placeholder="https://instagram.com/yourhandle" />
-            </Field>
             <p className="mt-2 text-xs text-muted-foreground">
               Only Email gives you data you own; Share/Follow unlock on click and can&rsquo;t be verified.
             </p>
@@ -446,7 +436,7 @@ export default function WebsiteClient({
   );
 }
 
-function TrackOrder({ tracks }: { tracks: { id: string; title: string }[] }) {
+function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: string }[] }) {
   const router = useRouter();
   const [order, setOrder] = useState(tracks);
   useEffect(() => { setOrder(tracks); }, [tracks]);
@@ -454,6 +444,11 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string }[] }) {
   const [, startTransition] = useTransition();
 
   if (!tracks.length) return null;
+
+  const setGate = (id: string, gate: string) => {
+    setOrder((o) => o.map((t) => (t.id === id ? { ...t, gate } : t)));
+    startTransition(() => { setSiteTrackGate(id, gate).then(() => router.refresh()); });
+  };
 
   function reorderTo(targetId: string) {
     const from = order.findIndex((t) => t.id === dragId.current);
@@ -468,7 +463,9 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string }[] }) {
   return (
     <section className="rounded-xl border border-border bg-card p-6">
       <h2 className="mb-1 text-lg font-semibold">Song order</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Drag to set the order songs appear on your site — the first one plays first.</p>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Drag to set order (the first plays first). Pick each song&rsquo;s unlock gate — mix Email (captures the address) and Share/Follow (grows reach) to get the best of both.
+      </p>
       <ul className="space-y-2">
         {order.map((t, i) => (
           <li
@@ -481,8 +478,19 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string }[] }) {
             className="flex cursor-grab items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2 transition active:cursor-grabbing hover:border-ring"
           >
             <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>
-            <span className="text-sm text-foreground">{t.title}</span>
-            <span className="ml-auto select-none text-muted-foreground">⠿</span>
+            <span className="flex-1 truncate text-sm text-foreground">{t.title}</span>
+            <select
+              value={t.gate}
+              onChange={(e) => setGate(t.id, e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="rounded-md border border-input bg-transparent px-2 py-1 text-xs outline-none focus-visible:border-ring dark:bg-input/30"
+            >
+              <option value="email">Email gate</option>
+              <option value="share">Share gate</option>
+              <option value="follow">Follow gate</option>
+              <option value="free">Free (no gate)</option>
+            </select>
+            <span className="select-none text-muted-foreground">⠿</span>
           </li>
         ))}
       </ul>
