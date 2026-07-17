@@ -35,6 +35,9 @@ type ArtistSite = {
   themeColor: string | null;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
+  previewSeconds: number;
+  unlockGate: string;
+  unlockFollowUrl: string | null;
   heroImageUrl: string | null;
   galleryImages: string[];
   hiddenGalleryImages: string[];
@@ -232,6 +235,34 @@ export default function WebsiteClient({
             <Field label="Hero button (secondary)">
               <Input name="heroCtaSecondary" defaultValue={site?.heroCtaSecondary ?? ""} placeholder="Join the Mailing List" />
             </Field>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="mb-1 text-sm font-semibold">Song unlock gate</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Fans hear a preview, then unlock the full songs. Choose how they unlock.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Preview length (seconds)">
+                <Input name="previewSeconds" type="number" min={5} max={30} defaultValue={site?.previewSeconds ?? 30} />
+              </Field>
+              <Field label="Unlock method">
+                <select
+                  name="unlockGate"
+                  defaultValue={site?.unlockGate ?? "email"}
+                  className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                >
+                  <option value="email">Email — captures the address (recommended)</option>
+                  <option value="share">Share — optimistic, grows reach</option>
+                  <option value="follow">Follow — optimistic, grows a profile</option>
+                </select>
+              </Field>
+            </div>
+            <Field label="Follow / profile URL (used by the Follow method)">
+              <Input name="unlockFollowUrl" defaultValue={site?.unlockFollowUrl ?? ""} placeholder="https://instagram.com/yourhandle" />
+            </Field>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Only Email gives you data you own; Share/Follow unlock on click and can&rsquo;t be verified.
+            </p>
           </div>
           <Field label="Bio">
             <textarea

@@ -66,6 +66,13 @@ export async function saveArtistSite(formData: FormData) {
   const heroCtaPrimary = String(formData.get("heroCtaPrimary") || "").trim() || null;
   const heroCtaSecondary = String(formData.get("heroCtaSecondary") || "").trim() || null;
 
+  // Song-unlock gate settings.
+  const rawPreview = parseInt(String(formData.get("previewSeconds") || ""), 10);
+  const previewSeconds = Number.isFinite(rawPreview) ? Math.min(30, Math.max(5, rawPreview)) : 30;
+  const gateRaw = String(formData.get("unlockGate") || "email");
+  const unlockGate = ["email", "share", "follow"].includes(gateRaw) ? gateRaw : "email";
+  const unlockFollowUrl = String(formData.get("unlockFollowUrl") || "").trim() || null;
+
   // Section visibility: a checkbox per toggleable section (checked = visible).
   const hiddenSections = SECTION_KEYS.filter((k) => !formData.get(`section_${k}`));
 
@@ -146,6 +153,9 @@ export async function saveArtistSite(formData: FormData) {
     themeColor,
     heroCtaPrimary,
     heroCtaSecondary,
+    previewSeconds,
+    unlockGate,
+    unlockFollowUrl,
     hiddenSections,
     shows,
     socialLinks,

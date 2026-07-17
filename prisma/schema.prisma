@@ -491,6 +491,8 @@ model ArtistSite {
   websitePixelId  String?  // which Pixel powers the artist's external website (data-driven install, no redeploy)
   featuredSongIds String[]
   previewSeconds  Int      @default(30)
+  unlockGate      String   @default("email") // how a visitor unlocks full songs: "email" | "share" | "follow"
+  unlockFollowUrl String?  // for the "follow" gate: the profile URL the visitor is sent to
   // Artist-controlled email settings (Phase 3):
   availableEmails String[] // the mailboxes this artist can pick from (dropdown source)
   contactEmail    String?  // public booking/contact address shown on the site
