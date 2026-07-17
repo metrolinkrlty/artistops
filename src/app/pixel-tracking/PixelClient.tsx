@@ -184,10 +184,21 @@ export default function PixelClient({ pixels, events, websitePixelId, adPixels }
       {/* Ad pixels */}
       <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6">
         <h2 className="text-white font-semibold mb-1">Ad pixels</h2>
-        <p className="text-[#8b8fa8] text-sm mb-4">
+        <p className="text-[#8b8fa8] text-sm mb-3">
           Add your ad-platform pixel IDs — ArtistOps installs them on your website so you can retarget
           visitors and track conversions. Instagram &amp; Facebook both use the Meta pixel.
         </p>
+        <div className="mb-4 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-3 text-xs text-[#8b8fa8]">
+          <p className="mb-1 font-medium text-white">Need a Meta Pixel ID?</p>
+          <p>
+            Open{" "}
+            <a href="https://www.facebook.com/events_manager2" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">
+              Meta Events Manager →
+            </a>{" "}
+            → click <strong className="text-[#c9cce0]">＋ Connect data sources</strong> → <strong className="text-[#c9cce0]">Web</strong> → name it →
+            choose <em>&ldquo;install code manually&rdquo;</em> and just <strong className="text-[#c9cce0]">copy the ID number</strong> (we install the code for you). Paste it below and click out to save.
+          </p>
+        </div>
         <div className="space-y-3 max-w-xl">
           <AdPixelRow label="Meta Pixel ID — Instagram & Facebook" platform="meta" initial={adPixels.meta} placeholder="e.g. 123456789012345" />
           <AdPixelRow label="TikTok Pixel ID" platform="tiktok" initial={adPixels.tiktok} placeholder="e.g. C1A2B3D4E5F6G7H8" />
