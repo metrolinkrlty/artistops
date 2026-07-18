@@ -79,6 +79,7 @@ export default function SiteMusic({
   // Refs the rAF loop writes to directly (bypassing React re-render for smoothness).
   const shadeRef = useRef<HTMLDivElement | null>(null);
   const waveClipRef = useRef<HTMLDivElement | null>(null);
+  const titleClipRef = useRef<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLDivElement | null>(null);
   const timeRef = useRef<HTMLSpanElement | null>(null);
   const seekAreaRef = useRef<HTMLDivElement | null>(null);
@@ -113,6 +114,7 @@ export default function SiteMusic({
     const pct = `${prog * 100}%`;
     if (shadeRef.current) shadeRef.current.style.width = pct;
     if (waveClipRef.current) waveClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
+    if (titleClipRef.current) titleClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
     if (handleRef.current) handleRef.current.style.left = pct;
     if (timeRef.current) timeRef.current.textContent = `${fmt(a.currentTime)} / ${fmt(total)}${unlockedRef.current ? "" : " · preview"}`;
     if (!unlockedRef.current && a.currentTime >= previewCap) { a.pause(); setPlaying(null); }
@@ -256,7 +258,7 @@ export default function SiteMusic({
                   )}
                 </button>
 
-                <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: active ? "var(--accent)" : undefined }}>
+                <span className="flex-1 truncate font-semibold uppercase tracking-wide">
                   {t.title}
                 </span>
 
@@ -275,6 +277,17 @@ export default function SiteMusic({
                   </button>
                 )}
               </div>
+
+              {/* Accent copy of the title, revealed left-to-right by the scrubber
+                  (clip synced to progress) so the title "lights up" as it passes. */}
+              {active && (
+                <div ref={titleClipRef} className="pointer-events-none absolute inset-0 z-10 flex items-center gap-4 px-5 py-4" style={{ clipPath: "inset(0 100% 0 0)" }}>
+                  <div className="h-10 w-10 shrink-0" />
+                  <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: "var(--accent)" }}>
+                    {t.title}
+                  </span>
+                </div>
+              )}
 
               {/* Per-song gate */}
               {!unlocked && gateOpen && (
