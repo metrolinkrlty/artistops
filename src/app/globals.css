@@ -138,9 +138,11 @@
    The dark layers stay constant for contrast; the accent halo blooms in/out. */
 @keyframes aoTitlePulse {
   0%, 100% {
+    opacity: 0.6;
     text-shadow: 0 1px 4px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9), 0 0 4px var(--accent);
   }
   50% {
-    text-shadow: 0 1px 4px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9), 0 0 18px var(--accent), 0 0 7px var(--accent);
+    opacity: 1;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9), 0 0 20px var(--accent), 0 0 8px var(--accent);
   }
 }
