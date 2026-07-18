@@ -148,6 +148,8 @@ export default function SiteMusic({
   followUrl,
   fbPageUrl,
   playerStyle = "waveform",
+  showStreamLinks = true,
+  streamLinksAfterGate = false,
 }: {
   slug: string;
   initiallyUnlockedIds: string[] | "all";
@@ -155,6 +157,8 @@ export default function SiteMusic({
   followUrl: string | null;
   fbPageUrl: string | null;
   playerStyle?: PlayerStyle;
+  showStreamLinks?: boolean;
+  streamLinksAfterGate?: boolean;
 }) {
   // Which decorative layers this style shows.
   const classic = playerStyle === "classic"; // song list + bottom transport bar
@@ -419,8 +423,9 @@ export default function SiteMusic({
               )}
               </div>
 
-              {/* Links to hear the full song on monetizing platforms */}
-              <StreamLinks links={t.streamLinks} />
+              {/* Links to hear the full song on monetizing platforms.
+                  Hidden entirely when off; when "after gate", only once unlocked. */}
+              {showStreamLinks && (!streamLinksAfterGate || unlocked) && <StreamLinks links={t.streamLinks} />}
 
               {/* Per-song gate */}
               {!unlocked && gateOpen && (

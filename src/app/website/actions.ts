@@ -74,6 +74,9 @@ export async function saveArtistSite(formData: FormData) {
   const styleRaw = String(formData.get("playerStyle") || "waveform");
   const playerStyle = ["waveform", "shade", "simple", "classic"].includes(styleRaw) ? styleRaw : "waveform";
 
+  const showStreamLinks = formData.get("showStreamLinks") != null;
+  const streamLinksAfterGate = String(formData.get("streamLinksTiming") || "before") === "after";
+
   const heroCtaPrimary = String(formData.get("heroCtaPrimary") || "").trim() || null;
   const heroCtaSecondary = String(formData.get("heroCtaSecondary") || "").trim() || null;
 
@@ -167,6 +170,8 @@ export async function saveArtistSite(formData: FormData) {
     fontFamily,
     footerText,
     playerStyle,
+    showStreamLinks,
+    streamLinksAfterGate,
     heroCtaPrimary,
     heroCtaSecondary,
     previewSeconds,

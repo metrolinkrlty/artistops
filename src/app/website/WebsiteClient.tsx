@@ -40,6 +40,8 @@ type ArtistSite = {
   fontFamily: string | null;
   footerText: string | null;
   playerStyle: string | null;
+  showStreamLinks: boolean;
+  streamLinksAfterGate: boolean;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
   previewSeconds: number;
@@ -307,6 +309,36 @@ export default function WebsiteClient({
                 </label>
               ))}
             </div>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" name="showStreamLinks" defaultChecked={site?.showStreamLinks ?? true} className="accent-primary" />
+              Show streaming links on your songs
+            </label>
+            <p className="mb-3 mt-1 text-xs text-muted-foreground">
+              Shows the &ldquo;Full song on Spotify / Apple Music / …&rdquo; buttons under each song (only where you&rsquo;ve added a link in &ldquo;Song order&rdquo; below). Turn off to hide them everywhere.
+            </p>
+            <fieldset className="grid gap-2">
+              <legend className="mb-1 text-xs font-medium text-muted-foreground">When should fans see them?</legend>
+              {[
+                { value: "before", title: "Right away", desc: "Fans can jump to Spotify/Apple anytime. Best for plays and royalties." },
+                { value: "after", title: "After they unlock the song", desc: "Fans give their email (or share/follow) first, then get the streaming links. Best for growing your list." },
+              ].map((opt) => (
+                <label key={opt.value} className="flex cursor-pointer items-start gap-3 rounded-lg border border-input p-2.5 transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                  <input
+                    type="radio"
+                    name="streamLinksTiming"
+                    value={opt.value}
+                    defaultChecked={(site?.streamLinksAfterGate ? "after" : "before") === opt.value}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <span className="text-sm">
+                    <span className="font-semibold">{opt.title}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{opt.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </fieldset>
           </div>
           <div className="rounded-lg border border-border p-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">

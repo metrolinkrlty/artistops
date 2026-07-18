@@ -35,6 +35,8 @@ export async function GET(
       fontFamily: true,
       footerText: true,
       playerStyle: true,
+      showStreamLinks: true,
+      streamLinksAfterGate: true,
       galleryImages: true,
       hiddenSections: true,
       shows: true,

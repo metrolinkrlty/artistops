@@ -172,6 +172,8 @@ export default async function ArtistSitePage({ params }: Params) {
                 followUrl={site.unlockFollowUrl}
                 fbPageUrl={site.fbPageUrl}
                 playerStyle={(site.playerStyle as "waveform" | "shade" | "simple" | "classic") ?? "waveform"}
+                showStreamLinks={site.showStreamLinks}
+                streamLinksAfterGate={site.streamLinksAfterGate}
               />
             </div>
           </section>
