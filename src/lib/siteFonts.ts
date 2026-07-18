@@ -7,35 +7,46 @@ export type SiteFont = {
   note: string;
   category: string;
   css: string;
+  gf: string; // Google Fonts family query, e.g. "Playfair+Display:wght@700"
 };
 
 export const SITE_FONTS: SiteFont[] = [
   // Clean & modern
-  { key: "oswald", label: "Oswald", note: "Bold & condensed (default)", category: "Clean & modern", css: "'Oswald', sans-serif" },
-  { key: "bebas", label: "Bebas Neue", note: "Big & punchy", category: "Clean & modern", css: "'Bebas Neue', sans-serif" },
-  { key: "montserrat", label: "Montserrat", note: "Clean & geometric", category: "Clean & modern", css: "'Montserrat', sans-serif" },
-  { key: "anton", label: "Anton", note: "Heavy impact", category: "Clean & modern", css: "'Anton', sans-serif" },
-  { key: "teko", label: "Teko", note: "Tall & narrow", category: "Clean & modern", css: "'Teko', sans-serif" },
-  { key: "righteous", label: "Righteous", note: "Rounded retro", category: "Clean & modern", css: "'Righteous', sans-serif" },
+  { key: "oswald", label: "Oswald", note: "Bold & condensed (default)", category: "Clean & modern", css: "'Oswald', sans-serif", gf: "Oswald:wght@600" },
+  { key: "bebas", label: "Bebas Neue", note: "Big & punchy", category: "Clean & modern", css: "'Bebas Neue', sans-serif", gf: "Bebas+Neue" },
+  { key: "montserrat", label: "Montserrat", note: "Clean & geometric", category: "Clean & modern", css: "'Montserrat', sans-serif", gf: "Montserrat:wght@700" },
+  { key: "anton", label: "Anton", note: "Heavy impact", category: "Clean & modern", css: "'Anton', sans-serif", gf: "Anton" },
+  { key: "teko", label: "Teko", note: "Tall & narrow", category: "Clean & modern", css: "'Teko', sans-serif", gf: "Teko:wght@600" },
+  { key: "righteous", label: "Righteous", note: "Rounded retro", category: "Clean & modern", css: "'Righteous', sans-serif", gf: "Righteous" },
   // Classic serif
-  { key: "playfair", label: "Playfair Display", note: "Elegant serif", category: "Classic serif", css: "'Playfair Display', serif" },
-  { key: "lora", label: "Lora", note: "Warm serif", category: "Classic serif", css: "'Lora', serif" },
-  { key: "abril", label: "Abril Fatface", note: "Bold magazine serif", category: "Classic serif", css: "'Abril Fatface', serif" },
-  { key: "cormorant", label: "Cormorant Garamond", note: "Refined & literary", category: "Classic serif", css: "'Cormorant Garamond', serif" },
+  { key: "playfair", label: "Playfair Display", note: "Elegant serif", category: "Classic serif", css: "'Playfair Display', serif", gf: "Playfair+Display:wght@700" },
+  { key: "lora", label: "Lora", note: "Warm serif", category: "Classic serif", css: "'Lora', serif", gf: "Lora:wght@700" },
+  { key: "abril", label: "Abril Fatface", note: "Bold magazine serif", category: "Classic serif", css: "'Abril Fatface', serif", gf: "Abril+Fatface" },
+  { key: "cormorant", label: "Cormorant Garamond", note: "Refined & literary", category: "Classic serif", css: "'Cormorant Garamond', serif", gf: "Cormorant+Garamond:wght@700" },
   // Western & country
-  { key: "rye", label: "Rye", note: "Old-West wood type", category: "Western & country", css: "'Rye', serif" },
-  { key: "ewert", label: "Ewert", note: "Bold saloon slab", category: "Western & country", css: "'Ewert', serif" },
-  { key: "specialelite", label: "Special Elite", note: "Vintage typewriter", category: "Western & country", css: "'Special Elite', monospace" },
-  { key: "alfaslab", label: "Alfa Slab One", note: "Heavy rodeo slab", category: "Western & country", css: "'Alfa Slab One', serif" },
-  { key: "sancreek", label: "Sancreek", note: "Wanted-poster western", category: "Western & country", css: "'Sancreek', serif" },
-  { key: "bevan", label: "Bevan", note: "Saloon signage", category: "Western & country", css: "'Bevan', serif" },
+  { key: "rye", label: "Rye", note: "Old-West wood type", category: "Western & country", css: "'Rye', serif", gf: "Rye" },
+  { key: "ewert", label: "Ewert", note: "Bold saloon slab", category: "Western & country", css: "'Ewert', serif", gf: "Ewert" },
+  { key: "specialelite", label: "Special Elite", note: "Vintage typewriter", category: "Western & country", css: "'Special Elite', monospace", gf: "Special+Elite" },
+  { key: "alfaslab", label: "Alfa Slab One", note: "Heavy rodeo slab", category: "Western & country", css: "'Alfa Slab One', serif", gf: "Alfa+Slab+One" },
+  { key: "sancreek", label: "Sancreek", note: "Wanted-poster western", category: "Western & country", css: "'Sancreek', serif", gf: "Sancreek" },
+  { key: "bevan", label: "Bevan", note: "Saloon signage", category: "Western & country", css: "'Bevan', serif", gf: "Bevan" },
   // Script & cursive
-  { key: "pacifico", label: "Pacifico", note: "Casual cursive", category: "Script & cursive", css: "'Pacifico', cursive" },
-  { key: "dancing", label: "Dancing Script", note: "Flowing script", category: "Script & cursive", css: "'Dancing Script', cursive" },
-  { key: "greatvibes", label: "Great Vibes", note: "Fancy formal script", category: "Script & cursive", css: "'Great Vibes', cursive" },
-  { key: "lobster", label: "Lobster", note: "Bold retro script", category: "Script & cursive", css: "'Lobster', cursive" },
-  { key: "sacramento", label: "Sacramento", note: "Thin elegant script", category: "Script & cursive", css: "'Sacramento', cursive" },
+  { key: "pacifico", label: "Pacifico", note: "Casual cursive", category: "Script & cursive", css: "'Pacifico', cursive", gf: "Pacifico" },
+  { key: "dancing", label: "Dancing Script", note: "Flowing script", category: "Script & cursive", css: "'Dancing Script', cursive", gf: "Dancing+Script:wght@700" },
+  { key: "greatvibes", label: "Great Vibes", note: "Fancy formal script", category: "Script & cursive", css: "'Great Vibes', cursive", gf: "Great+Vibes" },
+  { key: "lobster", label: "Lobster", note: "Bold retro script", category: "Script & cursive", css: "'Lobster', cursive", gf: "Lobster" },
+  { key: "sacramento", label: "Sacramento", note: "Thin elegant script", category: "Script & cursive", css: "'Sacramento', cursive", gf: "Sacramento" },
 ];
+
+// Resolve a stored fontFamily key to its CSS + a Google Fonts <link> href that
+// loads just that one font (used by the public /sites renderer).
+export function fontFor(key: string | null | undefined): { css: string; href: string } {
+  const f = SITE_FONTS.find((x) => x.key === key) ?? SITE_FONTS[0];
+  return {
+    css: f.css,
+    href: `https://fonts.googleapis.com/css2?family=${f.gf}&display=swap`,
+  };
+}
 
 export const DEFAULT_FONT = "oswald";
 

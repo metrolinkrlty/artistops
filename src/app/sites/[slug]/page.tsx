@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { Show } from "@/app/website/site-fields";
 import { unlockCookieName } from "@/app/sites/unlock";
+import { fontFor } from "@/lib/siteFonts";
 import SiteMusic from "./SiteMusic";
 import SiteMailingList from "./SiteMailingList";
 import SiteAnalytics from "./SiteAnalytics";
@@ -55,7 +56,8 @@ export default async function ArtistSitePage({ params }: Params) {
     site.themeColor && /^#[0-9a-fA-F]{6}$/.test(site.themeColor)
       ? site.themeColor
       : DEFAULT_ACCENT;
-  const themeStyle = { "--accent": accent } as CSSProperties;
+  const font = fontFor(site.fontFamily);
+  const themeStyle = { "--accent": accent, "--site-heading": font.css } as CSSProperties;
 
   const social = (site.socialLinks as Record<string, string> | null) || {};
   const socialLinks = SOCIAL_ORDER.filter((s) => social[s.key]);
@@ -81,11 +83,13 @@ export default async function ArtistSitePage({ params }: Params) {
 
   return (
     <div style={themeStyle} className="min-h-screen bg-neutral-950 text-neutral-100">
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link rel="stylesheet" href={font.href} />
       <SiteAnalytics ownerId={site.userId} />
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <a href="#top" className="text-lg font-semibold uppercase tracking-[0.15em]" style={{ color: accent }}>
+          <a href="#top" className="text-lg font-semibold uppercase tracking-[0.15em]" style={{ color: accent, fontFamily: "var(--site-heading)" }}>
             {site.displayName}
           </a>
           <nav className="hidden gap-7 sm:flex">
@@ -118,7 +122,7 @@ export default async function ArtistSitePage({ params }: Params) {
                 {site.location}
               </p>
             )}
-            <h1 className="text-5xl font-bold uppercase leading-[0.95] tracking-tight sm:text-7xl">
+            <h1 className="text-5xl font-bold uppercase leading-[0.95] tracking-tight sm:text-7xl" style={{ fontFamily: "var(--site-heading)" }}>
               {site.displayName}
             </h1>
             {site.heroSubtext && (
@@ -262,7 +266,7 @@ function SectionHeading({ kicker, title, accent, center }: { kicker: string; tit
   return (
     <div className={`mb-8 ${center ? "text-center" : ""}`}>
       <p className="mb-2 text-sm uppercase tracking-[0.3em]" style={{ color: accent }}>{kicker}</p>
-      <h2 className="text-4xl font-bold uppercase tracking-tight sm:text-5xl">{title}</h2>
+      <h2 className="text-4xl font-bold uppercase tracking-tight sm:text-5xl" style={{ fontFamily: "var(--site-heading)" }}>{title}</h2>
     </div>
   );
 }
