@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { unlockSiteTrackEmail, unlockSiteTrackShareFollow } from "@/app/sites/actions";
 
 type Track = { trackId: string; title: string; gate: string; previewUrl: string | null };
@@ -23,6 +23,30 @@ function fmt(s: number) {
   const m = Math.floor(s / 60);
   const ss = Math.floor(s % 60);
   return `${m}:${String(ss).padStart(2, "0")}`;
+}
+
+// A decorative waveform (not real audio) — a fixed, pleasant bar pattern.
+function useWaveBars() {
+  return useMemo(
+    () =>
+      Array.from({ length: 56 }, (_, i) => {
+        const v =
+          Math.sin(i * 0.45) * 0.5 + Math.sin(i * 0.17 + 1) * 0.3 + Math.sin(i * 0.9) * 0.2;
+        return 22 + Math.abs(v) * 64; // ~22–86% height
+      }),
+    []
+  );
+}
+
+function WaveBars({ className }: { className?: string }) {
+  const bars = useWaveBars();
+  return (
+    <div className={`flex h-full w-full items-center gap-[2px] ${className ?? ""}`}>
+      {bars.map((h, i) => (
+        <div key={i} className="flex-1 rounded-full bg-current" style={{ height: `${h}%` }} />
+      ))}
+    </div>
+  );
 }
 
 export default function SiteMusic({
@@ -48,11 +72,19 @@ export default function SiteMusic({
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [curTime, setCurTime] = useState(0);
-  const [dur, setDur] = useState(previewSeconds || 30);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const draggingRef = useRef(false);
   const previewCap = previewSeconds || 30;
+
+  // Refs the rAF loop writes to directly (bypassing React re-render for smoothness).
+  const shadeRef = useRef<HTMLDivElement | null>(null);
+  const waveClipRef = useRef<HTMLDivElement | null>(null);
+  const handleRef = useRef<HTMLDivElement | null>(null);
+  const timeRef = useRef<HTMLSpanElement | null>(null);
+  const seekAreaRef = useRef<HTMLDivElement | null>(null);
+  const draggingRef = useRef(false);
+  const totalRef = useRef(previewCap);
+  const unlockedRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -67,11 +99,32 @@ export default function SiteMusic({
     return allUnlocked || t.gate === "free" || unlockedIds.has(t.trackId);
   }
 
-  // Total length used for the scrubber/time: full song length, or the preview cap.
-  function totalFor(t: Track) {
+  // One frame of visual work: write the shade width, waveform reveal, handle
+  // position, and time directly to the DOM (no React re-render → no jerk). Also
+  // enforces the preview cap. Called both by the audio's timeupdate event (fires
+  // even when the tab is hidden) and by rAF (for 60fps smoothing when visible).
+  const writeFrameRef = useRef<() => void>(() => {});
+  writeFrameRef.current = () => {
     const a = audioRef.current;
-    return isUnlocked(t) && a && isFinite(a.duration) ? a.duration : previewCap;
-  }
+    if (!a) return;
+    const total = unlockedRef.current && isFinite(a.duration) ? a.duration : previewCap;
+    totalRef.current = total;
+    const prog = total > 0 ? Math.min(1, a.currentTime / total) : 0;
+    const pct = `${prog * 100}%`;
+    if (shadeRef.current) shadeRef.current.style.width = pct;
+    if (waveClipRef.current) waveClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
+    if (handleRef.current) handleRef.current.style.left = pct;
+    if (timeRef.current) timeRef.current.textContent = `${fmt(a.currentTime)} / ${fmt(total)}${unlockedRef.current ? "" : " · preview"}`;
+    if (!unlockedRef.current && a.currentTime >= previewCap) { a.pause(); setPlaying(null); }
+  };
+
+  useEffect(() => {
+    if (!playing) return;
+    let raf = 0;
+    const loop = () => { writeFrameRef.current(); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [playing]);
 
   function play(t: Track) {
     const a = audioRef.current;
@@ -80,26 +133,20 @@ export default function SiteMusic({
     const full = isUnlocked(t);
     const src = full ? `/api/site/${slug}/track/${t.trackId}/full` : t.previewUrl;
     if (!src) return;
+    unlockedRef.current = full;
+    totalRef.current = previewCap;
     a.src = src;
-    setCurTime(0);
-    setDur(full ? 0 : previewCap);
-    a.onloadedmetadata = () => { if (full) setDur(a.duration); };
-    a.ontimeupdate = () => {
-      setCurTime(a.currentTime);
-      if (!full && a.currentTime >= previewCap) { a.pause(); setPlaying(null); }
-    };
     void a.play();
     setPlaying(t.trackId);
   }
 
-  function seekTo(t: Track, clientX: number, trackEl: HTMLElement) {
+  function seekFromClientX(clientX: number) {
     const a = audioRef.current;
-    if (!a || playing !== t.trackId) return;
-    const rect = trackEl.getBoundingClientRect();
+    const area = seekAreaRef.current;
+    if (!a || !area) return;
+    const rect = area.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const total = isUnlocked(t) ? (isFinite(a.duration) ? a.duration : previewCap) : previewCap;
-    a.currentTime = frac * total;
-    setCurTime(a.currentTime);
+    a.currentTime = frac * totalRef.current;
   }
 
   async function submitEmail(t: Track, e: React.FormEvent) {
@@ -144,9 +191,8 @@ export default function SiteMusic({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-      <audio ref={audioRef} onEnded={() => setPlaying(null)} className="hidden" />
+      <audio ref={audioRef} onTimeUpdate={() => writeFrameRef.current()} onEnded={() => setPlaying(null)} className="hidden" />
 
-      {/* Header — mirrors the live site */}
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
         <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--accent)" }}>
           {previewCap}-second previews
@@ -161,20 +207,45 @@ export default function SiteMusic({
           const active = playing === t.trackId;
           const unlocked = isUnlocked(t);
           const gateOpen = openGate === t.trackId;
-          const total = active ? totalFor(t) : (unlocked ? 0 : previewCap);
-          const prog = active && total > 0 ? Math.min(1, curTime / total) : 0;
           return (
-            <div key={t.trackId} className="relative">
-              {/* Fun progress fill sweeping through the row while it plays */}
+            <div key={t.trackId} className="relative select-none">
+              {/* Animated shade + waveform (only for the playing row). rAF writes width/clip/left. */}
               {active && (
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-0" style={{ width: `${prog * 100}%`, backgroundColor: "var(--accent)", opacity: 0.12 }} />
+                <div ref={seekAreaRef} className="pointer-events-none absolute inset-0 z-0">
+                  {/* faint full waveform (the unplayed hint) */}
+                  <div className="absolute inset-y-0 left-0 right-0 px-5 py-3 opacity-[0.12] text-neutral-300">
+                    <WaveBars />
+                  </div>
+                  {/* shaded (played) area — a soft accent wash that grows */}
+                  <div ref={shadeRef} className="absolute inset-y-0 left-0 will-change-[width]" style={{ width: "0%", backgroundColor: "var(--accent)", opacity: 0.14 }} />
+                  {/* accent waveform, revealed by clip-path as the shade grows */}
+                  <div ref={waveClipRef} className="absolute inset-y-0 left-0 right-0 px-5 py-3 will-change-[clip-path]" style={{ color: "var(--accent)", clipPath: "inset(0 100% 0 0)" }}>
+                    <WaveBars />
+                  </div>
+                </div>
+              )}
+
+              {/* Leading-edge scrubber — grab and drag to seek */}
+              {active && (
+                <div
+                  ref={handleRef}
+                  className="absolute inset-y-0 z-20 -ml-2 flex w-4 cursor-ew-resize touch-none items-center justify-center will-change-[left]"
+                  style={{ left: "0%" }}
+                  onPointerDown={(e) => { draggingRef.current = true; seekFromClientX(e.clientX); try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                  onPointerMove={(e) => { if (draggingRef.current) seekFromClientX(e.clientX); }}
+                  onPointerUp={(e) => { draggingRef.current = false; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                  aria-label="Scrub"
+                >
+                  <div className="h-full w-[3px] rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                  <div className="absolute h-3.5 w-3.5 rounded-full border-2 border-neutral-950 shadow" style={{ backgroundColor: "var(--accent)" }} />
+                </div>
               )}
 
               <div className="relative z-10 flex items-center gap-4 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => play(t)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-950 transition"
+                  className="relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-950 transition"
                   style={{ backgroundColor: "var(--accent)" }}
                   aria-label={active ? "Pause" : unlocked ? "Play" : "Play preview"}
                 >
@@ -190,9 +261,7 @@ export default function SiteMusic({
                 </span>
 
                 {active ? (
-                  <span className="shrink-0 font-mono text-xs text-neutral-400">
-                    {fmt(curTime)} / {fmt(total)}{!unlocked && " · preview"}
-                  </span>
+                  <span ref={timeRef} className="shrink-0 font-mono text-xs text-neutral-300">0:00 / {fmt(previewCap)}{!unlocked && " · preview"}</span>
                 ) : unlocked ? (
                   <span className="shrink-0 text-xs uppercase tracking-widest text-neutral-500">Full</span>
                 ) : (
@@ -206,19 +275,6 @@ export default function SiteMusic({
                   </button>
                 )}
               </div>
-
-              {/* Inline scrubber along the bottom of the row (drag to seek) */}
-              {active && (
-                <div
-                  className="relative z-10 mx-5 mb-3 h-1.5 cursor-pointer rounded-full bg-white/10"
-                  onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); draggingRef.current = true; seekTo(t, e.clientX, e.currentTarget); }}
-                  onPointerMove={(e) => { if (draggingRef.current) seekTo(t, e.clientX, e.currentTarget); }}
-                  onPointerUp={(e) => { draggingRef.current = false; e.currentTarget.releasePointerCapture(e.pointerId); }}
-                >
-                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${prog * 100}%`, backgroundColor: "var(--accent)" }} />
-                  <div className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-neutral-950 shadow" style={{ left: `${prog * 100}%`, backgroundColor: "var(--accent)" }} />
-                </div>
-              )}
 
               {/* Per-song gate */}
               {!unlocked && gateOpen && (
