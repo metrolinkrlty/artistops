@@ -135,7 +135,7 @@ export default function AiEditor() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="e.g. rewrite my bio to mention I'm from Greeley"
+          placeholder="e.g. rewrite my bio to mention my hometown"
           disabled={pending}
           className="h-9 flex-1 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         />

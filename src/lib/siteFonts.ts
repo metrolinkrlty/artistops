@@ -1,5 +1,5 @@
 // Curated heading fonts an artist can pick for their website. The key is stored
-// on ArtistSite.fontFamily; the public site (lukecorliss.com) maps the key to a
+// on ArtistSite.fontFamily; the public site maps the key to a
 // real loaded font. Keep this list — and the website's font loader — in sync.
 export type SiteFont = {
   key: string;

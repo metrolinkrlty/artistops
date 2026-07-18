@@ -140,7 +140,7 @@ export default function ReleaseNotifyClient({
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Midnight in Greeley"
+              placeholder="e.g. your single or album name"
               required
               className="w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500"
             />

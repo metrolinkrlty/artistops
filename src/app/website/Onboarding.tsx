@@ -110,7 +110,7 @@ export default function Onboarding() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Luke Corliss"
+                placeholder="Your name or band name"
                 autoFocus
               />
             </Field>
@@ -139,10 +139,10 @@ export default function Onboarding() {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Set the vibe. This shapes your homepage.</p>
             <Field label="Tagline / genre">
-              <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Honky-tonk, rockabilly & western rock" autoFocus />
+              <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Your genre or vibe (e.g. indie folk, hip-hop)" autoFocus />
             </Field>
             <Field label="Location">
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Greeley, Colorado" />
+              <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Your city, state" />
             </Field>
             <Field label="Accent color">
               <div className="flex items-center gap-2">

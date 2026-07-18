@@ -35,9 +35,9 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: "object",
       properties: {
-        displayName: { type: "string", description: "The artist's public name, e.g. 'Luke Corliss'. Cannot be blank." },
-        tagline: { type: "string", description: "Short genre/vibe line, e.g. 'Honky-tonk, rockabilly & western rock'." },
-        location: { type: "string", description: "Home base, e.g. 'Greeley, Colorado'. Shown above the name in the hero and in the footer." },
+        displayName: { type: "string", description: "The artist's public name, e.g. 'Your Band Name'. Cannot be blank." },
+        tagline: { type: "string", description: "Short genre/vibe line, e.g. 'Indie folk from the Pacific Northwest'." },
+        location: { type: "string", description: "Home base, e.g. 'Austin, Texas'. Shown above the name in the hero and in the footer." },
         bio: { type: "string", description: "The About-section text. Separate paragraphs with a blank line (\\n\\n)." },
         heroSubtext: { type: "string", description: "The one-paragraph pitch under the artist's name at the very top of the site." },
         heroCtaPrimary: { type: "string", description: "Label for the primary hero button (default 'Listen Now')." },
@@ -82,8 +82,8 @@ const tools: Anthropic.Tool[] = [
       type: "object",
       properties: {
         date: { type: "string", description: "The date as it should appear, e.g. 'Aug 3, 2026' or 'Fri, Aug 3 · 8pm'." },
-        venue: { type: "string", description: "Venue name, e.g. 'Moxi Theater'." },
-        city: { type: "string", description: "City/state, e.g. 'Greeley, CO'. Optional." },
+        venue: { type: "string", description: "Venue name, e.g. 'The Fillmore'." },
+        city: { type: "string", description: "City/state, e.g. 'Austin, TX'. Optional." },
         ticketUrl: { type: "string", description: "Ticket link (http/https). Optional." },
       },
       required: ["date", "venue"],

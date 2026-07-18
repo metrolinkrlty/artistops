@@ -200,16 +200,16 @@ export default function WebsiteClient({
         <form action={onSave} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Display name" required>
-              <Input name="displayName" defaultValue={site?.displayName ?? ""} placeholder="Luke Corliss" required />
+              <Input name="displayName" defaultValue={site?.displayName ?? ""} placeholder="Your name or band name" required />
             </Field>
             <Field label="Slug" required>
               <Input name="slug" defaultValue={site?.slug ?? ""} placeholder="luke-corliss" required />
             </Field>
             <Field label="Tagline">
-              <Input name="tagline" defaultValue={site?.tagline ?? ""} placeholder="Honky-tonk, rockabilly & western rock" />
+              <Input name="tagline" defaultValue={site?.tagline ?? ""} placeholder="Your genre or vibe (e.g. indie folk, hip-hop)" />
             </Field>
             <Field label="Location">
-              <Input name="location" defaultValue={site?.location ?? ""} placeholder="Greeley, Colorado" />
+              <Input name="location" defaultValue={site?.location ?? ""} placeholder="Your city, state" />
             </Field>
             <Field label="Accent color">
               <div className="flex items-center gap-2">
@@ -316,7 +316,7 @@ export default function WebsiteClient({
                 name="shows"
                 defaultValue={showsText}
                 rows={4}
-                placeholder={"Aug 3, 2026 | Moxi Theater | Greeley, CO | https://tickets.example.com"}
+                placeholder={"Aug 3, 2026 | Venue Name | City, ST | https://tickets.example.com"}
                 className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 font-mono text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
               <span className="text-xs text-muted-foreground">
@@ -353,7 +353,7 @@ export default function WebsiteClient({
                 value={availableText}
                 onChange={(e) => setAvailableText(e.target.value)}
                 rows={3}
-                placeholder={"luke@lukecorliss.com\nadmin@lukecorliss.com\nhello@lukecorliss.com"}
+                placeholder={"you@yourbandname.com\nbookings@yourbandname.com\nhello@yourbandname.com"}
                 className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
               />
               <span className="text-xs text-muted-foreground">
@@ -589,6 +589,16 @@ function ImageManager({
   const dragUrl = useRef<string | null>(null);
   const [overUrl, setOverUrl] = useState<string | null>(null);
 
+  // Natural pixel size per image, read as each loads — shown on hover so the
+  // artist can judge which photos are sharp enough to publish.
+  const [dims, setDims] = useState<Record<string, string>>({});
+  function onImgLoad(url: string, e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    if (img.naturalWidth) {
+      setDims((d) => (d[url] ? d : { ...d, [url]: `${img.naturalWidth}×${img.naturalHeight}` }));
+    }
+  }
+
   async function upload(kind: "hero" | "gallery", input: HTMLInputElement | null) {
     const files = input?.files ? Array.from(input.files) : [];
     if (!files.length) return;
@@ -688,7 +698,12 @@ function ImageManager({
                   className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${overUrl === url ? "border-primary ring-2 ring-primary" : i === 0 ? "border-primary" : "border-border"}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" draggable={false} className="aspect-square w-full object-cover" />
+                  <img src={url} alt="" draggable={false} onLoad={(e) => onImgLoad(url, e)} className="aspect-square w-full object-cover" />
+                  {dims[url] && (
+                    <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                      {dims[url]}
+                    </span>
+                  )}
                   {i === 0 && (
                     <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-primary/90 px-1.5 py-0.5 text-center text-[10px] font-semibold text-primary-foreground">
                       ★ Primary photo
@@ -723,7 +738,12 @@ function ImageManager({
                 {hiddenGalleryImages.map((url) => (
                   <div key={url} className="group relative overflow-hidden rounded-lg border border-border opacity-60">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="aspect-square w-full object-cover" />
+                    <img src={url} alt="" onLoad={(e) => onImgLoad(url, e)} className="aspect-square w-full object-cover" />
+                    {dims[url] && (
+                      <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                        {dims[url]}
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={() => startTransition(() => { showGalleryImage(url).then(() => router.refresh()); })}
