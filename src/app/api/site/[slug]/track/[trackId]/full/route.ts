@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { supabaseAdmin, AUDIO_BUCKET } from "@/lib/supabaseAdmin";
-import { unlockCookieName } from "@/app/sites/unlock";
+import { unlockCookieName, isTrackUnlocked } from "@/app/sites/unlock";
 
 // Cookie-gated full-track stream for the multi-tenant renderer. The visitor
 // must have unlocked this slug (email gate) — then we sign the private full
@@ -17,16 +17,19 @@ export async function GET(
 ) {
   const { slug, trackId } = await params;
 
-  const store = await cookies();
-  if (store.get(unlockCookieName(slug))?.value !== "1") {
-    return new NextResponse("Locked", { status: 403 });
-  }
-
   const track = await prisma.siteTrack.findUnique({
     where: { site_trackId: { site: slug, trackId } },
-    select: { fullPath: true },
+    select: { fullPath: true, gate: true },
   });
   if (!track) return new NextResponse("Not found", { status: 404 });
+
+  // Free songs are always streamable; otherwise the cookie must authorize THIS
+  // track (per-song), with legacy "1" still meaning everything.
+  const store = await cookies();
+  const cookieVal = store.get(unlockCookieName(slug))?.value;
+  if (track.gate !== "free" && !isTrackUnlocked(cookieVal, trackId)) {
+    return new NextResponse("Locked", { status: 403 });
+  }
 
   const { data, error } = await supabaseAdmin.storage
     .from(AUDIO_BUCKET)

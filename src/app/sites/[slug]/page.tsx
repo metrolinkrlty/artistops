@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import type { Show } from "@/app/website/site-fields";
-import { unlockCookieName } from "@/app/sites/unlock";
+import { unlockCookieName, unlockedIdsFromCookie } from "@/app/sites/unlock";
 import { fontFor } from "@/lib/siteFonts";
 import SiteMusic from "./SiteMusic";
 import SiteMailingList from "./SiteMailingList";
@@ -50,7 +50,7 @@ export default async function ArtistSitePage({ params }: Params) {
   ]);
   if (!site) notFound();
 
-  const unlocked = cookieStore.get(unlockCookieName(slug))?.value === "1";
+  const unlockedIds = unlockedIdsFromCookie(cookieStore.get(unlockCookieName(slug))?.value);
 
   const accent =
     site.themeColor && /^#[0-9a-fA-F]{6}$/.test(site.themeColor)
@@ -146,7 +146,13 @@ export default async function ArtistSitePage({ params }: Params) {
           <section id="music" className="scroll-mt-20 py-24">
             <div className="mx-auto max-w-3xl px-6">
               <SectionHeading kicker="Listen" title="Music" accent={accent} />
-              <SiteMusic slug={slug} initiallyUnlocked={unlocked} />
+              <SiteMusic
+                slug={slug}
+                initiallyUnlockedIds={unlockedIds}
+                previewSeconds={site.previewSeconds}
+                followUrl={site.unlockFollowUrl}
+                fbPageUrl={site.fbPageUrl}
+              />
             </div>
           </section>
         )}
