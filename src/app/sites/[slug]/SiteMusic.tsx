@@ -3,7 +3,38 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { unlockSiteTrackEmail, unlockSiteTrackShareFollow } from "@/app/sites/actions";
 
-type Track = { trackId: string; title: string; gate: string; previewUrl: string | null };
+type Track = { trackId: string; title: string; gate: string; previewUrl: string | null; streamLinks?: Record<string, string> | null };
+
+// Monetizing platforms a song can link out to. Order = display order.
+const STREAM_PLATFORMS: { key: string; label: string }[] = [
+  { key: "spotify", label: "Spotify" },
+  { key: "apple", label: "Apple Music" },
+  { key: "bandcamp", label: "Bandcamp" },
+  { key: "youtube", label: "YouTube" },
+  { key: "soundcloud", label: "SoundCloud" },
+];
+
+function StreamLinks({ links }: { links?: Record<string, string> | null }) {
+  if (!links) return null;
+  const items = STREAM_PLATFORMS.filter((p) => links[p.key]);
+  if (!items.length) return null;
+  return (
+    <div className="relative z-10 flex flex-wrap items-center gap-2 px-5 pb-3 pt-0.5">
+      <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Full song on</span>
+      {items.map((p) => (
+        <a
+          key={p.key}
+          href={links[p.key]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full border border-white/15 px-2.5 py-0.5 text-[11px] text-neutral-300 transition hover:border-[var(--accent)] hover:text-white"
+        >
+          {p.label}
+        </a>
+      ))}
+    </div>
+  );
+}
 
 // Notify the artist's ad pixels of a conversion (no-op if none installed).
 function firePixelLead() {
@@ -300,7 +331,8 @@ export default function SiteMusic({
           const unlocked = isUnlocked(t);
           const gateOpen = openGate === t.trackId;
           return (
-            <div key={t.trackId} className="relative select-none">
+            <div key={t.trackId} className="select-none">
+              <div className="relative">
               {/* Animated shade + waveform (only for the playing row). rAF writes width/clip/left. */}
               {active && showSweep && (
                 <div ref={seekAreaRef} className="pointer-events-none absolute inset-0 z-0">
@@ -385,6 +417,10 @@ export default function SiteMusic({
                   </span>
                 </div>
               )}
+              </div>
+
+              {/* Links to hear the full song on monetizing platforms */}
+              <StreamLinks links={t.streamLinks} />
 
               {/* Per-song gate */}
               {!unlocked && gateOpen && (

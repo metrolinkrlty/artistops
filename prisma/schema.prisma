@@ -614,6 +614,7 @@ model SiteTrack {
   previewPath String
   fullPath    String
   durationSec Int?
+  streamLinks Json?    // per-song links to monetizing platforms: { spotify?, apple?, bandcamp?, youtube?, soundcloud? }
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   @@unique([site, trackId])

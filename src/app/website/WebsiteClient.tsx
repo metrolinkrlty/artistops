@@ -15,6 +15,7 @@ import {
   showGalleryImage,
   reorderSiteTracks,
   setSiteTrackGate,
+  setSiteTrackLinks,
   setHeroImage,
   type SocialLinks,
 } from "./actions";
@@ -98,7 +99,7 @@ export default function WebsiteClient({
   site: ArtistSite;
   subscribers: Subscriber[];
   isAdmin: boolean;
-  siteTracks: { id: string; title: string; gate: string }[];
+  siteTracks: { id: string; title: string; gate: string; streamLinks: unknown }[];
 }) {
   const router = useRouter();
   const social = (site?.socialLinks as SocialLinks) || {};
@@ -549,11 +550,24 @@ function FontDropdown({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
-function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: string }[] }) {
+const STREAM_PLATFORMS: { key: string; label: string; placeholder: string }[] = [
+  { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/track/…" },
+  { key: "apple", label: "Apple Music", placeholder: "https://music.apple.com/…" },
+  { key: "bandcamp", label: "Bandcamp", placeholder: "https://yourband.bandcamp.com/track/…" },
+  { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/watch?v=…" },
+  { key: "soundcloud", label: "SoundCloud", placeholder: "https://soundcloud.com/…" },
+];
+
+function asLinks(v: unknown): Record<string, string> {
+  return v && typeof v === "object" ? (v as Record<string, string>) : {};
+}
+
+function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: string; streamLinks: unknown }[] }) {
   const router = useRouter();
   const [order, setOrder] = useState(tracks);
   useEffect(() => { setOrder(tracks); }, [tracks]);
   const dragId = useRef<string | null>(null);
+  const [openLinks, setOpenLinks] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   if (!tracks.length) return null;
@@ -561,6 +575,11 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: str
   const setGate = (id: string, gate: string) => {
     setOrder((o) => o.map((t) => (t.id === id ? { ...t, gate } : t)));
     startTransition(() => { setSiteTrackGate(id, gate).then(() => router.refresh()); });
+  };
+
+  const saveLinks = (id: string, links: Record<string, string>) => {
+    setOrder((o) => o.map((t) => (t.id === id ? { ...t, streamLinks: links } : t)));
+    startTransition(() => { setSiteTrackLinks(id, links).then(() => router.refresh()); });
   };
 
   function reorderTo(targetId: string) {
@@ -577,35 +596,75 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: str
     <section className="rounded-xl border border-border bg-card p-6">
       <h2 className="mb-1 text-lg font-semibold">Song order</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Drag to set order (the first plays first). Pick each song&rsquo;s unlock gate — mix Email (captures the address) and Share/Follow (grows reach) to get the best of both.
+        Drag to set order (the first plays first). Pick each song&rsquo;s unlock gate — mix Email (captures the address) and Share/Follow (grows reach) to get the best of both. Add streaming links so fans can hear the full song on Spotify, Apple Music and more (that&rsquo;s where you earn royalties).
       </p>
       <ul className="space-y-2">
-        {order.map((t, i) => (
+        {order.map((t, i) => {
+          const links = asLinks(t.streamLinks);
+          const linkCount = STREAM_PLATFORMS.filter((p) => links[p.key]).length;
+          const isOpen = openLinks === t.id;
+          return (
           <li
             key={t.id}
-            draggable
-            onDragStart={() => { dragId.current = t.id; }}
-            onDragOver={(e) => { if (dragId.current && dragId.current !== t.id) e.preventDefault(); }}
-            onDrop={(e) => { e.preventDefault(); reorderTo(t.id); }}
-            onDragEnd={() => { dragId.current = null; }}
-            className="flex cursor-grab items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2 transition active:cursor-grabbing hover:border-ring"
+            className="rounded-lg border border-border bg-background/40 transition hover:border-ring"
           >
-            <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>
-            <span className="flex-1 truncate text-sm text-foreground">{t.title}</span>
-            <select
-              value={t.gate}
-              onChange={(e) => setGate(t.id, e.target.value)}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="rounded-md border border-input bg-transparent px-2 py-1 text-xs outline-none focus-visible:border-ring dark:bg-input/30"
+            <div
+              draggable
+              onDragStart={() => { dragId.current = t.id; }}
+              onDragOver={(e) => { if (dragId.current && dragId.current !== t.id) e.preventDefault(); }}
+              onDrop={(e) => { e.preventDefault(); reorderTo(t.id); }}
+              onDragEnd={() => { dragId.current = null; }}
+              className="flex cursor-grab items-center gap-3 px-3 py-2 active:cursor-grabbing"
             >
-              <option value="email">Email gate</option>
-              <option value="share">Share gate</option>
-              <option value="follow">Follow gate</option>
-              <option value="free">Free (no gate)</option>
-            </select>
-            <span className="select-none text-muted-foreground">⠿</span>
+              <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>
+              <span className="flex-1 truncate text-sm text-foreground">{t.title}</span>
+              <button
+                type="button"
+                onClick={() => setOpenLinks(isOpen ? null : t.id)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className={`rounded-md border px-2 py-1 text-xs transition ${linkCount ? "border-primary/50 text-primary" : "border-input text-muted-foreground"} hover:border-ring`}
+              >
+                {linkCount ? `Links · ${linkCount}` : "+ Links"}
+              </button>
+              <select
+                value={t.gate}
+                onChange={(e) => setGate(t.id, e.target.value)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="rounded-md border border-input bg-transparent px-2 py-1 text-xs outline-none focus-visible:border-ring dark:bg-input/30"
+              >
+                <option value="email">Email gate</option>
+                <option value="share">Share gate</option>
+                <option value="follow">Follow gate</option>
+                <option value="free">Free (no gate)</option>
+              </select>
+              <span className="select-none text-muted-foreground">⠿</span>
+            </div>
+            {isOpen && (
+              <div className="space-y-2 border-t border-border px-3 py-3">
+                <p className="text-xs text-muted-foreground">
+                  Paste the full-song URL on each platform. Only the ones you fill in show up on your site.
+                </p>
+                {STREAM_PLATFORMS.map((p) => (
+                  <label key={p.key} className="flex items-center gap-2">
+                    <span className="w-24 shrink-0 text-xs text-muted-foreground">{p.label}</span>
+                    <input
+                      type="url"
+                      defaultValue={links[p.key] ?? ""}
+                      placeholder={p.placeholder}
+                      onBlur={(e) => {
+                        const next = { ...links, [p.key]: e.target.value.trim() };
+                        if (!e.target.value.trim()) delete next[p.key];
+                        saveLinks(t.id, next);
+                      }}
+                      className="w-full rounded-md border border-input bg-transparent px-2 py-1 text-xs outline-none focus-visible:border-ring dark:bg-input/30"
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );

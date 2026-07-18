@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
@@ -370,9 +371,30 @@ export async function getSiteTracks() {
   const tracks = await prisma.siteTrack.findMany({
     where: { site: site.slug },
     orderBy: { order: "asc" },
-    select: { id: true, title: true, gate: true },
+    select: { id: true, title: true, gate: true, streamLinks: true },
   });
   return tracks;
+}
+
+// Save a song's links to monetizing platforms (Spotify/Apple/Bandcamp/etc.).
+// Only accepts http(s) URLs; empty values are dropped, all-empty stores null.
+export async function setSiteTrackLinks(id: string, links: Record<string, string>) {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return;
+  const owned = await prisma.siteTrack.findFirst({ where: { id, site: site.slug }, select: { id: true } });
+  if (!owned) return;
+  const allowed = ["spotify", "apple", "bandcamp", "youtube", "soundcloud"];
+  const clean: Record<string, string> = {};
+  for (const key of allowed) {
+    const url = String(links?.[key] || "").trim();
+    if (/^https?:\/\/\S+$/i.test(url)) clean[key] = url.slice(0, 500);
+  }
+  await prisma.siteTrack.update({
+    where: { id },
+    data: { streamLinks: Object.keys(clean).length ? clean : Prisma.JsonNull },
+  });
+  revalidatePath("/website");
 }
 
 // Set how a single song unlocks: "email" | "share" | "follow" | "free".

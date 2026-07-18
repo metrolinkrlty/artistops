@@ -39,6 +39,7 @@ export async function GET(
         title: t.title,
         gate: t.gate,
         previewUrl: data?.signedUrl ?? null,
+        streamLinks: (t.streamLinks as Record<string, string> | null) ?? null,
       };
     })
   );
