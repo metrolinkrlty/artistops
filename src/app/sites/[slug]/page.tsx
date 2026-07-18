@@ -171,6 +171,7 @@ export default async function ArtistSitePage({ params }: Params) {
                 previewSeconds={site.previewSeconds}
                 followUrl={site.unlockFollowUrl}
                 fbPageUrl={site.fbPageUrl}
+                playerStyle={(site.playerStyle as "waveform" | "shade" | "simple" | "classic") ?? "waveform"}
               />
             </div>
           </section>
@@ -283,6 +284,12 @@ export default async function ArtistSitePage({ params }: Params) {
           )}
           <p className="text-sm text-neutral-500">
             &copy; {new Date().getFullYear()} {site.displayName}
+          </p>
+          <p className="text-xs text-neutral-600">
+            Website created with{" "}
+            <a href="https://artistops.net" target="_blank" rel="noopener noreferrer" className="transition hover:text-neutral-300" style={{ color: accent }}>
+              ArtistOps.net
+            </a>
           </p>
         </div>
       </footer>

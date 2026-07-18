@@ -29,19 +29,24 @@ function fmt(s: number) {
 function useWaveBars() {
   return useMemo(
     () =>
-      Array.from({ length: 56 }, (_, i) => {
+      Array.from({ length: 160 }, (_, i) => {
         const v =
           Math.sin(i * 0.45) * 0.5 + Math.sin(i * 0.17 + 1) * 0.3 + Math.sin(i * 0.9) * 0.2;
-        return 22 + Math.abs(v) * 64; // ~22–86% height
+        return Math.min(100, 60 + Math.abs(v) * 120); // ~60–100% height
       }),
     []
   );
 }
 
-function WaveBars({ className }: { className?: string }) {
+function WaveBars({ className, level = 1 }: { className?: string; level?: number }) {
   const bars = useWaveBars();
+  // Bars shrink/grow vertically with the volume level.
+  const scale = 0.12 + Math.max(0, Math.min(1, level)) * 0.88;
   return (
-    <div className={`flex h-full w-full items-center gap-[2px] ${className ?? ""}`}>
+    <div
+      className={`flex h-full w-full items-center gap-[2px] ${className ?? ""}`}
+      style={{ transform: `scaleY(${scale})`, transformOrigin: "center", transition: "transform 150ms ease" }}
+    >
       {bars.map((h, i) => (
         <div key={i} className="flex-1 rounded-full bg-current" style={{ height: `${h}%` }} />
       ))}
@@ -49,19 +54,81 @@ function WaveBars({ className }: { className?: string }) {
   );
 }
 
+// --- Vintage volume knob ------------------------------------------------
+// A knob that plays/pauses on click and sets volume when you turn it. The
+// pointer angle around the knob maps to volume across a 270° sweep.
+const KNOB_SWEEP = 270;
+function knobAngle(vol: number) { return -135 + vol * KNOB_SWEEP; }
+function angleToVol(deg: number) { return (Math.max(-135, Math.min(135, deg)) + 135) / KNOB_SWEEP; }
+function pointerAngle(e: { clientX: number; clientY: number }, el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2);
+  const dy = e.clientY - (r.top + r.height / 2);
+  return (Math.atan2(dx, -dy) * 180) / Math.PI; // 0° points up, + is clockwise
+}
+
+// Polished chrome: a conic metal sheen with a bright off-center highlight,
+// bevelled with inset light/shadow so it reads like a real reflective knob.
+const KNOB_WRAP_STYLE: React.CSSProperties = {
+  background:
+    "radial-gradient(circle at 36% 27%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.25) 26%, rgba(255,255,255,0) 46%), " +
+    "conic-gradient(from 205deg at 50% 50%, #8c8c8c 0deg, #f7f7f7 42deg, #6f6f6f 92deg, #ececec 150deg, #9a9a9a 205deg, #fdfdfd 250deg, #737373 300deg, #e0e0e0 340deg, #8c8c8c 360deg)",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.55), inset 0 1px 2px rgba(255,255,255,0.95), inset 0 -3px 6px rgba(0,0,0,0.4)",
+  border: "2px solid #5f5f5f",
+  touchAction: "none",
+  cursor: "ns-resize",
+};
+
+function KnobFace({ angle, playing, iconSize = 28 }: { angle: number; playing: boolean; iconSize?: number }) {
+  return (
+    <>
+      {/* knurled chrome edge */}
+      <span
+        className="pointer-events-none absolute inset-0 rounded-full"
+        style={{
+          background: "repeating-conic-gradient(#8f8f8f 0deg 6deg, #ededed 6deg 12deg)",
+          opacity: 0.5,
+          WebkitMaskImage: "radial-gradient(circle, transparent 56%, #000 59%, #000 82%, transparent 85%)",
+          maskImage: "radial-gradient(circle, transparent 56%, #000 59%, #000 82%, transparent 85%)",
+        }}
+      />
+      {/* short black volume indicator near the rim */}
+      <span className="pointer-events-none absolute inset-0" style={{ transform: `rotate(${angle}deg)` }}>
+        <span className="absolute left-1/2 top-[1px] h-1.5 w-[3px] -translate-x-1/2 rounded-full" style={{ backgroundColor: "#0a0a0a", boxShadow: "0 0 1px rgba(255,255,255,0.65)" }} />
+      </span>
+      {/* center play/pause icon (dark, for contrast on chrome) */}
+      <span className="pointer-events-none relative" style={{ color: "#161616" }}>
+        {playing ? (
+          <svg width={iconSize} height={iconSize} viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1" width="3" height="10" rx="1" /><rect x="7" y="1" width="3" height="10" rx="1" /></svg>
+        ) : (
+          <svg width={iconSize} height={iconSize} viewBox="0 0 12 12" fill="currentColor"><path d="M2 1.5v9l8-4.5-8-4.5Z" /></svg>
+        )}
+      </span>
+    </>
+  );
+}
+
+export type PlayerStyle = "waveform" | "shade" | "simple" | "classic";
+
 export default function SiteMusic({
   slug,
   initiallyUnlockedIds,
   previewSeconds,
   followUrl,
   fbPageUrl,
+  playerStyle = "waveform",
 }: {
   slug: string;
   initiallyUnlockedIds: string[] | "all";
   previewSeconds: number;
   followUrl: string | null;
   fbPageUrl: string | null;
+  playerStyle?: PlayerStyle;
 }) {
+  // Which decorative layers this style shows.
+  const classic = playerStyle === "classic"; // song list + bottom transport bar
+  const showSweep = playerStyle === "waveform" || playerStyle === "shade"; // shade sweep + scrubber + title reveal
+  const showBars = playerStyle === "waveform"; // the waveform bars inside the sweep
   const [tracks, setTracks] = useState<Track[]>([]);
   const [playing, setPlaying] = useState<string | null>(null);
   const [allUnlocked] = useState(initiallyUnlockedIds === "all");
@@ -69,12 +136,19 @@ export default function SiteMusic({
     new Set(initiallyUnlockedIds === "all" ? [] : initiallyUnlockedIds)
   );
   const [openGate, setOpenGate] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null); // last-played track (classic bar persists it)
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const previewCap = previewSeconds || 30;
+
+  // Volume set by turning the knob (0–1). Applied to the shared audio element.
+  const [volume, setVolume] = useState(1);
+  useEffect(() => { if (audioRef.current) audioRef.current.volume = volume; }, [volume]);
+  const knobRef = useRef<{ x: number; y: number; moved: boolean; el: HTMLElement } | null>(null);
+  const knobTurnRef = useRef(0); // timestamp of the last volume turn (suppresses the click)
 
   // Refs the rAF loop writes to directly (bypassing React re-render for smoothness).
   const shadeRef = useRef<HTMLDivElement | null>(null);
@@ -83,9 +157,12 @@ export default function SiteMusic({
   const handleRef = useRef<HTMLDivElement | null>(null);
   const timeRef = useRef<HTMLSpanElement | null>(null);
   const seekAreaRef = useRef<HTMLDivElement | null>(null);
+  const bottomSeekRef = useRef<HTMLInputElement | null>(null); // classic bar slider
+  const bottomTimeRef = useRef<HTMLSpanElement | null>(null); // classic bar time
   const draggingRef = useRef(false);
   const totalRef = useRef(previewCap);
   const unlockedRef = useRef(false);
+  const loadedIdRef = useRef<string | null>(null); // which track's src is currently loaded
 
   useEffect(() => {
     let alive = true;
@@ -116,7 +193,12 @@ export default function SiteMusic({
     if (waveClipRef.current) waveClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
     if (titleClipRef.current) titleClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
     if (handleRef.current) handleRef.current.style.left = pct;
-    if (timeRef.current) timeRef.current.textContent = `${fmt(a.currentTime)} / ${fmt(total)}${unlockedRef.current ? "" : " · preview"}`;
+    // classic bottom transport bar
+    if (bottomSeekRef.current && !draggingRef.current) bottomSeekRef.current.value = String(Math.round(prog * 1000));
+    if (bottomTimeRef.current?.firstChild) bottomTimeRef.current.firstChild.nodeValue = `${fmt(a.currentTime)} / ${fmt(total)}`;
+    // Mutate the existing text node in place (never replace children — that
+    // desyncs React's fiber and crashes with removeChild on the next unmount).
+    if (timeRef.current?.firstChild) timeRef.current.firstChild.nodeValue = `${fmt(a.currentTime)} / ${fmt(total)}${unlockedRef.current ? "" : " · preview"}`;
     if (!unlockedRef.current && a.currentTime >= previewCap) { a.pause(); setPlaying(null); }
   };
 
@@ -131,13 +213,19 @@ export default function SiteMusic({
   function play(t: Track) {
     const a = audioRef.current;
     if (!a) return;
+    setSelectedId(t.trackId);
     if (playing === t.trackId) { a.pause(); setPlaying(null); return; }
     const full = isUnlocked(t);
     const src = full ? `/api/site/${slug}/track/${t.trackId}/full` : t.previewUrl;
     if (!src) return;
-    unlockedRef.current = full;
-    totalRef.current = previewCap;
-    a.src = src;
+    // Only (re)load when switching tracks or after an unlock — so resuming a
+    // paused track from the classic bar continues instead of restarting.
+    if (loadedIdRef.current !== t.trackId) {
+      unlockedRef.current = full;
+      totalRef.current = previewCap;
+      a.src = src;
+      loadedIdRef.current = t.trackId;
+    }
     void a.play();
     setPlaying(t.trackId);
   }
@@ -159,6 +247,7 @@ export default function SiteMusic({
     setBusy(false);
     if (res.ok) {
       setUnlockedIds((s) => new Set(s).add(t.trackId));
+      if (loadedIdRef.current === t.trackId) loadedIdRef.current = null; // reload as full next play
       setOpenGate(null); setEmail("");
       firePixelLead();
     } else {
@@ -179,6 +268,7 @@ export default function SiteMusic({
     setBusy(false);
     if (res.ok) {
       setUnlockedIds((s) => new Set(s).add(t.trackId));
+      if (loadedIdRef.current === t.trackId) loadedIdRef.current = null; // reload as full next play
       setOpenGate(null);
       firePixelLead();
     } else {
@@ -212,23 +302,27 @@ export default function SiteMusic({
           return (
             <div key={t.trackId} className="relative select-none">
               {/* Animated shade + waveform (only for the playing row). rAF writes width/clip/left. */}
-              {active && (
+              {active && showSweep && (
                 <div ref={seekAreaRef} className="pointer-events-none absolute inset-0 z-0">
-                  {/* faint full waveform (the unplayed hint) */}
-                  <div className="absolute inset-y-0 left-0 right-0 px-5 py-3 opacity-[0.12] text-neutral-300">
-                    <WaveBars />
-                  </div>
+                  {/* faint full waveform (the unplayed hint) — waveform style only */}
+                  {showBars && (
+                    <div className="absolute inset-y-0 left-0 right-0 px-5 py-2 opacity-[0.12] text-neutral-300">
+                      <WaveBars level={volume} />
+                    </div>
+                  )}
                   {/* shaded (played) area — a soft accent wash that grows */}
                   <div ref={shadeRef} className="absolute inset-y-0 left-0 will-change-[width]" style={{ width: "0%", backgroundColor: "var(--accent)", opacity: 0.14 }} />
-                  {/* accent waveform, revealed by clip-path as the shade grows */}
-                  <div ref={waveClipRef} className="absolute inset-y-0 left-0 right-0 px-5 py-3 will-change-[clip-path]" style={{ color: "var(--accent)", clipPath: "inset(0 100% 0 0)" }}>
-                    <WaveBars />
-                  </div>
+                  {/* accent waveform, revealed by clip-path as the shade grows — waveform style only */}
+                  {showBars && (
+                    <div ref={waveClipRef} className="absolute inset-y-0 left-0 right-0 px-5 py-2 will-change-[clip-path]" style={{ color: "var(--accent)", clipPath: "inset(0 100% 0 0)" }}>
+                      <WaveBars level={volume} />
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Leading-edge scrubber — grab and drag to seek */}
-              {active && (
+              {active && showSweep && (
                 <div
                   ref={handleRef}
                   className="absolute inset-y-0 z-20 -ml-2 flex w-4 cursor-ew-resize touch-none items-center justify-center will-change-[left]"
@@ -246,24 +340,27 @@ export default function SiteMusic({
               <div className="relative z-10 flex items-center gap-4 px-5 py-4">
                 <button
                   type="button"
-                  onClick={() => play(t)}
-                  className="relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-950 transition"
-                  style={{ backgroundColor: "var(--accent)" }}
-                  aria-label={active ? "Pause" : unlocked ? "Play" : "Play preview"}
+                  onClick={() => { if (Date.now() - knobTurnRef.current < 300) return; play(t); }}
+                  onPointerDown={(e) => { knobRef.current = { x: e.clientX, y: e.clientY, moved: false, el: e.currentTarget }; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                  onPointerMove={(e) => { const k = knobRef.current; if (!k) return; if (Math.hypot(e.clientX - k.x, e.clientY - k.y) > 3) { k.moved = true; setVolume(angleToVol(pointerAngle(e, k.el))); } }}
+                  onPointerUp={(e) => { const k = knobRef.current; knobRef.current = null; if (k?.moved) knobTurnRef.current = Date.now(); try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                  className="relative z-20 flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+                  style={KNOB_WRAP_STYLE}
+                  role="slider"
+                  aria-label={`Volume — click to ${active ? "pause" : "play"}, turn to change volume`}
+                  aria-valuenow={Math.round(volume * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
                 >
-                  {active ? (
-                    <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="1" width="3" height="10" rx="1" /><rect x="7" y="1" width="3" height="10" rx="1" /></svg>
-                  ) : (
-                    <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor"><path d="M2 1.5v9l8-4.5-8-4.5Z" /></svg>
-                  )}
+                  <KnobFace angle={knobAngle(volume)} playing={active} />
                 </button>
 
-                <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: active ? "rgba(255,255,255,0.4)" : undefined }}>
+                <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: active && showSweep ? "rgba(255,255,255,0.4)" : undefined }}>
                   {t.title}
                 </span>
 
                 {active ? (
-                  <span ref={timeRef} className="shrink-0 font-mono text-xs text-neutral-300">0:00 / {fmt(previewCap)}{!unlocked && " · preview"}</span>
+                  <span ref={timeRef} className="shrink-0 font-mono text-xs text-neutral-300">{`0:00 / ${fmt(previewCap)}${!unlocked ? " · preview" : ""}`}</span>
                 ) : unlocked ? (
                   <span className="shrink-0 text-xs uppercase tracking-widest text-neutral-500">Full</span>
                 ) : (
@@ -278,12 +375,12 @@ export default function SiteMusic({
                 )}
               </div>
 
-              {/* Accent copy of the title, revealed left-to-right by the scrubber
-                  (clip synced to progress) so the title "lights up" as it passes. */}
-              {active && (
+              {/* White copy of the title, revealed left-to-right by the scrubber
+                  (clip synced to progress) so the title stays white as it passes. */}
+              {active && showSweep && (
                 <div ref={titleClipRef} className="pointer-events-none absolute inset-0 z-30 flex items-center gap-4 px-5 py-4" style={{ clipPath: "inset(0 100% 0 0)" }}>
                   <div className="h-10 w-10 shrink-0" />
-                  <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: "var(--accent)" }}>
+                  <span className="flex-1 truncate font-bold uppercase tracking-wide" style={{ color: "#ffffff", textShadow: "0 1px 4px rgba(0,0,0,0.85), 0 0 1px rgba(0,0,0,0.9)", animation: "aoTitlePulse 1.5s ease-in-out infinite" }}>
                     {t.title}
                   </span>
                 </div>
@@ -292,6 +389,9 @@ export default function SiteMusic({
               {/* Per-song gate */}
               {!unlocked && gateOpen && (
                 <div className="relative z-10 border-t border-white/10 px-5 py-4">
+                  <p className="mb-3 text-2xl font-semibold leading-tight" style={{ color: "var(--accent)" }}>
+                    Hear the WHOLE song by playing it forward!
+                  </p>
                   {t.gate === "email" && (
                     <form onSubmit={(e) => submitEmail(t, e)} className="flex flex-col gap-2 sm:flex-row">
                       <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className={`flex-1 ${inputClass}`} />
@@ -311,7 +411,7 @@ export default function SiteMusic({
                     </button>
                   )}
                   <p className="pt-2 text-xs text-neutral-500">
-                    {t.gate === "email" ? `${previewCap}s preview. Enter your email to hear the whole thing.` : "One tap unlocks the full song."}
+                    {t.gate === "email" ? `${previewCap}s preview. Enter your email and the full song unlocks right here.` : "One tap unlocks the full song."}
                   </p>
                 </div>
               )}
@@ -319,6 +419,55 @@ export default function SiteMusic({
           );
         })}
       </div>
+
+      {/* Classic transport bar: label, big silver knob (play/pause + volume), seek slider */}
+      {classic && selectedId && (() => {
+        const st = tracks.find((t) => t.trackId === selectedId);
+        if (!st) return null;
+        const stUnlocked = isUnlocked(st);
+        const isPlayingSel = playing === selectedId;
+        return (
+          <div className="border-t border-white/10 bg-white/[0.03] px-5 py-4">
+            <div className="mb-2 flex items-center justify-between text-xs text-neutral-400">
+              <span className="font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>
+                {stUnlocked ? "Now Playing" : "Preview"} — {st.title}
+              </span>
+              <span ref={bottomTimeRef} className="font-mono">{`0:00 / ${fmt(previewCap)}`}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span
+                role="slider"
+                aria-label="Volume — click to play or pause, turn to change volume"
+                aria-valuenow={Math.round(volume * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="relative flex h-14 w-14 flex-none cursor-pointer items-center justify-center rounded-full"
+                style={KNOB_WRAP_STYLE}
+                onPointerDown={(e) => { knobRef.current = { x: e.clientX, y: e.clientY, moved: false, el: e.currentTarget }; try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                onPointerMove={(e) => { const k = knobRef.current; if (!k) return; if (Math.hypot(e.clientX - k.x, e.clientY - k.y) > 3) { k.moved = true; setVolume(angleToVol(pointerAngle(e, k.el))); } }}
+                onPointerUp={(e) => { const k = knobRef.current; knobRef.current = null; if (k?.moved) knobTurnRef.current = Date.now(); try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                onClick={() => { if (Date.now() - knobTurnRef.current < 300) return; play(st); }}
+              >
+                <KnobFace angle={knobAngle(volume)} playing={isPlayingSel} iconSize={40} />
+              </span>
+              <input
+                ref={bottomSeekRef}
+                type="range"
+                min={0}
+                max={1000}
+                defaultValue={0}
+                onChange={(e) => { const a = audioRef.current; if (!a) return; a.currentTime = (Number(e.target.value) / 1000) * totalRef.current; }}
+                onPointerDown={() => { draggingRef.current = true; }}
+                onPointerUp={() => { draggingRef.current = false; }}
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15"
+                style={{ accentColor: "var(--accent)" }}
+                aria-label="Seek"
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       {error && <p className="px-5 py-3 text-sm text-red-400">{error}</p>}
     </div>
   );

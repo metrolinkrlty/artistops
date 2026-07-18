@@ -38,6 +38,7 @@ type ArtistSite = {
   themeColor: string | null;
   fontFamily: string | null;
   footerText: string | null;
+  playerStyle: string | null;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
   previewSeconds: number;
@@ -271,6 +272,40 @@ export default function WebsiteClient({
             <p className="mt-2 text-xs text-muted-foreground">
               Only Email gives you data you own; Share/Follow unlock on click and can&rsquo;t be verified.
             </p>
+          </div>
+          <div className="rounded-lg border border-border p-4">
+            <h3 className="mb-1 text-sm font-semibold">Music player style</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              How your songs look while they play. Pick the one that feels most like you — you can change it anytime.
+            </p>
+            <div className="grid gap-2.5">
+              {[
+                { value: "waveform", title: "Waveform", desc: "A moving sound wave sweeps across the song as it plays, and the title lights up. Lively and modern.", recommended: true },
+                { value: "shade", title: "Shade sweep", desc: "A soft colored glow glides across the song as it plays. Clean and simple — with a handle you can grab to scrub." },
+                { value: "classic", title: "Classic", desc: "A song list with a player bar at the bottom — big play knob and a slider to scrub. The familiar look." },
+                { value: "simple", title: "Simple list", desc: "Just press play and listen. No moving effects — the most understated." },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-input p-3 transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                >
+                  <input
+                    type="radio"
+                    name="playerStyle"
+                    value={opt.value}
+                    defaultChecked={(site?.playerStyle ?? "waveform") === opt.value}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <span className="text-sm">
+                    <span className="font-semibold">
+                      {opt.title}
+                      {opt.recommended && <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">Recommended</span>}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{opt.desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
           <div className="rounded-lg border border-border p-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">

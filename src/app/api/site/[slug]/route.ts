@@ -34,6 +34,7 @@ export async function GET(
       themeColor: true,
       fontFamily: true,
       footerText: true,
+      playerStyle: true,
       galleryImages: true,
       hiddenSections: true,
       shows: true,

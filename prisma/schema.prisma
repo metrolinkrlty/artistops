@@ -483,6 +483,7 @@ model ArtistSite {
   themeColor      String?  // accent/highlight hex, e.g. "#e0a530"
   fontFamily      String?  // heading-font key the website applies, e.g. "oswald" | "bebas" | "playfair" | "montserrat" | "lora"
   footerText      String?  // custom line shown in the public site footer
+  playerStyle     String   @default("waveform") // music player look: "waveform" | "shade" | "simple" | "classic"
   hiddenSections  String[] @default([]) // section keys to hide, e.g. ["gallery","shows"]
   shows           Json?    // [{date, venue, city?, ticketUrl?}]
   heroCtaPrimary  String?  // label for the primary hero button (default "Listen Now")

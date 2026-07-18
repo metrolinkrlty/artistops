@@ -70,6 +70,9 @@ export async function saveArtistSite(formData: FormData) {
 
   const footerText = String(formData.get("footerText") || "").trim().slice(0, 300) || null;
 
+  const styleRaw = String(formData.get("playerStyle") || "waveform");
+  const playerStyle = ["waveform", "shade", "simple", "classic"].includes(styleRaw) ? styleRaw : "waveform";
+
   const heroCtaPrimary = String(formData.get("heroCtaPrimary") || "").trim() || null;
   const heroCtaSecondary = String(formData.get("heroCtaSecondary") || "").trim() || null;
 
@@ -162,6 +165,7 @@ export async function saveArtistSite(formData: FormData) {
     themeColor,
     fontFamily,
     footerText,
+    playerStyle,
     heroCtaPrimary,
     heroCtaSecondary,
     previewSeconds,
