@@ -599,6 +599,18 @@ function ImageManager({
     }
   }
 
+  // Which section a dragged photo came from, so a drop on the other section
+  // moves it (public ↔ hidden). dropZone highlights the section being hovered.
+  const dragSource = useRef<"gallery" | "hidden" | null>(null);
+  const [dropZone, setDropZone] = useState<"gallery" | "hidden" | null>(null);
+  function moveToGallery(url: string) {
+    startTransition(() => { showGalleryImage(url).then(() => router.refresh()); });
+  }
+  function moveToHidden(url: string) {
+    startTransition(() => { hideGalleryImage(url).then(() => router.refresh()); });
+  }
+  function endDrag() { dragUrl.current = null; dragSource.current = null; setOverUrl(null); setDropZone(null); }
+
   async function upload(kind: "hero" | "gallery", input: HTMLInputElement | null) {
     const files = input?.files ? Array.from(input.files) : [];
     if (!files.length) return;
@@ -679,21 +691,32 @@ function ImageManager({
         <div>
           <h3 className="mb-2 text-sm font-semibold text-foreground">Gallery</h3>
           {order.length > 0 && (
-            <div className="mb-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+            <div
+              className={`mb-3 grid grid-cols-3 gap-3 rounded-lg sm:grid-cols-5 ${dropZone === "gallery" ? "outline outline-2 outline-dashed outline-primary" : ""}`}
+              onDragOver={(e) => { if (dragSource.current === "hidden") { e.preventDefault(); setDropZone("gallery"); } }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropZone(null); }}
+              onDrop={(e) => { if (dragSource.current === "hidden" && dragUrl.current) { e.preventDefault(); moveToGallery(dragUrl.current); } setDropZone(null); }}
+            >
               {order.map((url, i) => (
                 <div
                   key={url}
                   draggable
                   onDragStart={(e) => {
                     dragUrl.current = url;
+                    dragSource.current = "gallery";
                     e.dataTransfer.setData("text/uri-list", url);
                     e.dataTransfer.setData("text/plain", url);
                     e.dataTransfer.effectAllowed = "copyMove";
                   }}
-                  onDragOver={(e) => { if (dragUrl.current && dragUrl.current !== url) { e.preventDefault(); setOverUrl(url); } }}
+                  onDragOver={(e) => { if (dragSource.current === "gallery" && dragUrl.current !== url) { e.preventDefault(); setOverUrl(url); } }}
                   onDragLeave={() => setOverUrl((u) => (u === url ? null : u))}
-                  onDrop={(e) => { e.preventDefault(); reorderTo(url); setOverUrl(null); }}
-                  onDragEnd={() => { dragUrl.current = null; setOverUrl(null); }}
+                  onDrop={(e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    if (dragSource.current === "hidden" && dragUrl.current) moveToGallery(dragUrl.current);
+                    else reorderTo(url);
+                    setOverUrl(null); setDropZone(null);
+                  }}
+                  onDragEnd={endDrag}
                   title={i === 0 ? "This is your primary photo — drag another photo here to make it primary" : "Drag onto another photo to reorder, or onto the hero to set it as the hero"}
                   className={`group relative cursor-grab overflow-hidden rounded-lg border transition active:cursor-grabbing ${overUrl === url ? "border-primary ring-2 ring-primary" : i === 0 ? "border-primary" : "border-border"}`}
                 >
@@ -729,42 +752,63 @@ function ImageManager({
               ))}
             </div>
           )}
-          {hiddenGalleryImages.length > 0 && (
-            <div className="mb-3">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">
-                Hidden from your public gallery ({hiddenGalleryImages.length}) — kept in your library
-              </p>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-                {hiddenGalleryImages.map((url) => (
-                  <div key={url} className="group relative overflow-hidden rounded-lg border border-border opacity-60">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" onLoad={(e) => onImgLoad(url, e)} className="aspect-square w-full object-cover" />
-                    {dims[url] && (
-                      <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
-                        {dims[url]}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => startTransition(() => { showGalleryImage(url).then(() => router.refresh()); })}
-                      title="Show in public gallery"
-                      className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground opacity-0 transition group-hover:opacity-100"
-                    >
-                      Show
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => startTransition(() => { removeGalleryImage(url).then(() => router.refresh()); })}
-                      title="Delete permanently"
-                      className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
+          <div className="mb-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Hidden from your public gallery ({hiddenGalleryImages.length}) — kept in your library. Drag photos in or out to hide or show them.
+            </p>
+            <div
+              className={`grid grid-cols-3 gap-3 rounded-lg sm:grid-cols-5 ${dropZone === "hidden" ? "outline outline-2 outline-dashed outline-primary" : ""}`}
+              onDragOver={(e) => { if (dragSource.current === "gallery") { e.preventDefault(); setDropZone("hidden"); } }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropZone(null); }}
+              onDrop={(e) => { if (dragSource.current === "gallery" && dragUrl.current) { e.preventDefault(); moveToHidden(dragUrl.current); } setDropZone(null); }}
+            >
+              {hiddenGalleryImages.length === 0 && (
+                <div className="col-span-full rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
+                  Drag a gallery photo here to hide it from your public site.
+                </div>
+              )}
+              {hiddenGalleryImages.map((url) => (
+                <div
+                  key={url}
+                  draggable
+                  onDragStart={(e) => {
+                    dragUrl.current = url;
+                    dragSource.current = "hidden";
+                    e.dataTransfer.setData("text/uri-list", url);
+                    e.dataTransfer.setData("text/plain", url);
+                    e.dataTransfer.effectAllowed = "copyMove";
+                  }}
+                  onDragEnd={endDrag}
+                  title="Drag into the gallery above to show this photo publicly"
+                  className="group relative cursor-grab overflow-hidden rounded-lg border border-border opacity-60 transition active:cursor-grabbing hover:opacity-100"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" draggable={false} onLoad={(e) => onImgLoad(url, e)} className="aspect-square w-full object-cover" />
+                  {dims[url] && (
+                    <span className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100">
+                      {dims[url]}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => startTransition(() => { showGalleryImage(url).then(() => router.refresh()); })}
+                    title="Show in public gallery"
+                    className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-xs text-primary-foreground opacity-0 transition group-hover:opacity-100"
+                  >
+                    Show
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startTransition(() => { removeGalleryImage(url).then(() => router.refresh()); })}
+                    title="Delete permanently"
+                    className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-xs text-white opacity-0 transition group-hover:opacity-100"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
           <div className="flex items-center gap-2">
             <input ref={galleryInput} type="file" accept="image/*" multiple disabled={disabled || busy === "gallery"} onChange={() => upload("gallery", galleryInput.current)} className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1.5 file:text-sm file:text-foreground" />
             {busy === "gallery" && <span className="text-xs text-muted-foreground">Uploading…</span>}
