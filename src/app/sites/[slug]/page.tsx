@@ -9,6 +9,7 @@ import { fontFor } from "@/lib/siteFonts";
 import SiteMusic from "./SiteMusic";
 import SiteMailingList from "./SiteMailingList";
 import SiteAnalytics from "./SiteAnalytics";
+import SitePixels from "./SitePixels";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,23 @@ export default async function ArtistSitePage({ params }: Params) {
   ]);
   if (!site) notFound();
 
+  // The artist's ad pixels (Meta/TikTok/Google), so this hosted site can retarget
+  // visitors and track gate-unlock conversions. Defensive: never block the page.
+  const adPixels: { meta?: string; tiktok?: string; google?: string } = {};
+  try {
+    const rows = await prisma.adPixel.findMany({
+      where: { userId: site.userId },
+      select: { platform: true, pixelId: true },
+    });
+    for (const r of rows) {
+      if (r.platform === "meta" || r.platform === "tiktok" || r.platform === "google") {
+        adPixels[r.platform] = r.pixelId;
+      }
+    }
+  } catch {
+    // No pixels configured — the page still works.
+  }
+
   const unlockedIds = unlockedIdsFromCookie(cookieStore.get(unlockCookieName(slug))?.value);
 
   const accent =
@@ -86,6 +104,7 @@ export default async function ArtistSitePage({ params }: Params) {
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link rel="stylesheet" href={font.href} />
       <SiteAnalytics ownerId={site.userId} />
+      <SitePixels adPixels={adPixels} />
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-white/10 bg-neutral-950/85 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
