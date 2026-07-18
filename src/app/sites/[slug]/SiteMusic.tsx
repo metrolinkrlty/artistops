@@ -258,7 +258,7 @@ export default function SiteMusic({
                   )}
                 </button>
 
-                <span className="flex-1 truncate font-semibold uppercase tracking-wide">
+                <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: active ? "rgba(255,255,255,0.4)" : undefined }}>
                   {t.title}
                 </span>
 
@@ -281,7 +281,7 @@ export default function SiteMusic({
               {/* Accent copy of the title, revealed left-to-right by the scrubber
                   (clip synced to progress) so the title "lights up" as it passes. */}
               {active && (
-                <div ref={titleClipRef} className="pointer-events-none absolute inset-0 z-10 flex items-center gap-4 px-5 py-4" style={{ clipPath: "inset(0 100% 0 0)" }}>
+                <div ref={titleClipRef} className="pointer-events-none absolute inset-0 z-30 flex items-center gap-4 px-5 py-4" style={{ clipPath: "inset(0 100% 0 0)" }}>
                   <div className="h-10 w-10 shrink-0" />
                   <span className="flex-1 truncate font-semibold uppercase tracking-wide" style={{ color: "var(--accent)" }}>
                     {t.title}
