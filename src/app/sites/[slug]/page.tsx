@@ -278,6 +278,9 @@ export default async function ArtistSitePage({ params }: Params) {
               </a>
             </p>
           )}
+          {site.footerText && (
+            <p className="max-w-2xl whitespace-pre-line text-center text-sm text-neutral-400">{site.footerText}</p>
+          )}
           <p className="text-sm text-neutral-500">
             &copy; {new Date().getFullYear()} {site.displayName}
           </p>

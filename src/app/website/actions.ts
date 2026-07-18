@@ -68,6 +68,8 @@ export async function saveArtistSite(formData: FormData) {
   const rawFont = String(formData.get("fontFamily") || "").trim();
   const fontFamily = FONT_KEYS.includes(rawFont) ? rawFont : null;
 
+  const footerText = String(formData.get("footerText") || "").trim().slice(0, 300) || null;
+
   const heroCtaPrimary = String(formData.get("heroCtaPrimary") || "").trim() || null;
   const heroCtaSecondary = String(formData.get("heroCtaSecondary") || "").trim() || null;
 
@@ -159,6 +161,7 @@ export async function saveArtistSite(formData: FormData) {
     heroSubtext,
     themeColor,
     fontFamily,
+    footerText,
     heroCtaPrimary,
     heroCtaSecondary,
     previewSeconds,

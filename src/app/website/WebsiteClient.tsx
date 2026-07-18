@@ -37,6 +37,7 @@ type ArtistSite = {
   heroSubtext: string | null;
   themeColor: string | null;
   fontFamily: string | null;
+  footerText: string | null;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
   previewSeconds: number;
@@ -291,6 +292,17 @@ export default function WebsiteClient({
               placeholder="Your About section. Separate paragraphs with a blank line."
               className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
             />
+          </Field>
+
+          <Field label="Footer text">
+            <textarea
+              name="footerText"
+              defaultValue={site?.footerText ?? ""}
+              rows={2}
+              placeholder="A line for the bottom of your site — a thank-you, a management credit, anything."
+              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            />
+            <span className="text-xs text-muted-foreground">Shown above the copyright line in your site footer. Leave blank to hide.</span>
           </Field>
 
           <div>

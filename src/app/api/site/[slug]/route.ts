@@ -33,6 +33,7 @@ export async function GET(
       heroSubtext: true,
       themeColor: true,
       fontFamily: true,
+      footerText: true,
       galleryImages: true,
       hiddenSections: true,
       shows: true,
