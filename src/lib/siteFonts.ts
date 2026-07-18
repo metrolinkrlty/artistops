@@ -36,6 +36,28 @@ export const SITE_FONTS: SiteFont[] = [
   { key: "greatvibes", label: "Great Vibes", note: "Fancy formal script", category: "Script & cursive", css: "'Great Vibes', cursive", gf: "Great+Vibes" },
   { key: "lobster", label: "Lobster", note: "Bold retro script", category: "Script & cursive", css: "'Lobster', cursive", gf: "Lobster" },
   { key: "sacramento", label: "Sacramento", note: "Thin elegant script", category: "Script & cursive", css: "'Sacramento', cursive", gf: "Sacramento" },
+  { key: "caveat", label: "Caveat", note: "Natural handwriting", category: "Script & cursive", css: "'Caveat', cursive", gf: "Caveat:wght@700" },
+  // Vintage & decorative
+  { key: "monoton", label: "Monoton", note: "Art-deco neon lines", category: "Vintage & decorative", css: "'Monoton', cursive", gf: "Monoton" },
+  { key: "limelight", label: "Limelight", note: "1930s Hollywood deco", category: "Vintage & decorative", css: "'Limelight', serif", gf: "Limelight" },
+  { key: "poiret", label: "Poiret One", note: "Deco geometric", category: "Vintage & decorative", css: "'Poiret One', sans-serif", gf: "Poiret+One" },
+  { key: "cinzel", label: "Cinzel", note: "Roman inscription", category: "Vintage & decorative", css: "'Cinzel', serif", gf: "Cinzel:wght@700" },
+  { key: "cinzeldeco", label: "Cinzel Decorative", note: "Ornate Roman", category: "Vintage & decorative", css: "'Cinzel Decorative', serif", gf: "Cinzel+Decorative:wght@700" },
+  { key: "yeseva", label: "Yeseva One", note: "Elegant vintage serif", category: "Vintage & decorative", css: "'Yeseva One', serif", gf: "Yeseva+One" },
+  { key: "vastshadow", label: "Vast Shadow", note: "Old shadowed signage", category: "Vintage & decorative", css: "'Vast Shadow', serif", gf: "Vast+Shadow" },
+  { key: "imfell", label: "IM Fell English", note: "17th-century press", category: "Vintage & decorative", css: "'IM Fell English', serif", gf: "IM+Fell+English" },
+  { key: "ultra", label: "Ultra", note: "Heavy antique slab", category: "Vintage & decorative", css: "'Ultra', serif", gf: "Ultra" },
+  { key: "unifraktur", label: "UnifrakturMaguntia", note: "Blackletter gothic", category: "Vintage & decorative", css: "'UnifrakturMaguntia', serif", gf: "UnifrakturMaguntia" },
+  { key: "pirata", label: "Pirata One", note: "Tavern blackletter", category: "Vintage & decorative", css: "'Pirata One', serif", gf: "Pirata+One" },
+  { key: "fredericka", label: "Fredericka the Great", note: "Sketched vintage", category: "Vintage & decorative", css: "'Fredericka the Great', serif", gf: "Fredericka+the+Great" },
+  // Bold & display
+  { key: "bungee", label: "Bungee", note: "Urban signage", category: "Bold & display", css: "'Bungee', sans-serif", gf: "Bungee" },
+  { key: "titanone", label: "Titan One", note: "Chunky & rounded", category: "Bold & display", css: "'Titan One', sans-serif", gf: "Titan+One" },
+  { key: "bangers", label: "Bangers", note: "Comic-book impact", category: "Bold & display", css: "'Bangers', cursive", gf: "Bangers" },
+  { key: "staatliches", label: "Staatliches", note: "Tall poster caps", category: "Bold & display", css: "'Staatliches', sans-serif", gf: "Staatliches" },
+  { key: "shrikhand", label: "Shrikhand", note: "Juicy display", category: "Bold & display", css: "'Shrikhand', serif", gf: "Shrikhand" },
+  { key: "fredoka", label: "Fredoka", note: "Friendly & round", category: "Bold & display", css: "'Fredoka', sans-serif", gf: "Fredoka:wght@600" },
+  { key: "syne", label: "Syne", note: "Modern art-house", category: "Bold & display", css: "'Syne', sans-serif", gf: "Syne:wght@700" },
 ];
 
 // Resolve a stored fontFamily key to its CSS + a Google Fonts <link> href that
@@ -53,8 +75,8 @@ export const DEFAULT_FONT = "oswald";
 export const FONT_KEYS = SITE_FONTS.map((f) => f.key) as readonly string[];
 
 // Category order for grouping in the picker dropdown.
-export const FONT_CATEGORIES = ["Clean & modern", "Classic serif", "Western & country", "Script & cursive"];
+export const FONT_CATEGORIES = ["Clean & modern", "Classic serif", "Vintage & decorative", "Bold & display", "Western & country", "Script & cursive"];
 
 // The Google Fonts stylesheet that loads every option (for the picker preview).
 export const FONT_PREVIEW_HREF =
-  "https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Bebas+Neue&family=Montserrat:wght@700&family=Anton&family=Teko:wght@600&family=Righteous&family=Playfair+Display:wght@700&family=Lora:wght@700&family=Abril+Fatface&family=Cormorant+Garamond:wght@700&family=Rye&family=Ewert&family=Special+Elite&family=Alfa+Slab+One&family=Sancreek&family=Bevan&family=Pacifico&family=Dancing+Script:wght@700&family=Great+Vibes&family=Lobster&family=Sacramento&display=swap";
+  "https://fonts.googleapis.com/css2?family=Oswald:wght@600&family=Bebas+Neue&family=Montserrat:wght@700&family=Anton&family=Teko:wght@600&family=Righteous&family=Playfair+Display:wght@700&family=Lora:wght@700&family=Abril+Fatface&family=Cormorant+Garamond:wght@700&family=Rye&family=Ewert&family=Special+Elite&family=Alfa+Slab+One&family=Sancreek&family=Bevan&family=Pacifico&family=Dancing+Script:wght@700&family=Great+Vibes&family=Lobster&family=Sacramento&family=Caveat:wght@700&family=Monoton&family=Limelight&family=Poiret+One&family=Cinzel:wght@700&family=Cinzel+Decorative:wght@700&family=Yeseva+One&family=Vast+Shadow&family=IM+Fell+English&family=Ultra&family=UnifrakturMaguntia&family=Pirata+One&family=Fredericka+the+Great&family=Bungee&family=Titan+One&family=Bangers&family=Staatliches&family=Shrikhand&family=Fredoka:wght@600&family=Syne:wght@700&display=swap";
