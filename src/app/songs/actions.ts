@@ -10,7 +10,7 @@ import { mapSmartLinkToStreamLinks } from "@/lib/streamLinks";
 // The platforms a song's Smart Link can carry, entered right on the Song.
 // key = internal, name = the Smart Link display name (kept in sync with the
 // /smart-links platform names + the website chip mapper).
-export const SONG_PLATFORMS: { key: string; name: string }[] = [
+const SONG_PLATFORMS: { key: string; name: string }[] = [
   { key: "spotify", name: "Spotify" },
   { key: "apple", name: "Apple Music" },
   { key: "youtube", name: "YouTube Music" },
