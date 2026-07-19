@@ -64,7 +64,7 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
           <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center">
             <Music className="w-5 h-5 text-white" />
           </div>
-          <span className="text-white font-bold text-2xl">ArtistOps<sup className="text-xs font-normal text-[#8b8fa8] ml-0.5">™</sup></span>
+          <span className="text-white font-bold text-2xl">ArtistOps<sup className="text-base font-normal text-[#8b8fa8] ml-0.5">™</sup></span>
         </div>
         <p className="text-[#8b8fa8] text-sm mt-1">Music Business Manager</p>
         <p className="text-indigo-400 text-base font-semibold mt-1">v{APP_VERSION}</p>

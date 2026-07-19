@@ -12,7 +12,7 @@ const TOGGLE_COLS = [
   { key: "revenue", label: "Revenue" },
   { key: "joined", label: "Joined" },
 ] as const;
-import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, sendBlast, countBlastRecipients, type AdminMessageView } from "./actions";
+import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, sendBlast, countBlastRecipients, updateLoginTagline, type AdminMessageView } from "./actions";
 
 type MembershipApplicationView = {
   role: string; referredBy: string; workLink: string | null;
@@ -34,10 +34,25 @@ const statusBadge: Record<string, string> = {
   REJECTED: "bg-red-500/20 text-red-400",
 };
 
-export default function AdminClient({ users, currentUserId }: { users: UserRow[]; currentUserId: string }) {
+export default function AdminClient({ users, currentUserId, loginTagline, defaultLoginTagline }: { users: UserRow[]; currentUserId: string; loginTagline: string; defaultLoginTagline: string }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
+
+  // Editable sign-in page tagline.
+  const [tagline, setTagline] = useState(loginTagline);
+  const [savingTagline, setSavingTagline] = useState(false);
+  const [taglineSaved, setTaglineSaved] = useState(false);
+
+  async function handleSaveTagline() {
+    setSavingTagline(true);
+    setTaglineSaved(false);
+    await updateLoginTagline(tagline);
+    setSavingTagline(false);
+    setTaglineSaved(true);
+    router.refresh();
+    setTimeout(() => setTaglineSaved(false), 2500);
+  }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -194,6 +209,40 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
         <div className="bg-[#1a1d27] border border-amber-500/30 rounded-xl p-4"><p className="text-[#8b8fa8] text-sm">Pending Approval</p><p className="text-amber-400 text-2xl font-bold mt-1">{pending.length}</p></div>
         <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-4"><p className="text-[#8b8fa8] text-sm">Approved Artists</p><p className="text-white text-2xl font-bold mt-1">{users.filter(u => u.status === "APPROVED" && !u.isAdmin).length}</p></div>
         <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-4"><p className="text-[#8b8fa8] text-sm">Total Revenue Tracked</p><p className="text-white text-2xl font-bold mt-1">${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p></div>
+      </div>
+
+      {/* Sign-in page tagline (public copy) */}
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+          <h2 className="text-white font-semibold">Sign-in page tagline</h2>
+        </div>
+        <p className="text-[#8b8fa8] text-xs mb-3">The paragraph shown under the sign-in box on the public <span className="text-[#c7cad8]">/login</span> page. Changes go live immediately.</p>
+        <textarea
+          value={tagline}
+          onChange={(e) => { setTagline(e.target.value); setTaglineSaved(false); }}
+          rows={4}
+          className={`${inputClass} leading-relaxed resize-y`}
+          placeholder="Leave blank to reset to the default tagline."
+        />
+        <div className="flex items-center gap-3 mt-3">
+          <button
+            onClick={handleSaveTagline}
+            disabled={savingTagline || tagline === loginTagline}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {savingTagline ? "Saving…" : "Save tagline"}
+          </button>
+          <button
+            onClick={() => setTagline(defaultLoginTagline)}
+            type="button"
+            className="text-[#8b8fa8] text-sm hover:text-white"
+          >
+            Reset to default
+          </button>
+          {taglineSaved && <span className="text-green-400 text-sm">Saved — live on /login</span>}
+          <span className="ml-auto text-[#5a5e72] text-xs">{tagline.length} chars</span>
+        </div>
       </div>
 
       {/* Pending approvals */}

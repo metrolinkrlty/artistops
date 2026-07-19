@@ -7,12 +7,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendEmail, approvedEmailHtml } from "@/lib/email";
 import { artistWantsEmail } from "@/app/messages/actions";
+import { setAppSetting, SETTING_LOGIN_TAGLINE, DEFAULT_LOGIN_TAGLINE } from "@/lib/settings";
 
 async function requireAdmin() {
   const userId = await requireUserId();
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user?.isAdmin) redirect("/");
   return userId;
+}
+
+// Edit the sign-in page tagline. Empty input resets to the built-in default.
+export async function updateLoginTagline(value: string): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const clean = value.trim();
+  await setAppSetting(SETTING_LOGIN_TAGLINE, clean || DEFAULT_LOGIN_TAGLINE);
+  revalidatePath("/login");
+  revalidatePath("/admin");
+  return { ok: true };
 }
 
 export async function approveUser(id: string) {

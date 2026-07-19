@@ -458,6 +458,14 @@ model Setting {
   @@unique([userId, key])
 }
 
+// Global (app-wide) key/value settings — editable from the admin panel, read on
+// public pages like the sign-in screen. Not per-user (unlike Setting above).
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model PasswordReset {
   id        String   @id @default(cuid())
   userId    String
