@@ -68,6 +68,11 @@ export default async function ArtistSitePage({ params }: Params) {
     // No pixels configured — the page still works.
   }
 
+  // Album / campaign Smart Links (not tied to one song) → a "Releases" section.
+  const albumLinks = await prisma.smartLink
+    .findMany({ where: { userId: site.userId, songId: null, isActive: true }, orderBy: { createdAt: "desc" }, select: { slug: true, title: true } })
+    .catch(() => [] as { slug: string; title: string }[]);
+
   const unlockedIds = unlockedIdsFromCookie(cookieStore.get(unlockCookieName(slug))?.value);
 
   const accent =
@@ -84,6 +89,7 @@ export default async function ArtistSitePage({ params }: Params) {
     : [];
   const shows: Show[] = Array.isArray(site.shows) ? (site.shows as Show[]) : [];
   const hidden = site.hiddenSections ?? [];
+  const showReleases = !hidden.includes("releases") && albumLinks.length > 0;
   const showShows = !hidden.includes("shows");
   const gallery = site.galleryImages ?? [];
   const showGallery = !hidden.includes("gallery") && gallery.length > 0;
@@ -93,6 +99,7 @@ export default async function ArtistSitePage({ params }: Params) {
 
   const nav = [
     hasMusic && { href: "#music", label: "Music" },
+    showReleases && { href: "#releases", label: "Releases" },
     bioParagraphs.length && { href: "#about", label: "About" },
     showGallery && { href: "#gallery", label: "Gallery" },
     showShows && { href: "#shows", label: "Shows" },
@@ -175,6 +182,30 @@ export default async function ArtistSitePage({ params }: Params) {
                 showStreamLinks={site.showStreamLinks}
                 streamLinksAfterGate={site.streamLinksAfterGate}
               />
+            </div>
+          </section>
+        )}
+
+        {/* Releases — album / campaign smart links */}
+        {showReleases && (
+          <section id="releases" className="scroll-mt-20 border-y border-white/10 bg-white/[0.02] py-24">
+            <div className="mx-auto max-w-3xl px-6">
+              <SectionHeading kicker="Get It" title="Releases" accent={accent} />
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                {albumLinks.map((a) => (
+                  <a
+                    key={a.slug}
+                    href={`/listen/${a.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4 transition hover:border-[var(--accent)]"
+                    title="Listen on your favorite platform"
+                  >
+                    <span className="truncate font-semibold uppercase tracking-wide">{a.title}</span>
+                    <span className="shrink-0 text-xs uppercase tracking-widest" style={{ color: accent }}>Listen →</span>
+                  </a>
+                ))}
+              </div>
             </div>
           </section>
         )}

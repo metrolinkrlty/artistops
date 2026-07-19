@@ -64,6 +64,9 @@ export async function GET(
   // that a DB not yet carrying `websitePixelId` still serves site content.
   let pixelId: string | null = null;
   const adPixels: Record<string, string> = {};
+  // Album / campaign Smart Links (not tied to a single song) to feature as
+  // "Releases" on the site. Each opens its /listen landing page.
+  let albumLinks: { slug: string; title: string }[] = [];
   try {
     const p = await prisma.artistSite.findUnique({
       where: { slug },
@@ -76,10 +79,17 @@ export async function GET(
         select: { platform: true, pixelId: true },
       });
       for (const r of rows) adPixels[r.platform] = r.pixelId;
+
+      const albums = await prisma.smartLink.findMany({
+        where: { userId: p.userId, songId: null, isActive: true },
+        orderBy: { createdAt: "desc" },
+        select: { slug: true, title: true },
+      });
+      albumLinks = albums;
     }
   } catch {
     pixelId = null;
   }
 
-  return NextResponse.json({ ok: true, site: { ...site, pixelId, adPixels } }, { headers: CORS });
+  return NextResponse.json({ ok: true, site: { ...site, pixelId, adPixels, albumLinks } }, { headers: CORS });
 }
