@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import ListenPageClient from "./ListenPageClient";
 import { prisma } from "@/lib/prisma";
 
@@ -15,8 +15,17 @@ export default async function ListenPage({ params }: { params: Promise<{ slug: s
   if (!record || !record.isActive) notFound();
 
   const platforms = ((record.platforms as unknown as Platform[]) || [])
+    .filter((p) => p?.url)
     .sort((a, b) => a.priority - b.priority)
     .map((p) => ({ ...p, free: FREE_PLATFORMS.has(p.name) }));
+
+  // No platform links → send the fan to the artist's music player, not a dead end.
+  if (platforms.length === 0) {
+    const site = record.userId
+      ? await prisma.artistSite.findUnique({ where: { userId: record.userId }, select: { slug: true } })
+      : null;
+    if (site) redirect(`/sites/${site.slug}#music`);
+  }
 
   const colorIdx = Math.abs(slug.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % COVER_COLORS.length;
 
