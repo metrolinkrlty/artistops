@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Music, DollarSign, Shield, BarChart2, Link2, Megaphone, Sparkles, Globe, Lock, Mail, User, Eye, EyeOff, CheckCircle2,
+  CalendarDays,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -16,6 +17,7 @@ const highlights = [
   { icon: Megaphone, title: "Campaigns & Ads", desc: "Social posts, ad performance, ROAS, and pixel-based attribution." },
   { icon: Sparkles, title: "AI Insights & Forecasting", desc: "Actionable insights and predictions for streams, revenue & growth." },
   { icon: Globe, title: "Audience & Pixels", desc: "Listener demographics, website analytics, and conversion tracking." },
+  { icon: CalendarDays, title: "Gig Procurement", desc: "Book live shows from lead to payday — map fans and tour routes, track every ticket, and settle earnings into revenue." },
 ];
 
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white pl-10 pr-4 py-2.5 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
@@ -275,10 +277,10 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#0f1117] text-white flex flex-col lg:flex-row">
       <div className="lg:w-3/5 p-8 lg:p-14 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-[#2a2d3a]">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center"><Music className="w-5 h-5 text-white" /></div>
+          <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center"><Music className="w-6 h-6 text-white" /></div>
           <div>
-            <h1 className="text-2xl font-bold">ArtistOps<sup className="text-[10px] font-normal text-[#8b8fa8] ml-0.5">™</sup></h1>
-            <p className="text-[#8b8fa8] text-xs">Music Business Manager</p>
+            <h1 className="text-4xl font-bold">ArtistOps<sup className="text-sm font-normal text-[#8b8fa8] ml-0.5">™</sup></h1>
+            <p className="text-[#8b8fa8] text-base">Music Business Manager</p>
           </div>
         </div>
         <h2 className="text-3xl lg:text-4xl font-bold leading-tight mb-3 max-w-xl">Run the entire business side of your music in one place.</h2>
@@ -303,8 +305,9 @@ export default function LoginPage() {
               <AuthForm />
             </Suspense>
           </div>
-          <p className="text-center text-[#8b8fa8] text-xs mt-6">Add your catalog so you can track it · Sessions time out after 30 min of inactivity.</p>
-          <p className="text-center text-[#5a5e72] text-xs mt-2">ArtistOps v{APP_VERSION}</p>
+          <p className="text-center text-[#8b8fa8] text-xs mt-6 leading-relaxed">Add your catalog — every song, ISRC, release, and who wrote and owns it. Then link each track to Spotify, Apple Music, and every other streaming platform to send fans there and track plays, royalties, and revenue across all of them — plus distribution and your website — in one place.</p>
+          <p className="text-center text-[#5a5e72] text-xs mt-2">Sessions time out after 30 min of inactivity.</p>
+          <p className="text-center text-[#8b8fa8] text-sm font-medium mt-2">ArtistOps v{APP_VERSION}</p>
         </div>
       </div>
     </div>

@@ -61,13 +61,13 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
     <aside className="w-64 min-h-screen bg-[#1a1d27] border-r border-[#2a2d3a] flex flex-col">
       <div className="p-6 border-b border-[#2a2d3a]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <Music className="w-4 h-4 text-white" />
+          <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center">
+            <Music className="w-5 h-5 text-white" />
           </div>
-          <span className="text-white font-bold text-lg">ArtistOps<sup className="text-[10px] font-normal text-[#8b8fa8] ml-0.5">™</sup></span>
+          <span className="text-white font-bold text-2xl">ArtistOps<sup className="text-xs font-normal text-[#8b8fa8] ml-0.5">™</sup></span>
         </div>
-        <p className="text-[#8b8fa8] text-xs mt-1">Music Business Manager</p>
-        <p className="text-indigo-400 text-sm font-semibold mt-1">v{APP_VERSION}</p>
+        <p className="text-[#8b8fa8] text-sm mt-1">Music Business Manager</p>
+        <p className="text-indigo-400 text-base font-semibold mt-1">v{APP_VERSION}</p>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
