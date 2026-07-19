@@ -294,8 +294,8 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
         </button>
       </div>
 
-      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-hidden">
-        <table className="w-full">
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[900px]">
           <thead>
             <tr className="text-[#8b8fa8] text-sm border-b border-[#2a2d3a] bg-[#161820]">
               <th className="text-left px-6 py-4">Title</th>

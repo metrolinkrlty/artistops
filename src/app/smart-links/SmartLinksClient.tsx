@@ -75,9 +75,9 @@ export default function SmartLinksClient({ links }: { links: SmartLink[] }) {
                   <td className="px-6 py-4 text-[#8b8fa8] text-sm">{link.platforms.length} platforms</td>
                   <td className="px-6 py-4 text-right text-white font-medium">{link.totalClicks.toLocaleString()}</td>
                   <td className="px-6 py-4 text-[#8b8fa8] text-sm">{link.topPlatform}</td>
-                  <td className="px-6 py-4"><button onClick={() => handleToggle(link)} className={`px-2 py-1 rounded text-xs font-medium ${link.isActive ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"}`}>{link.isActive ? "Active" : "Inactive"}</button></td>
+                  <td className="px-6 py-4"><button onClick={() => handleToggle(link)} title={link.isActive ? "Active — click to turn off (link stops working)" : "Inactive — click to turn on"} className={`px-2 py-1 rounded text-xs font-medium ${link.isActive ? "bg-green-500/20 text-green-400" : "bg-gray-500/20 text-gray-400"}`}>{link.isActive ? "Active" : "Inactive"}</button></td>
                   <td className="px-6 py-4">
-                    <a href={`/listen/${link.slug}`} target="_blank" className="flex items-center gap-1 text-indigo-400 text-xs font-mono hover:text-indigo-300"><Link2 className="w-3 h-3" />/listen/{link.slug}</a>
+                    <a href={`/listen/${link.slug}`} target="_blank" title="Open the public link page fans see" className="flex items-center gap-1 text-indigo-400 text-xs font-mono hover:text-indigo-300"><Link2 className="w-3 h-3" />/listen/{link.slug}</a>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
