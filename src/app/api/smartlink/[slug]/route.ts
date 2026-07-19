@@ -26,7 +26,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     .filter((p) => p?.url)
     .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
   return NextResponse.json(
-    { ok: true, link: { slug: record.slug, title: record.title, artistName: record.artistName, platforms } },
+    { ok: true, link: { slug: record.slug, title: record.title, artistName: record.artistName, gateEmail: record.gateEmail, platforms } },
     { headers: CORS }
   );
 }

@@ -34,6 +34,7 @@ export default async function ListenPage({ params }: { params: Promise<{ slug: s
     title: record.title,
     artistName: record.artistName,
     coverColor: record.coverArtUrl ? "#1a1060" : COVER_COLORS[colorIdx],
+    gateEmail: record.gateEmail,
     platforms,
   };
 

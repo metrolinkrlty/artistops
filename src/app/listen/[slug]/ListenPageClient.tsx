@@ -24,17 +24,39 @@ interface SmartLinkData {
   title: string;
   artistName: string;
   coverColor: string;
+  gateEmail: boolean;
   platforms: Platform[];
 }
 
 export default function ListenPageClient({ link }: { link: SmartLinkData }) {
   const [preferredPlatform, setPreferredPlatform] = useState<string | null>(null);
   const [clicked, setClicked] = useState<string | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     const stored = localStorage.getItem("ao_preferred_platform");
     if (stored) setPreferredPlatform(stored);
-  }, []);
+    if (localStorage.getItem(`ao_listen_unlock_${link.slug}`)) setUnlocked(true);
+  }, [link.slug]);
+
+  const submitEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setErr("Please enter a valid email."); return; }
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch(`/api/smartlink/${link.slug}/unlock`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error();
+      localStorage.setItem(`ao_listen_unlock_${link.slug}`, "1");
+      setUnlocked(true);
+    } catch { setErr("Something went wrong. Try again."); } finally { setBusy(false); }
+  };
+
+  const gated = link.gateEmail && !unlocked;
 
   const handleClick = async (platform: Platform) => {
     localStorage.setItem("ao_preferred_platform", platform.name);
@@ -79,13 +101,28 @@ export default function ListenPageClient({ link }: { link: SmartLinkData }) {
       <p className="text-[#8b8fa8] text-lg mb-2">{link.artistName}</p>
 
       {/* Free badge */}
-      {freePlatforms.length > 0 && (
+      {!gated && freePlatforms.length > 0 && (
         <div className="mb-6 px-3 py-1 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30">
           Free listening on: {freePlatforms.join(", ")}
         </div>
       )}
 
-      {/* Platform buttons */}
+      {/* Email gate */}
+      {gated ? (
+        <form onSubmit={submitEmail} className="w-full max-w-sm text-center" noValidate>
+          <p className="mb-4 text-sm text-[#8b8fa8]">Enter your email to unlock the links.</p>
+          <input
+            type="email" required value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }}
+            placeholder="you@email.com" autoFocus
+            className="w-full rounded-lg border border-[#2a2d3a] bg-[#1a1d27] px-4 py-3 text-white placeholder:text-[#8b8fa8] focus:border-indigo-500 focus:outline-none"
+          />
+          <button type="submit" disabled={busy} className="mt-3 w-full rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60">
+            {busy ? "Unlocking…" : "Unlock the links"}
+          </button>
+          {err && <p className="mt-2 text-sm text-red-400">{err}</p>}
+        </form>
+      ) : (
+      /* Platform buttons */
       <div className="w-full max-w-sm space-y-3">
         {sorted.map(platform => (
           <button
@@ -104,6 +141,7 @@ export default function ListenPageClient({ link }: { link: SmartLinkData }) {
           </button>
         ))}
       </div>
+      )}
 
       {/* Footer */}
       <div className="mt-8 text-center">

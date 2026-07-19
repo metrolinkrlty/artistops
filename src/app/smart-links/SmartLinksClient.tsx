@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Link2, X, Trash2, Copy, Check } from "lucide-react";
-import { createSmartLink, deleteSmartLink, toggleSmartLink } from "./actions";
+import { Plus, Search, Link2, X, Trash2, Copy, Check, Lock, Unlock } from "lucide-react";
+import { createSmartLink, deleteSmartLink, toggleSmartLink, toggleSmartLinkGate } from "./actions";
 
 type Platform = { name: string; url: string; priority: number };
-type SmartLink = { id: string; slug: string; title: string; artistName: string; platforms: Platform[]; totalClicks: number; topPlatform: string; isActive: boolean };
+type SmartLink = { id: string; slug: string; title: string; artistName: string; platforms: Platform[]; totalClicks: number; topPlatform: string; isActive: boolean; gateEmail: boolean };
 
 const platformOptions = ["Spotify", "Apple Music", "YouTube Music", "Amazon Music", "Tidal", "SoundCloud", "Audiomack", "Deezer", "TikTok"];
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
@@ -42,6 +42,9 @@ export default function SmartLinksClient({ links }: { links: SmartLink[] }) {
   }
   async function handleToggle(l: SmartLink) {
     await toggleSmartLink(l.id, !l.isActive); router.refresh();
+  }
+  async function handleToggleGate(l: SmartLink) {
+    await toggleSmartLinkGate(l.id, !l.gateEmail); router.refresh();
   }
   function copyLink(slug: string) {
     navigator.clipboard.writeText(`${window.location.origin}/listen/${slug}`);
@@ -81,6 +84,7 @@ export default function SmartLinksClient({ links }: { links: SmartLink[] }) {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleToggleGate(link)} title={link.gateEmail ? "Email gate ON — fans enter their email before the links show. Click to turn off." : "Email gate off — links show right away. Click to require an email first."} className={link.gateEmail ? "text-amber-400 hover:text-amber-300" : "text-[#8b8fa8] hover:text-amber-400"}>{link.gateEmail ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}</button>
                       <button onClick={() => copyLink(link.slug)} className="text-[#8b8fa8] hover:text-indigo-400" title="Copy link">{copied === link.slug ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}</button>
                       <button onClick={() => handleDelete(link)} className="text-[#8b8fa8] hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4" /></button>
                     </div>
@@ -138,6 +142,13 @@ export default function SmartLinksClient({ links }: { links: SmartLink[] }) {
                   <button type="button" onClick={() => setPlatforms([...platforms, { name: "Apple Music", url: "" }])} className="text-indigo-400 text-sm hover:text-indigo-300">+ Add Platform</button>
                 </div>
               </div>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-3" title="Fans enter their email before the platform links appear — best for pre-save/exclusive drops">
+                <input type="checkbox" name="gateEmail" className="mt-0.5 accent-indigo-500" />
+                <span className="text-sm text-white">
+                  Require an email to unlock the links
+                  <span className="mt-0.5 block text-xs text-[#8b8fa8]">Fans enter their email (added to your mailing list) before the buttons show. Best for a pre-save or exclusive — skip it for ads where you want max clicks.</span>
+                </span>
+              </label>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="flex-1 px-4 py-2 border border-[#2a2d3a] text-[#8b8fa8] rounded-lg text-sm hover:text-white">Cancel</button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Creating..." : "Create link"}</button>

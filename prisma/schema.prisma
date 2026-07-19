@@ -294,6 +294,7 @@ model SmartLink {
   coverArtUrl String?
   platforms   Json
   isActive    Boolean  @default(true)
+  gateEmail   Boolean  @default(false) // require an email on the /listen page before revealing the platform links
   clicks      SmartLinkClick[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

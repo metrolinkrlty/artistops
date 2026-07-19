@@ -33,7 +33,7 @@ export async function getSmartLinks() {
     const platCount = new Map<string, number>();
     for (const c of l.clicks) if (c.platform) platCount.set(c.platform, (platCount.get(c.platform) || 0) + 1);
     const topPlatform = Array.from(platCount.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || platforms[0]?.name || "—";
-    return { id: l.id, slug: l.slug, title: l.title, artistName: l.artistName, platforms, totalClicks: total, topPlatform, isActive: l.isActive };
+    return { id: l.id, slug: l.slug, title: l.title, artistName: l.artistName, platforms, totalClicks: total, topPlatform, isActive: l.isActive, gateEmail: l.gateEmail };
   });
 }
 
@@ -68,6 +68,7 @@ export async function createSmartLink(formData: FormData) {
       songId,
       platforms: platforms as never,
       isActive: true,
+      gateEmail: formData.get("gateEmail") != null,
     },
   });
   await propagateToSiteTracks(songId, platforms);
@@ -86,5 +87,13 @@ export async function deleteSmartLink(id: string) {
 export async function toggleSmartLink(id: string, isActive: boolean) {
   const userId = await requireUserId();
   await prisma.smartLink.updateMany({ where: { id, userId }, data: { isActive } });
+  revalidatePath("/smart-links");
+}
+
+// Require (or stop requiring) an email on the link's /listen page before the
+// platform buttons show.
+export async function toggleSmartLinkGate(id: string, gateEmail: boolean) {
+  const userId = await requireUserId();
+  await prisma.smartLink.updateMany({ where: { id, userId }, data: { gateEmail } });
   revalidatePath("/smart-links");
 }
