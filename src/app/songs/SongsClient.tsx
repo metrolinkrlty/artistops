@@ -1,5 +1,16 @@
 "use client";
-import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe, Link2, Download } from "lucide-react";
+import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe, Link2, Download, SlidersHorizontal } from "lucide-react";
+
+// Columns the artist can hide to free up space (Title + Actions always show).
+const SONG_TOGGLE_COLS = [
+  { key: "isrc", label: "ISRC" },
+  { key: "genre", label: "Genre" },
+  { key: "writers", label: "Writers" },
+  { key: "bpmkey", label: "BPM / Key" },
+  { key: "rights", label: "Rights" },
+  { key: "status", label: "Status" },
+  { key: "release", label: "Release" },
+] as const;
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
@@ -145,6 +156,20 @@ function driveDownloadUrl(url: string): string | null {
 export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }: { songs: Song[]; featuredSongIds: string[]; smartLinkSongIds: string[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set());
+  const [showCols, setShowCols] = useState(false);
+  useEffect(() => {
+    try { const s = localStorage.getItem("songs_hidden_cols"); if (s) setHiddenCols(new Set(JSON.parse(s))); } catch {}
+  }, []);
+  function toggleCol(key: string) {
+    setHiddenCols((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem("songs_hidden_cols", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+  const visibleColCount = 2 + SONG_TOGGLE_COLS.filter((c) => !hiddenCols.has(c.key)).length;
   const [editing, setEditing] = useState<Song | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [genreSel, setGenreSel] = useState("");
@@ -338,23 +363,43 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
             className="bg-[#1a1d27] border border-[#2a2d3a] text-white pl-10 pr-4 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500 w-72"
           />
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
-          <Plus className="w-4 h-4" /> Add Song
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={() => setShowCols((v) => !v)} className="flex items-center gap-2 px-4 py-2 border border-[#2a2d3a] text-[#c7cad8] rounded-lg text-sm hover:text-white hover:border-indigo-500" title="Show or hide columns to free up space">
+              <SlidersHorizontal className="w-4 h-4" /> Columns
+            </button>
+            {showCols && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowCols(false)} />
+                <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[#2a2d3a] bg-[#1a1d27] p-1.5 shadow-xl">
+                  {SONG_TOGGLE_COLS.map((c) => (
+                    <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-[#c7cad8] hover:bg-[#2a2d3a]">
+                      <input type="checkbox" checked={!hiddenCols.has(c.key)} onChange={() => toggleCol(c.key)} className="accent-indigo-500" />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+            <Plus className="w-4 h-4" /> Add Song
+          </button>
+        </div>
       </div>
 
       <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-x-auto">
-        <table className="w-full min-w-[900px]">
+        <table className="w-full">
           <thead>
             <tr className="text-[#8b8fa8] text-sm border-b border-[#2a2d3a] bg-[#161820]">
               <th className="text-left px-6 py-4">Title</th>
-              <th className="text-left px-6 py-4">ISRC</th>
-              <th className="text-left px-6 py-4">Genre</th>
-              <th className="text-left px-6 py-4">Writers</th>
-              <th className="text-left px-6 py-4">BPM / Key</th>
-              <th className="text-left px-6 py-4">Rights</th>
-              <th className="text-left px-6 py-4">Status</th>
-              <th className="text-left px-6 py-4">Release</th>
+              {!hiddenCols.has("isrc") && <th className="text-left px-6 py-4">ISRC</th>}
+              {!hiddenCols.has("genre") && <th className="text-left px-6 py-4">Genre</th>}
+              {!hiddenCols.has("writers") && <th className="text-left px-6 py-4">Writers</th>}
+              {!hiddenCols.has("bpmkey") && <th className="text-left px-6 py-4">BPM / Key</th>}
+              {!hiddenCols.has("rights") && <th className="text-left px-6 py-4">Rights</th>}
+              {!hiddenCols.has("status") && <th className="text-left px-6 py-4">Status</th>}
+              {!hiddenCols.has("release") && <th className="text-left px-6 py-4">Release</th>}
               <th className="text-left px-6 py-4">Actions</th>
             </tr>
           </thead>
@@ -377,25 +422,33 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                       {(() => { const d = clock(parseMeta(song.metadataFile)?.durationSec); return d ? ` · ${d}` : ""; })()}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-xs font-mono ${song.isrc ? "text-indigo-400" : "text-[#8b8fa8]"}`}>{song.isrc || "—"}</span>
-                  </td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{song.genre || "—"}</td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{song.writers.join(", ")}</td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{song.bpm ? `${song.bpm} BPM · ${song.key}` : "—"}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col gap-0.5">
-                      <RightsIcon ok={!!cr?.registeredWithPRO} label="PRO" />
-                      <RightsIcon ok={!!cr?.registeredWithMLC} label="MLC" />
-                      <RightsIcon ok={!!cr?.registeredWithSX} label="SX" />
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[song.status]}`}>{song.status}</span>
-                  </td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">
-                    {song.releaseDate ? formatDate(song.releaseDate) : "—"}
-                  </td>
+                  {!hiddenCols.has("isrc") && (
+                    <td className="px-6 py-4">
+                      <span className={`text-xs font-mono ${song.isrc ? "text-indigo-400" : "text-[#8b8fa8]"}`}>{song.isrc || "—"}</span>
+                    </td>
+                  )}
+                  {!hiddenCols.has("genre") && <td className="px-6 py-4 text-[#8b8fa8] text-sm">{song.genre || "—"}</td>}
+                  {!hiddenCols.has("writers") && <td className="px-6 py-4 text-[#8b8fa8] text-sm">{song.writers.join(", ")}</td>}
+                  {!hiddenCols.has("bpmkey") && <td className="px-6 py-4 text-[#8b8fa8] text-sm">{song.bpm ? `${song.bpm} BPM · ${song.key}` : "—"}</td>}
+                  {!hiddenCols.has("rights") && (
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <RightsIcon ok={!!cr?.registeredWithPRO} label="PRO" />
+                        <RightsIcon ok={!!cr?.registeredWithMLC} label="MLC" />
+                        <RightsIcon ok={!!cr?.registeredWithSX} label="SX" />
+                      </div>
+                    </td>
+                  )}
+                  {!hiddenCols.has("status") && (
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[song.status]}`}>{song.status}</span>
+                    </td>
+                  )}
+                  {!hiddenCols.has("release") && (
+                    <td className="px-6 py-4 text-[#8b8fa8] text-sm">
+                      {song.releaseDate ? formatDate(song.releaseDate) : "—"}
+                    </td>
+                  )}
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex gap-1.5">
                       {featured.has(song.id) ? (
@@ -446,7 +499,7 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-6 py-10 text-center text-[#8b8fa8] text-sm">
+                <td colSpan={visibleColCount} className="px-6 py-10 text-center text-[#8b8fa8] text-sm">
                   No songs yet. Click &ldquo;Add Song&rdquo; to create your first one.
                 </td>
               </tr>
