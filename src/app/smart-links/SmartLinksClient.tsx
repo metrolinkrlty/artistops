@@ -6,7 +6,6 @@ import { createSmartLink, deleteSmartLink, toggleSmartLink } from "./actions";
 
 type Platform = { name: string; url: string; priority: number };
 type SmartLink = { id: string; slug: string; title: string; artistName: string; platforms: Platform[]; totalClicks: number; topPlatform: string; isActive: boolean };
-type SongOpt = { id: string; title: string };
 
 const platformOptions = ["Spotify", "Apple Music", "YouTube Music", "Amazon Music", "Tidal", "SoundCloud", "Audiomack", "Deezer", "TikTok"];
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
@@ -21,7 +20,7 @@ const countryBreakdown = [
   { country: "Canada", flag: "🇨🇦", pct: 11.2 }, { country: "Australia", flag: "🇦🇺", pct: 7.1 }, { country: "Other", flag: "🌍", pct: 23.7 },
 ];
 
-export default function SmartLinksClient({ links, songs }: { links: SmartLink[]; songs: SongOpt[] }) {
+export default function SmartLinksClient({ links }: { links: SmartLink[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
@@ -64,7 +63,7 @@ export default function SmartLinksClient({ links, songs }: { links: SmartLink[];
             <Search className="w-4 h-4 text-[#8b8fa8] absolute left-3 top-1/2 -translate-y-1/2" />
             <input type="text" placeholder="Search smart links..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-[#1a1d27] border border-[#2a2d3a] text-white pl-10 pr-4 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500 w-72" />
           </div>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"><Plus className="w-4 h-4" /> Create Smart Link</button>
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"><Plus className="w-4 h-4" /> New album / campaign link</button>
         </div>
         <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-hidden">
           <table className="w-full">
@@ -122,11 +121,11 @@ export default function SmartLinksClient({ links, songs }: { links: SmartLink[];
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
           <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6"><h2 className="text-white font-semibold text-lg">Create Smart Link</h2><button onClick={() => setShowCreate(false)} className="text-[#8b8fa8] hover:text-white"><X className="w-5 h-5" /></button></div>
+            <div className="flex items-center justify-between mb-2"><h2 className="text-white font-semibold text-lg">New album / campaign link</h2><button onClick={() => setShowCreate(false)} className="text-[#8b8fa8] hover:text-white"><X className="w-5 h-5" /></button></div>
+            <p className="mb-5 text-xs text-[#8b8fa8]">For an album, EP, tour, or pre-save — anything that isn&rsquo;t one song. <span className="text-indigo-400">For a single song, add its platform links on the Song</span> (Songs → open the song → &ldquo;Streaming / platform links&rdquo;).</p>
             <form action={handleSubmit} className="space-y-4">
-              <div><label className="text-[#8b8fa8] text-sm block mb-1">Song</label><select name="songId" className={inputClass}><option value="">— optional —</option>{songs.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></div>
-              <div><label className="text-[#8b8fa8] text-sm block mb-1">Title *</label><input name="title" required className={inputClass} placeholder="Midnight Drive" /></div>
-              <div><label className="text-[#8b8fa8] text-sm block mb-1">Slug *</label><div className="flex items-center gap-2"><span className="text-[#8b8fa8] text-sm">/listen/</span><input name="slug" required placeholder="my-song-name" className={inputClass} /></div></div>
+              <div><label className="text-[#8b8fa8] text-sm block mb-1">Title *</label><input name="title" required className={inputClass} placeholder="Summer Tour 2025 · Neon Nights EP" /></div>
+              <div><label className="text-[#8b8fa8] text-sm block mb-1">Slug *</label><div className="flex items-center gap-2"><span className="text-[#8b8fa8] text-sm">/listen/</span><input name="slug" required placeholder="summer-tour" className={inputClass} /></div></div>
               <div>
                 <label className="text-[#8b8fa8] text-sm block mb-2">Platform URLs</label>
                 <div className="space-y-2">
@@ -141,7 +140,7 @@ export default function SmartLinksClient({ links, songs }: { links: SmartLink[];
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="flex-1 px-4 py-2 border border-[#2a2d3a] text-[#8b8fa8] rounded-lg text-sm hover:text-white">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Creating..." : "Create Smart Link"}</button>
+                <button type="submit" disabled={saving} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">{saving ? "Creating..." : "Create link"}</button>
               </div>
             </form>
           </div>
