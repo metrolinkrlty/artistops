@@ -132,3 +132,35 @@ export function writeWavTags(buf: ArrayBuffer, f: TagFields): ArrayBuffer {
 export function isWav(name: string, type: string) {
   return /\.wav$/i.test(name) || /wav|wave|x-wav/i.test(type);
 }
+
+// Read a WAV's ISRC straight from its RIFF INFO 'ISRC' tag (music-metadata
+// doesn't surface this one), so we can show what's actually embedded.
+export function readRiffInfoIsrc(buf: ArrayBuffer): string | null {
+  try {
+    const v = new DataView(buf);
+    if (str4(v, 0) !== "RIFF" || str4(v, 8) !== "WAVE") return null;
+    let off = 12;
+    const end = Math.min(buf.byteLength, v.getUint32(4, true) + 8);
+    while (off + 8 <= end) {
+      const id = str4(v, off);
+      const size = v.getUint32(off + 4, true);
+      if (id === "LIST" && str4(v, off + 8) === "INFO") {
+        let p = off + 12;
+        const listEnd = off + 8 + size;
+        while (p + 8 <= listEnd) {
+          const code = str4(v, p);
+          const csize = v.getUint32(p + 4, true);
+          if (code === "ISRC") {
+            const bytes = new Uint8Array(buf, p + 8, Math.min(csize, buf.byteLength - p - 8));
+            return new TextDecoder().decode(bytes).replace(/\0+$/, "").trim() || null;
+          }
+          p = p + 8 + csize + (csize & 1);
+        }
+      }
+      off = off + 8 + size + (size & 1);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

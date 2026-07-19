@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { UploadCloud, Loader2, Download, Check, Tags } from "lucide-react";
-import { writeMp3Tags, writeWavTags, isWav, type TagFields } from "@/lib/audioTags";
+import { writeMp3Tags, writeWavTags, isWav, readRiffInfoIsrc, type TagFields } from "@/lib/audioTags";
 
 // The metadata we'll stamp, taken from the song in ArtistOps.
 type SongTags = {
@@ -52,11 +52,13 @@ export default function TagWriter({ song }: { song: SongTags }) {
       const { parseBuffer } = await import("music-metadata");
       const mm = await parseBuffer(new Uint8Array(ab), { mimeType: file.type, path: file.name });
       const c = mm.common;
+      // ISRC can hide in a WAV's RIFF INFO tag, which music-metadata doesn't read.
+      const currentIsrc = (c.isrc || [])[0] || (isWav(file.name, file.type) ? readRiffInfoIsrc(ab) : "") || "";
       const cur = {
         Title: c.title || "",
         Artist: (c.artist || ""),
         Genre: (c.genre || [])[0] || "",
-        ISRC: (c.isrc || [])[0] || "",
+        ISRC: currentIsrc,
         Year: c.year ? String(c.year) : "",
         Writers: (c.composer || []).join(", "),
       };
