@@ -4,7 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { supabaseAdmin, AUDIO_BUCKET } from "@/lib/supabaseAdmin";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 import { mapSmartLinkToStreamLinks } from "@/lib/streamLinks";
+
+// The platforms a song's Smart Link can carry, entered right on the Song.
+// key = internal, name = the Smart Link display name (kept in sync with the
+// /smart-links platform names + the website chip mapper).
+export const SONG_PLATFORMS: { key: string; name: string }[] = [
+  { key: "spotify", name: "Spotify" },
+  { key: "apple", name: "Apple Music" },
+  { key: "youtube", name: "YouTube Music" },
+  { key: "amazon", name: "Amazon Music" },
+  { key: "soundcloud", name: "SoundCloud" },
+  { key: "bandcamp", name: "Bandcamp" },
+];
 
 // Mint a pre-signed upload URL scoped to the current user's folder. The browser
 // pushes the file bytes directly to Supabase Storage using this URL.
@@ -39,6 +52,64 @@ export async function getFeaturedSongIds(): Promise<string[]> {
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "track";
+}
+
+// The catalog song ids that have a Smart Link (for the 🔗 badge).
+export async function getSongSmartLinkIds(): Promise<string[]> {
+  const userId = await requireUserId();
+  const links = await prisma.smartLink.findMany({ where: { userId, songId: { not: null } }, select: { songId: true } });
+  return [...new Set(links.map((l) => l.songId!))];
+}
+
+// A song's current platform URLs (from its Smart Link), keyed for the editor.
+export async function getSongSmartLink(songId: string): Promise<Record<string, string>> {
+  const userId = await requireUserId();
+  const sl = await prisma.smartLink.findFirst({ where: { userId, songId }, orderBy: { updatedAt: "desc" }, select: { platforms: true } });
+  const out: Record<string, string> = {};
+  if (sl && Array.isArray(sl.platforms)) {
+    for (const p of sl.platforms as { name?: string; url?: string }[]) {
+      const key = SONG_PLATFORMS.find((sp) => sp.name.toLowerCase() === String(p?.name || "").trim().toLowerCase())?.key;
+      if (key && p?.url) out[key] = String(p.url);
+    }
+  }
+  return out;
+}
+
+// Save a song's platform URLs onto its Smart Link (creating one if needed) and
+// push them to any website track featuring the song. The Song is the source of
+// truth here, so the website chips are SET from these links (not merged).
+export async function upsertSongSmartLink(songId: string, links: Record<string, string>): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const song = await prisma.song.findFirst({ where: { id: songId, userId }, select: { id: true, title: true, artist: true } });
+  if (!song) return { ok: false, error: "Song not found." };
+
+  const platforms = SONG_PLATFORMS
+    .map((sp, i) => ({ name: sp.name, url: String(links?.[sp.key] || "").trim(), priority: i + 1 }))
+    .filter((p) => /^https?:\/\/\S+$/i.test(p.url));
+
+  const existing = await prisma.smartLink.findFirst({ where: { userId, songId }, orderBy: { updatedAt: "desc" }, select: { id: true } });
+  if (existing) {
+    await prisma.smartLink.update({ where: { id: existing.id }, data: { platforms: platforms as never } });
+  } else if (platforms.length) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { artistName: true } });
+    let slug = slugify(song.title);
+    if (await prisma.smartLink.findUnique({ where: { slug } })) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+    await prisma.smartLink.create({
+      data: { userId, songId, slug, title: song.title, artistName: user?.artistName || song.artist || "Artist", platforms: platforms as never, isActive: true },
+    });
+  }
+
+  // Website chips: the song is authoritative, so set them from these links.
+  const derived = mapSmartLinkToStreamLinks(platforms);
+  const tracks = await prisma.siteTrack.findMany({ where: { songId }, select: { id: true } });
+  for (const t of tracks) {
+    await prisma.siteTrack.update({ where: { id: t.id }, data: { streamLinks: Object.keys(derived).length ? derived : Prisma.JsonNull } });
+  }
+
+  revalidatePath("/songs");
+  revalidatePath("/smart-links");
+  if (tracks.length) revalidatePath("/website");
+  return { ok: true };
 }
 
 // Feature a catalog song on the artist's public website. The browser has already
@@ -164,9 +235,10 @@ function parseForm(formData: FormData) {
 export async function createSong(formData: FormData) {
   const userId = await requireUserId();
   const data = parseForm(formData);
-  if (!data.title || !data.artist) return;
-  await prisma.song.create({ data: { ...data, userId } });
+  if (!data.title || !data.artist) return { id: null };
+  const song = await prisma.song.create({ data: { ...data, userId } });
   revalidatePath("/songs");
+  return { id: song.id };
 }
 
 export async function updateSong(id: string, formData: FormData) {

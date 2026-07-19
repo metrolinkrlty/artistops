@@ -1,10 +1,20 @@
 "use client";
-import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe } from "lucide-react";
+import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe, Link2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
-import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl, featureSongOnWebsite } from "./actions";
+import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl, featureSongOnWebsite, getSongSmartLink, upsertSongSmartLink } from "./actions";
+
+// Platform link fields shown on the Song (keep keys in sync with SONG_PLATFORMS).
+const SONG_PLATFORM_FIELDS: { key: string; label: string; placeholder: string }[] = [
+  { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/track/…" },
+  { key: "apple", label: "Apple Music", placeholder: "https://music.apple.com/…" },
+  { key: "youtube", label: "YouTube Music", placeholder: "https://music.youtube.com/…" },
+  { key: "amazon", label: "Amazon Music", placeholder: "https://music.amazon.com/…" },
+  { key: "soundcloud", label: "SoundCloud", placeholder: "https://soundcloud.com/…" },
+  { key: "bandcamp", label: "Bandcamp", placeholder: "https://yourband.bandcamp.com/track/…" },
+];
 import { supabaseBrowser, AUDIO_BUCKET } from "@/lib/supabaseClient";
 import { DISTROKID_GENRES, DISTROKID_SUBGENRES } from "@/lib/genres";
 
@@ -87,7 +97,7 @@ function audioBufferToWavClip(buffer: AudioBuffer, seconds: number): Blob {
   return new Blob([buf], { type: "audio/wav" });
 }
 
-export default function SongsClient({ songs, featuredSongIds }: { songs: Song[]; featuredSongIds: string[] }) {
+export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }: { songs: Song[]; featuredSongIds: string[]; smartLinkSongIds: string[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Song | null>(null);
@@ -153,6 +163,8 @@ export default function SongsClient({ songs, featuredSongIds }: { songs: Song[];
 
   const [featured, setFeatured] = useState<Set<string>>(new Set(featuredSongIds));
   const [featuring, setFeaturing] = useState<string | null>(null);
+  const hasSmartLink = new Set(smartLinkSongIds);
+  const [platformLinks, setPlatformLinks] = useState<Record<string, string>>({});
 
   // Feature a song on the public website: trim a 30s preview in the browser,
   // upload it, then create the linked website track (full audio copied server-side).
@@ -192,11 +204,12 @@ export default function SongsClient({ songs, featuredSongIds }: { songs: Song[];
     setAudioFile(null); setMetaJson(""); setReading(false); setUploadPct(null); setPlayUrl(null);
   }
   function openAdd() {
-    setEditing(null); resetAudioState(); setShowForm(true);
+    setEditing(null); resetAudioState(); setPlatformLinks({}); setShowForm(true);
   }
   function openEdit(song: Song) {
-    setEditing(song); resetAudioState(); setShowForm(true);
+    setEditing(song); resetAudioState(); setPlatformLinks({}); setShowForm(true);
     if (song.audioFileRef) loadPlayback(song.audioFileRef);
+    getSongSmartLink(song.id).then(setPlatformLinks).catch(() => {});
   }
 
   async function handleSubmit(formData: FormData) {
@@ -214,8 +227,11 @@ export default function SongsClient({ songs, featuredSongIds }: { songs: Song[];
         formData.set("audioFileRef", path);
         if (metaJson) formData.set("metadataFile", metaJson);
       }
+      let songId = editing?.id ?? null;
       if (editing) await updateSong(editing.id, formData);
-      else await createSong(formData);
+      else { const created = await createSong(formData); songId = created?.id ?? null; }
+      // Save the song's platform links onto its Smart Link (feeds the website chips).
+      if (songId) await upsertSongSmartLink(songId, platformLinks);
       setShowForm(false);
       setEditing(null);
       resetAudioState();
@@ -275,6 +291,9 @@ export default function SongsClient({ songs, featuredSongIds }: { songs: Song[];
                   <td className="px-6 py-4">
                     <div className="text-white font-medium flex items-center gap-2">
                       {song.title}
+                      {hasSmartLink.has(song.id) && (
+                        <Link2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" aria-label="Has streaming links" />
+                      )}
                       {song.collectionTitle && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30" title={`Also a collection: ${song.collectionTitle}`}>
                           Collection
@@ -435,6 +454,30 @@ export default function SongsClient({ songs, featuredSongIds }: { songs: Song[];
                     <Music className="w-3 h-3" /> Open master WAV
                   </a>
                 )}
+              </div>
+              {/* Streaming / platform links → this song's Smart Link (feeds the website chips) */}
+              <div className="col-span-2 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-4">
+                <div className="mb-1 flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-indigo-400" />
+                  <h3 className="text-sm font-semibold text-white">Streaming / platform links</h3>
+                </div>
+                <p className="mb-3 text-xs text-[#8b8fa8]">
+                  Paste where this song lives on each platform. Saved to the song&rsquo;s Smart Link and shown as &ldquo;Full song on…&rdquo; buttons on your website. Enter once — used everywhere.
+                </p>
+                <div className="grid gap-2">
+                  {SONG_PLATFORM_FIELDS.map((p) => (
+                    <label key={p.key} className="flex items-center gap-2">
+                      <span className="w-28 shrink-0 text-xs text-[#8b8fa8]">{p.label}</span>
+                      <input
+                        type="url"
+                        value={platformLinks[p.key] ?? ""}
+                        onChange={(e) => setPlatformLinks((prev) => ({ ...prev, [p.key]: e.target.value }))}
+                        placeholder={p.placeholder}
+                        className={inputClass}
+                      />
+                    </label>
+                  ))}
+                </div>
               </div>
               <input type="hidden" name="metadataFile" defaultValue={editing?.metadataFile || ""} />
               <div className="col-span-2">
