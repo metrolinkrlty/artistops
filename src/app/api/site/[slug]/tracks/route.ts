@@ -40,6 +40,7 @@ export async function GET(
         gate: t.gate,
         previewUrl: data?.signedUrl ?? null,
         streamLinks: (t.streamLinks as Record<string, string> | null) ?? null,
+        linksMode: t.linksMode ?? "default",
       };
     })
   );

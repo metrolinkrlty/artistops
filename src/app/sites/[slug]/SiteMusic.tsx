@@ -3,7 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { unlockSiteTrackEmail, unlockSiteTrackShareFollow } from "@/app/sites/actions";
 
-type Track = { trackId: string; title: string; gate: string; previewUrl: string | null; streamLinks?: Record<string, string> | null };
+type Track = { trackId: string; title: string; gate: string; previewUrl: string | null; streamLinks?: Record<string, string> | null; linksMode?: string };
+
+// Should this song's streaming links show? Per-song linksMode overrides the
+// site-wide default ("before"/"after"/"off"); "default" falls back to the site.
+function linksVisible(mode: string | undefined, siteShow: boolean, siteAfter: boolean, unlocked: boolean): boolean {
+  switch (mode) {
+    case "off": return false;
+    case "before": return true;
+    case "after": return unlocked;
+    default: return siteShow && (!siteAfter || unlocked);
+  }
+}
 
 // Monetizing platforms a song can link out to. Order = display order.
 const STREAM_PLATFORMS: { key: string; label: string }[] = [
@@ -424,9 +435,9 @@ export default function SiteMusic({
               )}
               </div>
 
-              {/* Links to hear the full song on monetizing platforms.
-                  Hidden entirely when off; when "after gate", only once unlocked. */}
-              {showStreamLinks && (!streamLinksAfterGate || unlocked) && <StreamLinks links={t.streamLinks} />}
+              {/* Links to hear the full song on monetizing platforms. Per-song
+                  timing (t.linksMode) overrides the site-wide default. */}
+              {linksVisible(t.linksMode, showStreamLinks, streamLinksAfterGate, unlocked) && <StreamLinks links={t.streamLinks} />}
 
               {/* Per-song gate */}
               {!unlocked && gateOpen && (

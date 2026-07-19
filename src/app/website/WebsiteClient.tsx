@@ -16,6 +16,7 @@ import {
   reorderSiteTracks,
   setSiteTrackGate,
   setSiteTrackLinks,
+  setSiteTrackLinksMode,
   syncStreamLinksFromSmartLinks,
   setHeroImage,
   type SocialLinks,
@@ -102,7 +103,7 @@ export default function WebsiteClient({
   site: ArtistSite;
   subscribers: Subscriber[];
   isAdmin: boolean;
-  siteTracks: { id: string; title: string; gate: string; streamLinks: unknown }[];
+  siteTracks: { id: string; title: string; gate: string; streamLinks: unknown; linksMode: string }[];
 }) {
   const router = useRouter();
   const social = (site?.socialLinks as SocialLinks) || {};
@@ -596,7 +597,7 @@ function asLinks(v: unknown): Record<string, string> {
   return v && typeof v === "object" ? (v as Record<string, string>) : {};
 }
 
-function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: string; streamLinks: unknown }[] }) {
+function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: string; streamLinks: unknown; linksMode: string }[] }) {
   const router = useRouter();
   const [order, setOrder] = useState(tracks);
   useEffect(() => { setOrder(tracks); }, [tracks]);
@@ -614,6 +615,11 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: str
   const saveLinks = (id: string, links: Record<string, string>) => {
     setOrder((o) => o.map((t) => (t.id === id ? { ...t, streamLinks: links } : t)));
     startTransition(() => { setSiteTrackLinks(id, links).then(() => router.refresh()); });
+  };
+
+  const saveLinksMode = (id: string, mode: string) => {
+    setOrder((o) => o.map((t) => (t.id === id ? { ...t, linksMode: mode } : t)));
+    startTransition(() => { setSiteTrackLinksMode(id, mode).then(() => router.refresh()); });
   };
 
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
@@ -697,8 +703,22 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: str
             </div>
             {isOpen && (
               <div className="space-y-2 border-t border-border px-3 py-3">
+                <label className="flex items-center justify-between gap-2 pb-1">
+                  <span className="text-xs font-medium text-foreground">When to show these on your site</span>
+                  <select
+                    value={t.linksMode || "default"}
+                    onChange={(e) => saveLinksMode(t.id, e.target.value)}
+                    className="rounded-md border border-input bg-transparent px-2 py-1 text-xs outline-none focus-visible:border-ring dark:bg-input/30"
+                    title="Override the site-wide streaming-links timing for just this song"
+                  >
+                    <option value="default">Use site setting</option>
+                    <option value="before">Show right away</option>
+                    <option value="after">Only after they unlock</option>
+                    <option value="off">Hide for this song</option>
+                  </select>
+                </label>
                 <p className="text-xs text-muted-foreground">
-                  Paste the full-song URL on each platform. Only the ones you fill in show up on your site.
+                  Paste the full-song URL on each platform. Only the ones you fill in show up on your site. Tip: for an unreleased or exclusive track, set this to <strong>Only after they unlock</strong> (or leave the links empty) so fans have to give their email to hear it.
                 </p>
                 {STREAM_PLATFORMS.map((p) => (
                   <label key={p.key} className="flex items-center gap-2">

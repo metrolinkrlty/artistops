@@ -377,7 +377,7 @@ export async function getSiteTracks() {
   const tracks = await prisma.siteTrack.findMany({
     where: { site: site.slug },
     orderBy: { order: "asc" },
-    select: { id: true, title: true, gate: true, streamLinks: true },
+    select: { id: true, title: true, gate: true, streamLinks: true, linksMode: true },
   });
   return tracks;
 }
@@ -437,6 +437,20 @@ export async function syncStreamLinksFromSmartLinks(): Promise<{ ok: boolean; up
   }
   if (updated) revalidatePath("/website");
   return { ok: true, updated };
+}
+
+// When to show a single song's streaming links, overriding the site default.
+// "default" = use the site setting; "before" = always; "after" = only once
+// unlocked; "off" = never for this song.
+export async function setSiteTrackLinksMode(id: string, mode: string) {
+  const userId = await requireUserId();
+  if (!["default", "before", "after", "off"].includes(mode)) return;
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return;
+  const owned = await prisma.siteTrack.findFirst({ where: { id, site: site.slug }, select: { id: true } });
+  if (!owned) return;
+  await prisma.siteTrack.update({ where: { id }, data: { linksMode: mode } });
+  revalidatePath("/website");
 }
 
 // Set how a single song unlocks: "email" | "share" | "follow" | "free".
