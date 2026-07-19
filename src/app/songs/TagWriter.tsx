@@ -144,7 +144,7 @@ export default function TagWriter({ song }: { song: SongTags }) {
             type="button"
             onClick={writeAndDownload}
             disabled={busy}
-            title="Saves a NEW tagged copy to your Downloads folder. Your original and Google Drive are not changed — re-upload the copy to Drive yourself."
+            title="Saves a NEW tagged copy to your Downloads folder. Your original file is not changed."
             className="mt-3 flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
           >
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : done ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
@@ -152,7 +152,7 @@ export default function TagWriter({ song }: { song: SongTags }) {
           </button>
           {done && (
             <p className="mt-2 text-xs text-[#8b8fa8]">
-              Saved a new <strong className="text-white">&ldquo;(tagged)&rdquo;</strong> copy to your <strong className="text-white">Downloads</strong> folder — your original and Google Drive are unchanged. To update the master, re-upload this copy to Drive (right-click the file → Manage versions → Upload new version).
+              Saved a new <strong className="text-white">&ldquo;(tagged)&rdquo;</strong> copy to your <strong className="text-white">Downloads</strong> folder — your original file is unchanged. To update your master, re-upload this copy wherever you keep it (replacing the old file).
             </p>
           )}
         </div>
