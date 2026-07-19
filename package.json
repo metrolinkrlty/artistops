@@ -16,6 +16,7 @@
     "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.110.2",
     "@types/nodemailer": "^8.0.1",
+    "browser-id3-writer": "^6.3.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.21.0",

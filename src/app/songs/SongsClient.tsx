@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
 import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl, featureSongOnWebsite, unfeatureSongFromWebsite, getSongSmartLink, upsertSongSmartLink } from "./actions";
+import TagWriter from "./TagWriter";
 
 // Platform link fields shown on the Song (keep keys in sync with SONG_PLATFORMS).
 const SONG_PLATFORM_FIELDS: { key: string; label: string; placeholder: string }[] = [
@@ -574,6 +575,19 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                 </div>
               </div>
               <input type="hidden" name="metadataFile" defaultValue={editing?.metadataFile || ""} />
+              {editing && (
+                <TagWriter song={{
+                  title: editing.title,
+                  artist: editing.artist,
+                  genre: editing.genre,
+                  isrc: editing.isrc,
+                  date: editing.releaseDate,
+                  composer: editing.writers.join(", ") || null,
+                  publisher: editing.publishers.join(", ") || null,
+                  comment: editing.notes,
+                  album: editing.collectionTitle,
+                }} />
+              )}
               <div className="col-span-2">
                 <Field label="Notes"><textarea name="notes" defaultValue={editing?.notes || ""} className={inputClass} rows={3} /></Field>
               </div>
