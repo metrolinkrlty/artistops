@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
-import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl, featureSongOnWebsite, getSongSmartLink, upsertSongSmartLink } from "./actions";
+import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl, featureSongOnWebsite, unfeatureSongFromWebsite, getSongSmartLink, upsertSongSmartLink } from "./actions";
 
 // Platform link fields shown on the Song (keep keys in sync with SONG_PLATFORMS).
 const SONG_PLATFORM_FIELDS: { key: string; label: string; placeholder: string }[] = [
@@ -194,6 +194,22 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
     }
   }
 
+  // Remove a song from the website.
+  async function handleUnfeature(song: Song) {
+    if (!confirm(`Remove "${song.title}" from your website?`)) return;
+    setFeaturing(song.id);
+    try {
+      const res = await unfeatureSongFromWebsite(song.id);
+      if (!res.ok) throw new Error(res.error || "Could not remove this song.");
+      setFeatured((prev) => { const next = new Set(prev); next.delete(song.id); return next; });
+      router.refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Something went wrong removing this song.");
+    } finally {
+      setFeaturing(null);
+    }
+  }
+
   const filtered = songs.filter(
     (s) =>
       s.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -324,7 +340,19 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex gap-1.5">
                       {featured.has(song.id) ? (
-                        <span className="p-2 rounded-lg bg-green-500/10 text-green-400" title="On your website"><Globe className="w-5 h-5" /></span>
+                        <button
+                          onClick={() => handleUnfeature(song)}
+                          disabled={featuring === song.id}
+                          className="group/globe p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-40"
+                          title="On your website — click to remove"
+                        >
+                          {featuring === song.id ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                            <>
+                              <Globe className="w-5 h-5 group-hover/globe:hidden" />
+                              <X className="w-5 h-5 hidden group-hover/globe:block" />
+                            </>
+                          )}
+                        </button>
                       ) : (
                         <button
                           onClick={() => handleFeature(song)}

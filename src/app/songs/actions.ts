@@ -173,6 +173,30 @@ export async function featureSongOnWebsite(
   return { ok: true };
 }
 
+// Remove a song from the website: delete its SiteTrack and the site-owned audio
+// objects (preview + full copy). The catalog song and its own audio are untouched.
+export async function unfeatureSongFromWebsite(songId: string): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return { ok: false, error: "No website found." };
+
+  const track = await prisma.siteTrack.findFirst({
+    where: { site: site.slug, songId },
+    select: { id: true, previewPath: true, fullPath: true },
+  });
+  if (!track) return { ok: false, error: "This song isn't on your website." };
+
+  // Never delete the catalog song's own master, only the site-owned copies.
+  const song = await prisma.song.findFirst({ where: { id: songId, userId }, select: { audioFileRef: true } });
+  const objects = [track.previewPath, track.fullPath].filter((p) => p && p !== song?.audioFileRef);
+  if (objects.length) await supabaseAdmin.storage.from(AUDIO_BUCKET).remove(objects).catch(() => {});
+
+  await prisma.siteTrack.delete({ where: { id: track.id } });
+  revalidatePath("/songs");
+  revalidatePath("/website");
+  return { ok: true };
+}
+
 export type SongStatus =
   | "DEMO"
   | "MIXED"
