@@ -307,9 +307,6 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                   <td className="px-6 py-4">
                     <div className="text-white font-medium flex items-center gap-2">
                       {song.title}
-                      {hasSmartLink.has(song.id) && (
-                        <Link2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" aria-label="Has streaming links" />
-                      )}
                       {song.collectionTitle && (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30" title={`Also a collection: ${song.collectionTitle}`}>
                           Collection
@@ -363,15 +360,22 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                           {featuring === song.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Globe className="w-5 h-5" />}
                         </button>
                       )}
-                      <button onClick={() => handleDelete(song)} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-red-400 transition-colors" title="Delete">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      <Link
+                        href="/smart-links"
+                        className={`p-2 rounded-lg hover:bg-[#2a2d3a] transition-colors ${hasSmartLink.has(song.id) ? "text-indigo-400" : "text-[#8b8fa8] hover:text-indigo-400"}`}
+                        title={hasSmartLink.has(song.id) ? "Streaming links set — view Smart Links" : "Smart Links"}
+                      >
+                        <Link2 className="w-5 h-5" />
+                      </Link>
                       <Link href="/rights" className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-amber-400 transition-colors" title="Rights">
                         <Shield className="w-5 h-5" />
                       </Link>
                       <Link href="/copyrights" className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-blue-400 transition-colors" title="Copyright">
                         <FileText className="w-5 h-5" />
                       </Link>
+                      <button onClick={() => handleDelete(song)} className="ml-auto p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-red-400 transition-colors" title="Delete">
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
                   </td>
                 </tr>
