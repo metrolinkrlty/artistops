@@ -202,6 +202,8 @@ export default function SiteMusic({
   const waveClipRef = useRef<HTMLDivElement | null>(null);
   const titleClipRef = useRef<HTMLDivElement | null>(null);
   const handleRef = useRef<HTMLDivElement | null>(null);
+  const notesRef = useRef<HTMLDivElement | null>(null); // layer that music notes fly off from
+  const lastNoteRef = useRef(0); // throttle timestamp for note spawning
   const timeRef = useRef<HTMLSpanElement | null>(null);
   const seekAreaRef = useRef<HTMLDivElement | null>(null);
   const bottomSeekRef = useRef<HTMLInputElement | null>(null); // classic bar slider
@@ -228,6 +230,29 @@ export default function SiteMusic({
   // position, and time directly to the DOM (no React re-render → no jerk). Also
   // enforces the preview cap. Called both by the audio's timeupdate event (fires
   // even when the tab is hidden) and by rAF (for 60fps smoothing when visible).
+  // Spawn a single music note at the leading edge (prog = 0..1 across the row),
+  // letting it fly up-and-off and fade. Per-note drift/spin/size are randomized.
+  const NOTE_GLYPHS = ["♪", "♫", "♩", "♬"]; // ♪ ♫ ♩ ♬
+  function spawnNote(prog: number) {
+    const layer = notesRef.current;
+    if (!layer) return;
+    const el = document.createElement("span");
+    el.textContent = NOTE_GLYPHS[(Math.random() * NOTE_GLYPHS.length) | 0];
+    const driftX = (Math.random() * 2 - 1) * 22;
+    const rot = (Math.random() * 2 - 1) * 45;
+    const size = 12 + Math.random() * 10;
+    const dur = 900 + Math.random() * 500;
+    el.style.cssText =
+      `position:absolute;left:${prog * 100}%;top:50%;` +
+      `color:var(--accent);font-size:${size}px;line-height:1;` +
+      `text-shadow:0 0 6px var(--accent),0 1px 2px rgba(0,0,0,0.6);` +
+      `pointer-events:none;will-change:transform,opacity;` +
+      `--nx:${driftX.toFixed(1)}px;--nr:${rot.toFixed(1)}deg;` +
+      `animation:aoNoteFly ${Math.round(dur)}ms ease-out forwards;`;
+    el.addEventListener("animationend", () => el.remove());
+    layer.appendChild(el);
+  }
+
   const writeFrameRef = useRef<() => void>(() => {});
   writeFrameRef.current = () => {
     const a = audioRef.current;
@@ -240,6 +265,13 @@ export default function SiteMusic({
     if (waveClipRef.current) waveClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
     if (titleClipRef.current) titleClipRef.current.style.clipPath = `inset(0 ${(1 - prog) * 100}% 0 0)`;
     if (handleRef.current) handleRef.current.style.left = pct;
+    // Emit music notes off the leading edge while playing (waveform style only).
+    // Skip when the tab is hidden — timeupdate still fires, but the notes' CSS
+    // animation is paused, so they'd pile up in the DOM instead of flying off.
+    if (playing && showBars && !a.paused && document.visibilityState === "visible") {
+      const now = performance.now();
+      if (now - lastNoteRef.current > 230) { lastNoteRef.current = now; spawnNote(prog); }
+    }
     // classic bottom transport bar
     if (bottomSeekRef.current && !draggingRef.current) bottomSeekRef.current.value = String(Math.round(prog * 1000));
     if (bottomTimeRef.current?.firstChild) bottomTimeRef.current.firstChild.nodeValue = `${fmt(a.currentTime)} / ${fmt(total)}`;
@@ -383,6 +415,11 @@ export default function SiteMusic({
                   <div className="h-full w-[3px] rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                   <div className="absolute h-3.5 w-3.5 rounded-full border-2 border-neutral-950 shadow" style={{ backgroundColor: "var(--accent)" }} />
                 </div>
+              )}
+
+              {/* Music notes flying off the leading edge while playing (waveform style) */}
+              {active && showBars && (
+                <div ref={notesRef} className="pointer-events-none absolute inset-0 z-30 overflow-visible" aria-hidden />
               )}
 
               <div className="relative z-10 flex items-center gap-4 px-5 py-4">

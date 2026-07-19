@@ -183,6 +183,8 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
   const [reading, setReading] = useState(false);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [playUrl, setPlayUrl] = useState<string | null>(null);
+  const [detectingBpm, setDetectingBpm] = useState(false);
+  const [bpmNote, setBpmNote] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function fillIfEmpty(name: string, value: string | number | null | undefined) {
@@ -229,6 +231,44 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
     setPlayUrl(null);
     const url = await getAudioUrl(path);
     if (url) setPlayUrl(url);
+  }
+
+  // Get the audio bytes for the song being edited: the just-selected file if
+  // there is one, otherwise the stored master.
+  async function getEditingAudioBuffer(): Promise<ArrayBuffer | null> {
+    if (audioFile) return await audioFile.arrayBuffer();
+    const ref = editing?.audioFileRef;
+    if (!ref) return null;
+    const url = await getAudioUrl(ref);
+    if (!url) return null;
+    return await (await fetch(url)).arrayBuffer();
+  }
+
+  // Estimate tempo from the audio when there's no BPM tag to read. Decodes the
+  // file in the browser and runs beat detection; writes the result into the BPM
+  // field. Explicitly an estimate — beat detectors can land on half/double tempo.
+  async function detectBpm() {
+    setBpmNote(null);
+    setDetectingBpm(true);
+    try {
+      const ab = await getEditingAudioBuffer();
+      if (!ab) { setBpmNote("Add or upload this song's audio first, then detect."); return; }
+      const AC: typeof AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AC();
+      const audioBuf = await ctx.decodeAudioData(ab);
+      ctx.close();
+      const { analyze } = await import("web-audio-beat-detector");
+      const tempo = await analyze(audioBuf);
+      const rounded = Math.round(tempo);
+      const el = formRef.current?.elements.namedItem("bpm") as HTMLInputElement | null;
+      if (el) el.value = String(rounded);
+      setBpmNote(`Estimated ~${rounded} BPM — double-check it (detection can land on half or double the real tempo).`);
+    } catch (e) {
+      console.error("bpm detect failed", e);
+      setBpmNote("Couldn't analyze this audio — enter the BPM manually.");
+    } finally {
+      setDetectingBpm(false);
+    }
   }
 
   const [featured, setFeatured] = useState<Set<string>>(new Set(featuredSongIds));
@@ -563,7 +603,21 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                 </Field>
               )}
               <Field label="Release Date"><input name="releaseDate" type="date" defaultValue={editing?.releaseDate ? editing.releaseDate.slice(0, 10) : ""} className={inputClass} /></Field>
-              <Field label="BPM"><input name="bpm" type="number" defaultValue={editing?.bpm ?? ""} className={inputClass} /></Field>
+              <Field label="BPM">
+                <div className="flex items-center gap-2">
+                  <input name="bpm" type="number" defaultValue={editing?.bpm ?? ""} className={inputClass} />
+                  <button
+                    type="button"
+                    onClick={detectBpm}
+                    disabled={detectingBpm}
+                    title="Estimate the tempo from the audio (uses the selected file, or this song's uploaded master). BPM/Key already auto-fill from the file's tags when present."
+                    className="whitespace-nowrap rounded-lg border border-[#2a2d3a] px-2.5 py-2 text-xs text-indigo-400 transition hover:border-indigo-500 disabled:opacity-50"
+                  >
+                    {detectingBpm ? "Analyzing…" : "Detect"}
+                  </button>
+                </div>
+                {bpmNote && <p className="mt-1 text-xs text-[#8b8fa8]">{bpmNote}</p>}
+              </Field>
               <Field label="Key"><input name="key" defaultValue={editing?.key || ""} className={inputClass} placeholder="C Major" /></Field>
               <Field label="Status">
                 <select name="status" defaultValue={editing?.status || "DEMO"} className={inputClass}>
