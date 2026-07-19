@@ -1,5 +1,5 @@
 "use client";
-import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe, Link2 } from "lucide-react";
+import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe, Link2, Download } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
@@ -133,6 +133,13 @@ function audioSpecs(meta: AudioMeta | null): string[] {
   else if (meta.channels === 2) parts.push("Stereo");
   else if (meta.channels) parts.push(`${meta.channels} ch`);
   return parts;
+}
+
+// Turn a Google Drive "…/file/d/ID/view" (or "?id=ID") link into a direct
+// download URL, so the master saves to disk instead of opening Drive's player.
+function driveDownloadUrl(url: string): string | null {
+  const m = url.match(/\/file\/d\/([^/]+)/) || url.match(/[?&]id=([^&]+)/);
+  return m ? `https://drive.google.com/uc?export=download&id=${m[1]}` : null;
 }
 
 export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }: { songs: Song[]; featuredSongIds: string[]; smartLinkSongIds: string[] }) {
@@ -545,9 +552,14 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                 <label className="block text-[#8b8fa8] text-xs mb-1.5">Master File Link (external — e.g. full-quality Google Drive .wav)</label>
                 <input name="masterFileUrl" defaultValue={editing?.masterFileUrl || ""} placeholder="https://drive.google.com/file/d/…/view" className={inputClass} />
                 {editing?.masterFileUrl && (
-                  <a href={editing.masterFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-1.5 text-xs text-indigo-400 hover:text-indigo-300">
-                    <Music className="w-3 h-3" /> Open master WAV
-                  </a>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-4">
+                    <a href={editing.masterFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300">
+                      <Music className="w-3 h-3" /> Open master
+                    </a>
+                    <a href={driveDownloadUrl(editing.masterFileUrl) || editing.masterFileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300" title="Download the master to your computer, then use 'Write metadata to a file' below">
+                      <Download className="w-3 h-3" /> Download for tagging
+                    </a>
+                  </div>
                 )}
               </div>
               {/* Streaming / platform links → this song's Smart Link (feeds the website chips) */}
