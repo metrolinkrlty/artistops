@@ -547,8 +547,8 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                   )}
                 </div>
               </div>
-              {/* Master file (external, e.g. Google Drive WAV) */}
-              <div className="col-span-2">
+              {/* Master file + tagging (external WAV on Drive → download → write tags) */}
+              <div className="col-span-2 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-4">
                 <label className="block text-[#8b8fa8] text-xs mb-1.5">Master File Link (external — e.g. full-quality Google Drive .wav)</label>
                 <input name="masterFileUrl" defaultValue={editing?.masterFileUrl || ""} placeholder="https://drive.google.com/file/d/…/view" className={inputClass} />
                 {editing?.masterFileUrl && (
@@ -560,6 +560,19 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                       <Download className="w-3 h-3" /> Download for tagging
                     </a>
                   </div>
+                )}
+                {editing && (
+                  <TagWriter song={{
+                    title: editing.title,
+                    artist: editing.artist,
+                    genre: editing.genre,
+                    isrc: editing.isrc,
+                    date: editing.releaseDate,
+                    composer: editing.writers.join(", ") || null,
+                    publisher: editing.publishers.join(", ") || null,
+                    comment: editing.notes,
+                    album: editing.collectionTitle,
+                  }} />
                 )}
               </div>
               {/* Streaming / platform links → this song's Smart Link (feeds the website chips) */}
@@ -587,19 +600,6 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                 </div>
               </div>
               <input type="hidden" name="metadataFile" defaultValue={editing?.metadataFile || ""} />
-              {editing && (
-                <TagWriter song={{
-                  title: editing.title,
-                  artist: editing.artist,
-                  genre: editing.genre,
-                  isrc: editing.isrc,
-                  date: editing.releaseDate,
-                  composer: editing.writers.join(", ") || null,
-                  publisher: editing.publishers.join(", ") || null,
-                  comment: editing.notes,
-                  album: editing.collectionTitle,
-                }} />
-              )}
               <div className="col-span-2">
                 <Field label="Notes"><textarea name="notes" defaultValue={editing?.notes || ""} className={inputClass} rows={3} /></Field>
               </div>

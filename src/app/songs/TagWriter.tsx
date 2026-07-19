@@ -98,7 +98,7 @@ export default function TagWriter({ song }: { song: SongTags }) {
   const wav = isWav(fileName || "", fileType);
 
   return (
-    <div className="col-span-2 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-4">
+    <div className="mt-4 border-t border-[#2a2d3a] pt-4">
       <div className="mb-1 flex items-center gap-2">
         <Tags className="w-4 h-4 text-indigo-400" />
         <h3 className="text-sm font-semibold text-white">Write metadata to a file</h3>
