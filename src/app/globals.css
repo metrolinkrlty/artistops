@@ -151,5 +151,5 @@
 @keyframes aoNoteFly {
   0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(0deg); }
   15%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% - 52px)) scale(1.15) rotate(var(--nr, 0deg)); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% + var(--ny, -52px))) scale(1.2) rotate(var(--nr, 0deg)); }
 }

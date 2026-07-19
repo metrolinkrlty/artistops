@@ -238,16 +238,17 @@ export default function SiteMusic({
     if (!layer) return;
     const el = document.createElement("span");
     el.textContent = NOTE_GLYPHS[(Math.random() * NOTE_GLYPHS.length) | 0];
-    const driftX = (Math.random() * 2 - 1) * 22;
+    const driftX = (Math.random() * 2 - 1) * 26;
     const rot = (Math.random() * 2 - 1) * 45;
-    const size = 12 + Math.random() * 10;
-    const dur = 900 + Math.random() * 500;
+    const size = 22 + Math.random() * 18; // noticeably bigger: 22–40px
+    const dur = 950 + Math.random() * 550;
+    const ny = (Math.random() < 0.5 ? -1 : 1) * (46 + Math.random() * 30); // fly above OR below the midline
     el.style.cssText =
       `position:absolute;left:${prog * 100}%;top:50%;` +
       `color:var(--accent);font-size:${size}px;line-height:1;` +
-      `text-shadow:0 0 6px var(--accent),0 1px 2px rgba(0,0,0,0.6);` +
+      `text-shadow:0 0 9px var(--accent),0 1px 3px rgba(0,0,0,0.6);` +
       `pointer-events:none;will-change:transform,opacity;` +
-      `--nx:${driftX.toFixed(1)}px;--nr:${rot.toFixed(1)}deg;` +
+      `--nx:${driftX.toFixed(1)}px;--ny:${ny.toFixed(1)}px;--nr:${rot.toFixed(1)}deg;` +
       `animation:aoNoteFly ${Math.round(dur)}ms ease-out forwards;`;
     el.addEventListener("animationend", () => el.remove());
     layer.appendChild(el);
