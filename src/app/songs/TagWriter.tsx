@@ -104,12 +104,15 @@ export default function TagWriter({ song }: { song: SongTags }) {
         <h3 className="text-sm font-semibold text-white">Write metadata to a file</h3>
       </div>
       <p className="mb-3 text-xs text-[#8b8fa8]">
-        Stamp this song&rsquo;s ArtistOps details (title, artist, genre, ISRC, writers, date) into a local MP3 or WAV — great for fixing tags before distribution. The file is processed <strong>here in your browser</strong> and never uploaded; you get a corrected copy to download (your original is untouched).
+        Stamp this song&rsquo;s ArtistOps details (title, artist, genre, ISRC, writers, date) into an MP3 or WAV — great for fixing tags before distribution. Everything happens <strong>here in your browser</strong>: the file is never uploaded, and you get a corrected copy to download (your original is untouched).
+      </p>
+      <p className="mb-3 text-xs text-[#8b8fa8]">
+        <strong className="text-white">Step 1:</strong> download the file (use &ldquo;Download for tagging&rdquo; above for a Drive master). <strong className="text-white">Step 2:</strong> choose that downloaded file below.
       </p>
 
       <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300">
         <UploadCloud className="w-4 h-4" />
-        {fileName ? "Choose a different file" : "Choose an MP3 or WAV file"}
+        {fileName ? "Choose a different file" : "Choose the downloaded file"}
         <input type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav" className="hidden" onChange={(e) => onFile(e.target.files?.[0] || null)} />
       </label>
 
