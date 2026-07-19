@@ -244,7 +244,7 @@ export default function SiteMusic({
     const dur = 950 + Math.random() * 550;
     const ny = (Math.random() < 0.5 ? -1 : 1) * (46 + Math.random() * 30); // fly above OR below the midline
     el.style.cssText =
-      `position:absolute;left:${prog * 100}%;top:50%;` +
+      `position:absolute;left:calc(${prog * 100}% + 16px);top:50%;` + // just in front of the leading edge
       `color:var(--accent);font-size:${size}px;line-height:1;` +
       `text-shadow:0 0 9px var(--accent),0 1px 3px rgba(0,0,0,0.6);` +
       `pointer-events:none;will-change:transform,opacity;` +
