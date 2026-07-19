@@ -227,6 +227,16 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
     if (song.audioFileRef) loadPlayback(song.audioFileRef);
     getSongSmartLink(song.id).then(setPlatformLinks).catch(() => {});
   }
+  // Open the editor and jump straight to the streaming/platform links section.
+  const linksSectionRef = useRef<HTMLDivElement>(null);
+  const [scrollToLinks, setScrollToLinks] = useState(false);
+  function openEditToLinks(song: Song) { openEdit(song); setScrollToLinks(true); }
+  useEffect(() => {
+    if (showForm && scrollToLinks) {
+      const t = setTimeout(() => { linksSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); setScrollToLinks(false); }, 80);
+      return () => clearTimeout(t);
+    }
+  }, [showForm, scrollToLinks]);
 
   async function handleSubmit(formData: FormData) {
     setSaving(true);
@@ -360,20 +370,21 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                           {featuring === song.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Globe className="w-5 h-5" />}
                         </button>
                       )}
-                      <Link
-                        href="/smart-links"
+                      <button
+                        type="button"
+                        onClick={() => openEditToLinks(song)}
                         className={`p-2 rounded-lg hover:bg-[#2a2d3a] transition-colors ${hasSmartLink.has(song.id) ? "text-indigo-400" : "text-[#8b8fa8] hover:text-indigo-400"}`}
-                        title={hasSmartLink.has(song.id) ? "Streaming links set — view Smart Links" : "Smart Links"}
+                        title={hasSmartLink.has(song.id) ? "Streaming links set — edit" : "Add streaming links"}
                       >
                         <Link2 className="w-5 h-5" />
-                      </Link>
+                      </button>
                       <Link href="/rights" className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-amber-400 transition-colors" title="Rights">
                         <Shield className="w-5 h-5" />
                       </Link>
                       <Link href="/copyrights" className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-blue-400 transition-colors" title="Copyright">
                         <FileText className="w-5 h-5" />
                       </Link>
-                      <button onClick={() => handleDelete(song)} className="ml-auto p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-red-400 transition-colors" title="Delete">
+                      <button onClick={() => handleDelete(song)} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-red-400 transition-colors" title="Delete">
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
@@ -488,7 +499,7 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                 )}
               </div>
               {/* Streaming / platform links → this song's Smart Link (feeds the website chips) */}
-              <div className="col-span-2 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-4">
+              <div ref={linksSectionRef} className="col-span-2 rounded-lg border border-[#2a2d3a] bg-[#0f1117] p-4">
                 <div className="mb-1 flex items-center gap-2">
                   <Link2 className="w-4 h-4 text-indigo-400" />
                   <h3 className="text-sm font-semibold text-white">Streaming / platform links</h3>
