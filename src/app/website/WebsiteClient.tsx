@@ -586,6 +586,7 @@ function FontDropdown({ value, onChange }: { value: string; onChange: (v: string
 const STREAM_PLATFORMS: { key: string; label: string; placeholder: string }[] = [
   { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/track/…" },
   { key: "apple", label: "Apple Music", placeholder: "https://music.apple.com/…" },
+  { key: "amazon", label: "Amazon Music", placeholder: "https://music.amazon.com/…" },
   { key: "bandcamp", label: "Bandcamp", placeholder: "https://yourband.bandcamp.com/track/…" },
   { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/watch?v=…" },
   { key: "soundcloud", label: "SoundCloud", placeholder: "https://soundcloud.com/…" },

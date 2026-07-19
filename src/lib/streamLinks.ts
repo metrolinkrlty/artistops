@@ -12,6 +12,8 @@ const NAME_TO_KEY: Record<string, string> = {
   "apple music": "apple",
   youtube: "youtube",
   "youtube music": "youtube",
+  amazon: "amazon",
+  "amazon music": "amazon",
   soundcloud: "soundcloud",
   bandcamp: "bandcamp",
 };

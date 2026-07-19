@@ -9,6 +9,7 @@ type Track = { trackId: string; title: string; gate: string; previewUrl: string 
 const STREAM_PLATFORMS: { key: string; label: string }[] = [
   { key: "spotify", label: "Spotify" },
   { key: "apple", label: "Apple Music" },
+  { key: "amazon", label: "Amazon Music" },
   { key: "bandcamp", label: "Bandcamp" },
   { key: "youtube", label: "YouTube" },
   { key: "soundcloud", label: "SoundCloud" },

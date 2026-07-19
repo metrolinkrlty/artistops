@@ -390,7 +390,7 @@ export async function setSiteTrackLinks(id: string, links: Record<string, string
   if (!site) return;
   const owned = await prisma.siteTrack.findFirst({ where: { id, site: site.slug }, select: { id: true } });
   if (!owned) return;
-  const allowed = ["spotify", "apple", "bandcamp", "youtube", "soundcloud"];
+  const allowed = ["spotify", "apple", "amazon", "bandcamp", "youtube", "soundcloud"];
   const clean: Record<string, string> = {};
   for (const key of allowed) {
     const url = String(links?.[key] || "").trim();
