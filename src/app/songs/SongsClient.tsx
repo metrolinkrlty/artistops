@@ -343,13 +343,13 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                         <button
                           onClick={() => handleUnfeature(song)}
                           disabled={featuring === song.id}
-                          className="group/globe p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-40"
+                          className="group p-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-red-500/10 hover:text-red-400 transition-colors disabled:opacity-40"
                           title="On your website — click to remove"
                         >
                           {featuring === song.id ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                             <>
-                              <Globe className="w-5 h-5 group-hover/globe:hidden" />
-                              <X className="w-5 h-5 hidden group-hover/globe:block" />
+                              <Globe className="w-5 h-5 block group-hover:hidden" />
+                              <X className="w-5 h-5 hidden group-hover:block" />
                             </>
                           )}
                         </button>
