@@ -97,6 +97,43 @@ function audioBufferToWavClip(buffer: AudioBuffer, seconds: number): Blob {
   return new Blob([buf], { type: "audio/wav" });
 }
 
+// --- Audio spec formatting (from the stored/parsed file metadata) ----------
+type AudioMeta = { container?: string; codec?: string; sampleRate?: number; bitsPerSample?: number; bitrate?: number; durationSec?: number | null; channels?: number };
+
+function parseMeta(json: string | null | undefined): AudioMeta | null {
+  if (!json) return null;
+  try { return JSON.parse(json) as AudioMeta; } catch { return null; }
+}
+function clock(sec?: number | null): string | null {
+  if (!sec || sec < 0) return null;
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+function containerLabel(container?: string, codec?: string): string | null {
+  const c = String(container || "").toUpperCase(), k = String(codec || "").toUpperCase();
+  if (c.includes("WAV") || k.includes("PCM")) return "WAV";
+  if (c.includes("MPEG") || k.includes("MPEG") || k.includes("MP3")) return "MP3";
+  if (c.includes("FLAC")) return "FLAC";
+  if (c.includes("MP4") || c.includes("M4A") || k.includes("AAC")) return "AAC";
+  if (c.includes("OGG") || k.includes("VORBIS") || k.includes("OPUS")) return "OGG";
+  return container || null;
+}
+function audioSpecs(meta: AudioMeta | null): string[] {
+  if (!meta) return [];
+  const parts: string[] = [];
+  const fmt = containerLabel(meta.container, meta.codec);
+  if (fmt) parts.push(fmt);
+  if (meta.sampleRate) parts.push(`${+(meta.sampleRate / 1000).toFixed(1)} kHz`);
+  if (meta.bitsPerSample) parts.push(`${meta.bitsPerSample}-bit`);
+  else if (meta.bitrate) parts.push(`${Math.round(meta.bitrate / 1000)} kbps`);
+  const d = clock(meta.durationSec);
+  if (d) parts.push(d);
+  if (meta.channels === 1) parts.push("Mono");
+  else if (meta.channels === 2) parts.push("Stereo");
+  else if (meta.channels) parts.push(`${meta.channels} ch`);
+  return parts;
+}
+
 export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }: { songs: Song[]; featuredSongIds: string[]; smartLinkSongIds: string[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -216,6 +253,10 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
       s.artist.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Audio specs for the open song: freshly-read tags after an upload, else the
+  // stored metadata from a previous upload.
+  const specs = audioSpecs(parseMeta(metaJson || editing?.metadataFile));
+
   function resetAudioState() {
     setAudioFile(null); setMetaJson(""); setReading(false); setUploadPct(null); setPlayUrl(null);
   }
@@ -323,7 +364,10 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                         </span>
                       )}
                     </div>
-                    <div className="text-[#8b8fa8] text-xs">{song.artist}</div>
+                    <div className="text-[#8b8fa8] text-xs">
+                      {song.artist}
+                      {(() => { const d = clock(parseMeta(song.metadataFile)?.durationSec); return d ? ` · ${d}` : ""; })()}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-xs font-mono ${song.isrc ? "text-indigo-400" : "text-[#8b8fa8]"}`}>{song.isrc || "—"}</span>
@@ -478,6 +522,13 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                     {audioFile ? "Choose a different file" : editing?.audioFileRef ? "Replace file" : "Choose audio file"}
                     <input type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav" className="hidden" onChange={(e) => onAudioSelected(e.target.files?.[0] || null)} />
                   </label>
+                  {specs.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5" title="Read from the audio file's embedded metadata">
+                      {specs.map((s, i) => (
+                        <span key={i} className="rounded-md border border-[#2a2d3a] bg-[#1a1d27] px-2 py-0.5 text-xs text-white">{s}</span>
+                      ))}
+                    </div>
+                  )}
                   {reading && <p className="text-xs text-[#8b8fa8] mt-2 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Reading metadata…</p>}
                   {audioFile && !reading && (
                     <div className="mt-2 text-xs text-[#8b8fa8]">
