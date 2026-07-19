@@ -524,7 +524,19 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
               <Field label="Artist *"><input name="artist" required defaultValue={editing?.artist || "Alex Rivera"} className={inputClass} /></Field>
               <Field label="Writers (comma-separated)"><input name="writers" defaultValue={editing?.writers.join(", ") || ""} className={inputClass} /></Field>
               <Field label="Publishers (comma-separated)"><input name="publishers" defaultValue={editing?.publishers.join(", ") || ""} className={inputClass} /></Field>
-              <Field label="ISRC"><input name="isrc" defaultValue={editing?.isrc || ""} className={inputClass} placeholder="USRC12345678" /></Field>
+              <Field label="ISRC">
+                <input
+                  name="isrc"
+                  defaultValue={editing?.isrc || ""}
+                  className={inputClass}
+                  placeholder="USRC12345678"
+                  title="A recording's permanent global ID. Get your own ISRCs once, assign one per recording, and enter this SAME code in every distributor's form. Never let a distributor auto-assign — that gives the same recording different ISRCs on different platforms and splits your stats and royalties."
+                />
+                <p className="mt-1 text-[10px] leading-tight text-[#8b8fa8]">
+                  Use <strong className="text-[#c7cad8]">your own</strong> ISRC and enter this <strong className="text-[#c7cad8]">same code</strong> in your distributor — don&rsquo;t let them auto-assign a new one. It&rsquo;s permanent per recording.{" "}
+                  <a href="https://usisrc.org" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">Get your own (US)</a>
+                </p>
+              </Field>
               <Field label="UPC"><input name="upc" defaultValue={editing?.upc || ""} className={inputClass} /></Field>
               <Field label="Genre">
                 <select name="genre" value={genreSel} onChange={(e) => setGenreSel(e.target.value)} className={inputClass}>
