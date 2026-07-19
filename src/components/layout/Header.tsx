@@ -11,9 +11,10 @@ import { getHeaderUnread } from "@/app/messages/actions";
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  subtitleTitle?: string; // hover explanation shown on the subtitle
 }
 
-export default function Header({ title, subtitle }: HeaderProps) {
+export default function Header({ title, subtitle, subtitleTitle }: HeaderProps) {
   const pathname = usePathname();
   const [unread, setUnread] = useState(0);
 
@@ -31,7 +32,14 @@ export default function Header({ title, subtitle }: HeaderProps) {
     <div className="flex items-center justify-between px-8 py-4 border-b border-[#2a2d3a] bg-[#0f1117]">
       <div>
         <h1 className="text-white text-xl font-semibold">{title}</h1>
-        {subtitle && <p className="text-[#8b8fa8] text-sm">{subtitle}</p>}
+        {subtitle && (
+          <p
+            className={`text-[#8b8fa8] text-sm ${subtitleTitle ? "cursor-help underline decoration-dotted decoration-[#3a3d4a] underline-offset-4" : ""}`}
+            title={subtitleTitle}
+          >
+            {subtitle}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-4">
         <div className="relative">
