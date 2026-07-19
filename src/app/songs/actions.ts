@@ -24,6 +24,74 @@ export async function getAudioUrl(path: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
+// The catalog song ids already featured on the artist's website (for the ✓ badge).
+export async function getFeaturedSongIds(): Promise<string[]> {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return [];
+  const tracks = await prisma.siteTrack.findMany({
+    where: { site: site.slug, songId: { not: null } },
+    select: { songId: true },
+  });
+  return tracks.map((t) => t.songId!).filter(Boolean);
+}
+
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "track";
+}
+
+// Feature a catalog song on the artist's public website. The browser has already
+// trimmed + uploaded a short preview clip (previewPath); here we copy the full
+// audio to a site-owned object and create the linked SiteTrack.
+export async function featureSongOnWebsite(
+  songId: string,
+  previewPath: string
+): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return { ok: false, error: "Set up your website first (Website tab), then feature songs on it." };
+
+  const song = await prisma.song.findFirst({ where: { id: songId, userId }, select: { id: true, title: true, audioFileRef: true } });
+  if (!song) return { ok: false, error: "Song not found." };
+  if (!song.audioFileRef) return { ok: false, error: "Upload audio for this song first, then feature it." };
+  if (!previewPath.startsWith(`${userId}/`)) return { ok: false, error: "Invalid preview." };
+
+  const existing = await prisma.siteTrack.findFirst({ where: { site: site.slug, songId }, select: { id: true } });
+  if (existing) return { ok: false, error: "This song is already on your website." };
+
+  // Unique trackId (slug) within this site.
+  const base = slugify(song.title);
+  const taken = new Set((await prisma.siteTrack.findMany({ where: { site: site.slug }, select: { trackId: true } })).map((t) => t.trackId));
+  let trackId = base;
+  for (let n = 2; taken.has(trackId); n++) trackId = `${base}-${n}`;
+
+  // Give the site its own copy of the full audio so deleting the catalog song
+  // (which removes its file) never breaks the website track.
+  const ext = (song.audioFileRef.split(".").pop() || "mp3").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
+  const fullPath = `${userId}/site-${trackId}-${crypto.randomUUID()}.${ext}`;
+  const { error: copyErr } = await supabaseAdmin.storage.from(AUDIO_BUCKET).copy(song.audioFileRef, fullPath);
+  if (copyErr) return { ok: false, error: "Could not copy the audio. Try again." };
+
+  const maxOrder = await prisma.siteTrack.aggregate({ where: { site: site.slug }, _max: { order: true } });
+  await prisma.siteTrack.create({
+    data: {
+      userId,
+      site: site.slug,
+      songId,
+      trackId,
+      title: song.title,
+      order: (maxOrder._max.order ?? -1) + 1,
+      gate: "email",
+      previewPath,
+      fullPath,
+    },
+  });
+
+  revalidatePath("/songs");
+  revalidatePath("/website");
+  return { ok: true };
+}
+
 export type SongStatus =
   | "DEMO"
   | "MIXED"

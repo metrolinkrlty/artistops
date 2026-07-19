@@ -22,6 +22,7 @@ model Song {
   userId        String?
   title         String
   artist        String
+  siteTracks    SiteTrack[]
   writers       String[]
   publishers    String[]
   splits        Json
@@ -609,6 +610,8 @@ model SiteTrack {
   id          String   @id @default(cuid())
   userId      String?
   site        String
+  songId      String?  // links back to the catalog Song this was featured from
+  song        Song?    @relation(fields: [songId], references: [id], onDelete: SetNull)
   trackId     String
   title       String
   order       Int      @default(0)
@@ -622,6 +625,7 @@ model SiteTrack {
   @@unique([site, trackId])
   @@index([site])
   @@index([userId])
+  @@index([songId])
 }
 
 // A mailing-list / listener email captured from an artist's public website.

@@ -1,10 +1,10 @@
 "use client";
-import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play } from "lucide-react";
+import { Plus, Search, Shield, FileText, CheckCircle2, XCircle, Pencil, Trash2, X, Music, UploadCloud, Loader2, Play, Globe } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { formatDate } from "@/lib/dateUtils";
 import { useRouter } from "next/navigation";
-import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl } from "./actions";
+import { createSong, updateSong, deleteSong, createAudioUploadUrl, getAudioUrl, featureSongOnWebsite } from "./actions";
 import { supabaseBrowser, AUDIO_BUCKET } from "@/lib/supabaseClient";
 import { DISTROKID_GENRES, DISTROKID_SUBGENRES } from "@/lib/genres";
 
@@ -59,7 +59,35 @@ function RightsIcon({ ok, label }: { ok: boolean; label: string }) {
 const inputClass =
   "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm placeholder:text-[#8b8fa8] focus:outline-none focus:border-indigo-500";
 
-export default function SongsClient({ songs }: { songs: Song[] }) {
+// Encode the first `seconds` of an AudioBuffer as a 16-bit PCM WAV clip. Used
+// to make a short website preview from the full song entirely in the browser.
+function audioBufferToWavClip(buffer: AudioBuffer, seconds: number): Blob {
+  const sampleRate = buffer.sampleRate;
+  const numCh = Math.min(2, buffer.numberOfChannels);
+  const frames = Math.min(buffer.length, Math.floor(seconds * sampleRate));
+  const blockAlign = numCh * 2;
+  const dataSize = frames * blockAlign;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buf);
+  const writeStr = (o: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF"); view.setUint32(4, 36 + dataSize, true); writeStr(8, "WAVE");
+  writeStr(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * blockAlign, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+  writeStr(36, "data"); view.setUint32(40, dataSize, true);
+  const chans: Float32Array[] = [];
+  for (let c = 0; c < numCh; c++) chans.push(buffer.getChannelData(c));
+  let off = 44;
+  for (let i = 0; i < frames; i++) {
+    for (let c = 0; c < numCh; c++) {
+      const s = Math.max(-1, Math.min(1, chans[c][i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+  }
+  return new Blob([buf], { type: "audio/wav" });
+}
+
+export default function SongsClient({ songs, featuredSongIds }: { songs: Song[]; featuredSongIds: string[] }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Song | null>(null);
@@ -121,6 +149,37 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
     setPlayUrl(null);
     const url = await getAudioUrl(path);
     if (url) setPlayUrl(url);
+  }
+
+  const [featured, setFeatured] = useState<Set<string>>(new Set(featuredSongIds));
+  const [featuring, setFeaturing] = useState<string | null>(null);
+
+  // Feature a song on the public website: trim a 30s preview in the browser,
+  // upload it, then create the linked website track (full audio copied server-side).
+  async function handleFeature(song: Song) {
+    if (!song.audioFileRef) { alert("Upload audio for this song first, then feature it on your website."); return; }
+    setFeaturing(song.id);
+    try {
+      const url = await getAudioUrl(song.audioFileRef);
+      if (!url) throw new Error("Could not load this song's audio.");
+      const arrayBuf = await (await fetch(url)).arrayBuffer();
+      const AC: typeof AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AC();
+      const audioBuf = await ctx.decodeAudioData(arrayBuf);
+      ctx.close();
+      const clip = audioBufferToWavClip(audioBuf, 30);
+      const { path, token } = await createAudioUploadUrl(`preview-${song.id}.wav`);
+      const { error } = await supabaseBrowser.storage.from(AUDIO_BUCKET).uploadToSignedUrl(path, token, clip, { contentType: "audio/wav" });
+      if (error) throw new Error("Could not upload the preview. Try again.");
+      const res = await featureSongOnWebsite(song.id, path);
+      if (!res.ok) throw new Error(res.error || "Could not feature this song.");
+      setFeatured((prev) => new Set(prev).add(song.id));
+      router.refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Something went wrong featuring this song.");
+    } finally {
+      setFeaturing(null);
+    }
   }
 
   const filtered = songs.filter(
@@ -245,6 +304,18 @@ export default function SongsClient({ songs }: { songs: Song[] }) {
                   </td>
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
                     <div className="flex gap-2">
+                      {featured.has(song.id) ? (
+                        <span className="p-1 text-green-400" title="On your website"><Globe className="w-4 h-4" /></span>
+                      ) : (
+                        <button
+                          onClick={() => handleFeature(song)}
+                          disabled={featuring === song.id || !song.audioFileRef}
+                          className="p-1 text-[#8b8fa8] hover:text-indigo-400 transition-colors disabled:opacity-40 disabled:hover:text-[#8b8fa8]"
+                          title={song.audioFileRef ? "Feature on website" : "Upload audio first"}
+                        >
+                          {featuring === song.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(song)} className="p-1 text-[#8b8fa8] hover:text-red-400 transition-colors" title="Delete">
                         <Trash2 className="w-4 h-4" />
                       </button>
