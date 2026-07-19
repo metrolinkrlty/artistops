@@ -303,27 +303,27 @@ export default function SongsClient({ songs, featuredSongIds }: { songs: Song[];
                     {song.releaseDate ? formatDate(song.releaseDate) : "—"}
                   </td>
                   <td className="px-6 py-4" onClick={e => e.stopPropagation()}>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       {featured.has(song.id) ? (
-                        <span className="p-1 text-green-400" title="On your website"><Globe className="w-4 h-4" /></span>
+                        <span className="p-2 rounded-lg bg-green-500/10 text-green-400" title="On your website"><Globe className="w-5 h-5" /></span>
                       ) : (
                         <button
                           onClick={() => handleFeature(song)}
                           disabled={featuring === song.id || !song.audioFileRef}
-                          className="p-1 text-[#8b8fa8] hover:text-indigo-400 transition-colors disabled:opacity-40 disabled:hover:text-[#8b8fa8]"
+                          className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-indigo-400 transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[#8b8fa8]"
                           title={song.audioFileRef ? "Feature on website" : "Upload audio first"}
                         >
-                          {featuring === song.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                          {featuring === song.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Globe className="w-5 h-5" />}
                         </button>
                       )}
-                      <button onClick={() => handleDelete(song)} className="p-1 text-[#8b8fa8] hover:text-red-400 transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
+                      <button onClick={() => handleDelete(song)} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-red-400 transition-colors" title="Delete">
+                        <Trash2 className="w-5 h-5" />
                       </button>
-                      <Link href="/rights" className="p-1 text-[#8b8fa8] hover:text-amber-400 transition-colors" title="Rights">
-                        <Shield className="w-4 h-4" />
+                      <Link href="/rights" className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-amber-400 transition-colors" title="Rights">
+                        <Shield className="w-5 h-5" />
                       </Link>
-                      <Link href="/copyrights" className="p-1 text-[#8b8fa8] hover:text-blue-400 transition-colors" title="Copyright">
-                        <FileText className="w-4 h-4" />
+                      <Link href="/copyrights" className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-blue-400 transition-colors" title="Copyright">
+                        <FileText className="w-5 h-5" />
                       </Link>
                     </div>
                   </td>
