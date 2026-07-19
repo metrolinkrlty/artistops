@@ -16,6 +16,7 @@ import {
   reorderSiteTracks,
   setSiteTrackGate,
   setSiteTrackLinks,
+  syncStreamLinksFromSmartLinks,
   setHeroImage,
   type SocialLinks,
 } from "./actions";
@@ -614,6 +615,16 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: str
     startTransition(() => { setSiteTrackLinks(id, links).then(() => router.refresh()); });
   };
 
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const pullFromSmartLinks = async () => {
+    setSyncing(true); setSyncMsg(null);
+    const res = await syncStreamLinksFromSmartLinks();
+    setSyncing(false);
+    setSyncMsg(res.updated ? `Updated ${res.updated} song${res.updated === 1 ? "" : "s"} from your Smart Links.` : "No new links found in your Smart Links.");
+    router.refresh();
+  };
+
   function reorderTo(targetId: string) {
     const from = order.findIndex((t) => t.id === dragId.current);
     const to = order.findIndex((t) => t.id === targetId);
@@ -626,10 +637,22 @@ function TrackOrder({ tracks }: { tracks: { id: string; title: string; gate: str
 
   return (
     <section className="rounded-xl border border-border bg-card p-6">
-      <h2 className="mb-1 text-lg font-semibold">Song order</h2>
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Song order</h2>
+        <button
+          type="button"
+          onClick={pullFromSmartLinks}
+          disabled={syncing}
+          className="shrink-0 rounded-md border border-input px-2.5 py-1 text-xs text-muted-foreground transition hover:border-ring hover:text-foreground disabled:opacity-60"
+          title="Fill each song's streaming links from your Smart Links"
+        >
+          {syncing ? "Pulling…" : "↻ Pull links from Smart Links"}
+        </button>
+      </div>
       <p className="mb-4 text-sm text-muted-foreground">
-        Drag to set order (the first plays first). Pick each song&rsquo;s unlock gate — mix Email (captures the address) and Share/Follow (grows reach) to get the best of both. Add streaming links so fans can hear the full song on Spotify, Apple Music and more (that&rsquo;s where you earn royalties).
+        Drag to set order (the first plays first). Pick each song&rsquo;s unlock gate — mix Email (captures the address) and Share/Follow (grows reach) to get the best of both. Streaming links auto-fill from your <strong>Smart Links</strong> (or add them by hand per song below) so fans can hear the full song on Spotify, Apple Music and more — that&rsquo;s where you earn royalties.
       </p>
+      {syncMsg && <p className="mb-3 text-xs text-primary">{syncMsg}</p>}
       <ul className="space-y-2">
         {order.map((t, i) => {
           const links = asLinks(t.streamLinks);

@@ -3,8 +3,22 @@
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
+import { mapSmartLinkToStreamLinks, mergeStreamLinks } from "@/lib/streamLinks";
 
 type Platform = { name: string; url: string; priority: number };
+
+// Push a song's Smart Link platform URLs onto any website tracks featuring it,
+// so the "Full song on …" chips stay in sync without re-typing.
+async function propagateToSiteTracks(songId: string | null, platforms: Platform[]) {
+  if (!songId) return;
+  const derived = mapSmartLinkToStreamLinks(platforms);
+  if (!Object.keys(derived).length) return;
+  const tracks = await prisma.siteTrack.findMany({ where: { songId }, select: { id: true, streamLinks: true } });
+  for (const t of tracks) {
+    await prisma.siteTrack.update({ where: { id: t.id }, data: { streamLinks: mergeStreamLinks(t.streamLinks, derived) } });
+  }
+  if (tracks.length) revalidatePath("/website");
+}
 
 export async function getSmartLinks() {
   const userId = await requireUserId();
@@ -44,17 +58,19 @@ export async function createSmartLink(formData: FormData) {
   if (existing) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
+  const songId = String(formData.get("songId") || "") || null;
   await prisma.smartLink.create({
     data: {
       userId,
       slug,
       title,
       artistName: user?.artistName || "Artist",
-      songId: String(formData.get("songId") || "") || null,
+      songId,
       platforms: platforms as never,
       isActive: true,
     },
   });
+  await propagateToSiteTracks(songId, platforms);
   revalidatePath("/smart-links");
 }
 

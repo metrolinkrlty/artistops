@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { mapSmartLinkToStreamLinks, mergeStreamLinks } from "@/lib/streamLinks";
 import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
@@ -400,6 +401,42 @@ export async function setSiteTrackLinks(id: string, links: Record<string, string
     data: { streamLinks: Object.keys(clean).length ? clean : Prisma.JsonNull },
   });
   revalidatePath("/website");
+}
+
+// Pull the artist's Smart Link platform URLs onto every website track that's
+// linked to a catalog song. Smart Link values win for the platforms they cover;
+// hand-typed links for other platforms are kept. Returns how many were updated.
+export async function syncStreamLinksFromSmartLinks(): Promise<{ ok: boolean; updated: number }> {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  if (!site) return { ok: false, updated: 0 };
+
+  const tracks = await prisma.siteTrack.findMany({
+    where: { site: site.slug, songId: { not: null } },
+    select: { id: true, songId: true, streamLinks: true },
+  });
+  if (!tracks.length) return { ok: true, updated: 0 };
+
+  // Newest Smart Link per song.
+  const links = await prisma.smartLink.findMany({
+    where: { userId, songId: { in: tracks.map((t) => t.songId!) } },
+    orderBy: { updatedAt: "desc" },
+    select: { songId: true, platforms: true },
+  });
+  const bySong = new Map<string, unknown>();
+  for (const l of links) if (l.songId && !bySong.has(l.songId)) bySong.set(l.songId, l.platforms);
+
+  let updated = 0;
+  for (const t of tracks) {
+    const derived = mapSmartLinkToStreamLinks(bySong.get(t.songId!));
+    if (!Object.keys(derived).length) continue;
+    const merged = mergeStreamLinks(t.streamLinks, derived);
+    if (JSON.stringify(merged) === JSON.stringify(t.streamLinks ?? {})) continue;
+    await prisma.siteTrack.update({ where: { id: t.id }, data: { streamLinks: merged } });
+    updated++;
+  }
+  if (updated) revalidatePath("/website");
+  return { ok: true, updated };
 }
 
 // Set how a single song unlocks: "email" | "share" | "follow" | "free".

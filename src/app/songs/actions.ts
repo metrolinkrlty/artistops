@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
 import { supabaseAdmin, AUDIO_BUCKET } from "@/lib/supabaseAdmin";
 import { revalidatePath } from "next/cache";
+import { mapSmartLinkToStreamLinks } from "@/lib/streamLinks";
 
 // Mint a pre-signed upload URL scoped to the current user's folder. The browser
 // pushes the file bytes directly to Supabase Storage using this URL.
@@ -72,6 +73,14 @@ export async function featureSongOnWebsite(
   const { error: copyErr } = await supabaseAdmin.storage.from(AUDIO_BUCKET).copy(song.audioFileRef, fullPath);
   if (copyErr) return { ok: false, error: "Could not copy the audio. Try again." };
 
+  // Pre-fill the "Full song on …" links from this song's Smart Link, if any.
+  const smartLink = await prisma.smartLink.findFirst({
+    where: { userId, songId },
+    orderBy: { updatedAt: "desc" },
+    select: { platforms: true },
+  });
+  const streamLinks = mapSmartLinkToStreamLinks(smartLink?.platforms);
+
   const maxOrder = await prisma.siteTrack.aggregate({ where: { site: site.slug }, _max: { order: true } });
   await prisma.siteTrack.create({
     data: {
@@ -84,6 +93,7 @@ export async function featureSongOnWebsite(
       gate: "email",
       previewPath,
       fullPath,
+      ...(Object.keys(streamLinks).length ? { streamLinks } : {}),
     },
   });
 
