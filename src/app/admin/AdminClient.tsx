@@ -1,7 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Mail, MessageSquare, Send } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Shield, User, ChevronDown, ChevronUp, Eye, CheckCircle, XCircle, Mail, MessageSquare, Send, SlidersHorizontal } from "lucide-react";
+
+// Columns the admin can hide to reclaim space (Artist + Actions always show).
+const TOGGLE_COLS = [
+  { key: "email", label: "Email" },
+  { key: "role", label: "Role" },
+  { key: "status", label: "Status" },
+  { key: "songs", label: "Songs" },
+  { key: "revenue", label: "Revenue" },
+  { key: "joined", label: "Joined" },
+] as const;
 import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, sendBlast, countBlastRecipients, type AdminMessageView } from "./actions";
 
 type MembershipApplicationView = {
@@ -35,6 +45,22 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
   const [msgSubject, setMsgSubject] = useState("");
   const [msgBody, setMsgBody] = useState("");
   const [msgSent, setMsgSent] = useState(false);
+
+  // Which columns are hidden (persisted), plus the little "Columns" menu.
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [showCols, setShowCols] = useState(false);
+  useEffect(() => {
+    try { const s = localStorage.getItem("admin_hidden_cols"); if (s) setHidden(new Set(JSON.parse(s))); } catch {}
+  }, []);
+  function toggleCol(key: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem("admin_hidden_cols", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }
+  const visibleColCount = 2 + TOGGLE_COLS.filter((c) => !hidden.has(c.key)).length;
 
   function openMessage(u: UserRow) {
     setMessaging(u);
@@ -199,6 +225,24 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
       <div className="flex items-center justify-between">
         <h2 className="text-white font-semibold">All Accounts ({users.length})</h2>
         <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={() => setShowCols((v) => !v)} className="flex items-center gap-2 px-4 py-2 border border-[#2a2d3a] text-[#c7cad8] rounded-lg text-sm hover:text-white hover:border-indigo-500" title="Show or hide columns to free up space">
+              <SlidersHorizontal className="w-4 h-4" /> Columns
+            </button>
+            {showCols && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowCols(false)} />
+                <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-[#2a2d3a] bg-[#1a1d27] p-1.5 shadow-xl">
+                  {TOGGLE_COLS.map((c) => (
+                    <label key={c.key} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-[#c7cad8] hover:bg-[#2a2d3a]">
+                      <input type="checkbox" checked={!hidden.has(c.key)} onChange={() => toggleCol(c.key)} className="accent-indigo-500" />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={openBlast} className="flex items-center gap-2 px-4 py-2 border border-[#2a2d3a] text-[#c7cad8] rounded-lg text-sm hover:text-white hover:border-indigo-500">
             <Mail className="w-4 h-4" /> Email members
           </button>
@@ -208,17 +252,17 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
         </div>
       </div>
 
-      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-hidden">
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="text-[#8b8fa8] text-sm border-b border-[#2a2d3a] bg-[#161820]">
               <th className="text-left px-6 py-4">Artist</th>
-              <th className="text-left px-6 py-4">Email</th>
-              <th className="text-left px-6 py-4">Role</th>
-              <th className="text-left px-6 py-4">Status</th>
-              <th className="text-right px-6 py-4">Songs</th>
-              <th className="text-right px-6 py-4">Revenue</th>
-              <th className="text-left px-6 py-4">Joined</th>
+              {!hidden.has("email") && <th className="text-left px-6 py-4">Email</th>}
+              {!hidden.has("role") && <th className="text-left px-6 py-4">Role</th>}
+              {!hidden.has("status") && <th className="text-left px-6 py-4">Status</th>}
+              {!hidden.has("songs") && <th className="text-right px-6 py-4">Songs</th>}
+              {!hidden.has("revenue") && <th className="text-right px-6 py-4">Revenue</th>}
+              {!hidden.has("joined") && <th className="text-left px-6 py-4">Joined</th>}
               <th className="px-6 py-4"></th>
             </tr>
           </thead>
@@ -231,7 +275,11 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
                       <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold">
                         {u.artistName.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase()}
                       </div>
-                      <span className="text-white font-medium">{u.artistName}</span>
+                      {!u.isAdmin && u.status === "APPROVED" ? (
+                        <button onClick={() => handleViewAs(u)} title="View as this artist" className="text-left text-white font-medium transition-colors hover:text-indigo-400 hover:underline">{u.artistName}</button>
+                      ) : (
+                        <span className="text-white font-medium">{u.artistName}</span>
+                      )}
                       {u.id === currentUserId && <span className="text-xs bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded">You</span>}
                       {u.unreadMessages > 0 && (
                         <button onClick={() => openThread(u)} className="inline-flex items-center gap-1 text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded hover:bg-red-500/30" title="Unread messages">
@@ -240,44 +288,48 @@ export default function AdminClient({ users, currentUserId }: { users: UserRow[]
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{u.email}</td>
+                  {!hidden.has("email") && <td className="px-6 py-4 text-[#8b8fa8] text-sm">{u.email}</td>}
+                  {!hidden.has("role") && (
+                    <td className="px-6 py-4">
+                      {u.isAdmin
+                        ? <span className="flex items-center gap-1 text-amber-400 text-xs"><Shield className="w-3 h-3" /> Admin</span>
+                        : <span className="flex items-center gap-1 text-[#8b8fa8] text-xs"><User className="w-3 h-3" /> Artist</span>}
+                    </td>
+                  )}
+                  {!hidden.has("status") && (
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusBadge[u.status] || "bg-gray-500/20 text-gray-400"}`}>{u.status}</span>
+                    </td>
+                  )}
+                  {!hidden.has("songs") && <td className="px-6 py-4 text-right text-[#8b8fa8] text-sm">{u.songs}</td>}
+                  {!hidden.has("revenue") && <td className="px-6 py-4 text-right text-green-400 text-sm">${u.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>}
+                  {!hidden.has("joined") && <td className="px-6 py-4 text-[#8b8fa8] text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>}
                   <td className="px-6 py-4">
-                    {u.isAdmin
-                      ? <span className="flex items-center gap-1 text-amber-400 text-xs"><Shield className="w-3 h-3" /> Admin</span>
-                      : <span className="flex items-center gap-1 text-[#8b8fa8] text-xs"><User className="w-3 h-3" /> Artist</span>}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${statusBadge[u.status] || "bg-gray-500/20 text-gray-400"}`}>{u.status}</span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-[#8b8fa8] text-sm">{u.songs}</td>
-                  <td className="px-6 py-4 text-right text-green-400 text-sm">${u.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</td>
-                  <td className="px-6 py-4 text-[#8b8fa8] text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setExpandedId(expandedId === u.id ? null : u.id)} className="text-[#8b8fa8] hover:text-white" title="Details">
-                        {expandedId === u.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <div className="flex gap-1.5">
+                      <button onClick={() => setExpandedId(expandedId === u.id ? null : u.id)} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-white transition-colors" title="Details">
+                        {expandedId === u.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                       </button>
                       {!u.isAdmin && u.status === "APPROVED" && (
-                        <button onClick={() => openThread(u)} className="relative text-[#8b8fa8] hover:text-indigo-400" title="Messages">
-                          <MessageSquare className="w-4 h-4" />
+                        <button onClick={() => openThread(u)} className="relative p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-indigo-400 transition-colors" title="Messages">
+                          <MessageSquare className="w-5 h-5" />
                           {u.unreadMessages > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{u.unreadMessages}</span>
+                            <span className="absolute top-0.5 right-0.5 min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">{u.unreadMessages}</span>
                           )}
                         </button>
                       )}
                       {!u.isAdmin && u.status === "APPROVED" && (
-                        <button onClick={() => handleViewAs(u)} className="text-[#8b8fa8] hover:text-indigo-400" title="View as this artist"><Eye className="w-4 h-4" /></button>
+                        <button onClick={() => handleViewAs(u)} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-indigo-400 transition-colors" title="View as this artist"><Eye className="w-5 h-5" /></button>
                       )}
-                      <button onClick={() => { setEditing(u); setError(""); }} className="text-[#8b8fa8] hover:text-indigo-400" title="Edit"><Pencil className="w-4 h-4" /></button>
+                      <button onClick={() => { setEditing(u); setError(""); }} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-indigo-400 transition-colors" title="Edit"><Pencil className="w-5 h-5" /></button>
                       {u.id !== currentUserId && (
-                        <button onClick={() => handleDelete(u)} className="text-[#8b8fa8] hover:text-red-400" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(u)} className="p-2 rounded-lg text-[#8b8fa8] hover:bg-[#2a2d3a] hover:text-red-400 transition-colors" title="Delete"><Trash2 className="w-5 h-5" /></button>
                       )}
                     </div>
                   </td>
                 </tr>
                 {expandedId === u.id && (
                   <tr key={u.id + "-exp"} className="border-b border-[#2a2d3a] bg-[#161820]">
-                    <td colSpan={8} className="px-6 py-4">
+                    <td colSpan={visibleColCount} className="px-6 py-4">
                       <div className="grid grid-cols-4 gap-4 text-sm">
                         <div><p className="text-[#8b8fa8]">User ID</p><p className="text-white font-mono text-xs">{u.id}</p></div>
                         <div><p className="text-[#8b8fa8]">Songs in catalog</p><p className="text-white">{u.songs}</p></div>
