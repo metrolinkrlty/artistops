@@ -120,20 +120,37 @@ export default function WebsiteClient({
   const [pending, startTransition] = useTransition();
   const [font, setFont] = useState(site?.fontFamily ?? DEFAULT_FONT);
 
-  // The address pool that drives the dropdowns. Editing the list updates the
-  // dropdown options live.
-  const [availableText, setAvailableText] = useState(
-    (site?.availableEmails ?? []).join("\n")
-  );
+  // The address pool that drives the dropdowns. A locked list so addresses can't
+  // be deleted by accident — each row is locked (checked) by default; uncheck to
+  // edit or remove it. Editing updates the dropdown options live.
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const [emails, setEmails] = useState<string[]>(() => (site?.availableEmails ?? []).filter(Boolean));
+  const [unlocked, setUnlocked] = useState<Set<number>>(new Set());
+  const [newEmail, setNewEmail] = useState("");
   const emailOptions = Array.from(
     new Set([
-      ...availableText
-        .split(/[\n,]+/)
-        .map((e) => e.trim().toLowerCase())
-        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
+      ...emails.map((e) => e.trim().toLowerCase()).filter((e) => emailRe.test(e)),
       ...(isAdmin ? ADMIN_ONLY_EMAILS : []),
     ])
   );
+  // Serialized for the save action (unchanged server-side: newline/comma list).
+  const availableEmailsValue = emails.map((e) => e.trim()).filter(Boolean).join("\n");
+  function toggleLock(i: number) {
+    setUnlocked((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n; });
+  }
+  function updateEmail(i: number, val: string) {
+    setEmails((list) => list.map((e, idx) => (idx === i ? val : e)));
+  }
+  function removeEmail(i: number) {
+    setEmails((list) => list.filter((_, idx) => idx !== i));
+    setUnlocked(new Set()); // re-lock the rest after a removal
+  }
+  function addEmail() {
+    const v = newEmail.trim().toLowerCase();
+    if (!emailRe.test(v) || emails.some((e) => e.trim().toLowerCase() === v)) { setNewEmail(""); return; }
+    setEmails((list) => [...list, v]);
+    setNewEmail("");
+  }
   // Controlled so React 19's post-submit form reset doesn't snap these back to
   // "none" (the uncontrolled version reverted every save).
   const [emailSel, setEmailSel] = useState<Record<string, string>>({
@@ -444,16 +461,65 @@ export default function WebsiteClient({
             </p>
 
             <Field label="Your email addresses">
-              <textarea
-                name="availableEmails"
-                value={availableText}
-                onChange={(e) => setAvailableText(e.target.value)}
-                rows={3}
-                placeholder={"you@yourbandname.com\nbookings@yourbandname.com\nhello@yourbandname.com"}
-                className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
-              />
-              <span className="text-xs text-muted-foreground">
-                One per line. These populate the dropdowns below.
+              <div className="space-y-2">
+                {emails.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No addresses yet — add one below.</p>
+                )}
+                {emails.map((email, i) => {
+                  const isUnlocked = unlocked.has(i);
+                  return (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!isUnlocked}
+                        onChange={() => toggleLock(i)}
+                        title={isUnlocked ? "Check to lock (protect from edits)" : "Uncheck to edit or remove this address"}
+                        className="accent-primary"
+                        aria-label={isUnlocked ? "Lock address" : "Unlock address to edit or remove"}
+                      />
+                      {isUnlocked ? (
+                        <input
+                          value={email}
+                          onChange={(e) => updateEmail(i, e.target.value)}
+                          className="flex-1 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+                        />
+                      ) : (
+                        <span className="flex-1 truncate px-2.5 py-1.5 text-sm">{email}</span>
+                      )}
+                      {isUnlocked && (
+                        <button
+                          type="button"
+                          onClick={() => removeEmail(i)}
+                          title="Remove this address"
+                          className="shrink-0 rounded-lg border border-input px-2.5 py-1.5 text-xs text-red-500 transition hover:border-red-500 hover:bg-red-500/10"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmail(); } }}
+                    placeholder="add another address — name@yourdomain.com"
+                    className="flex-1 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={addEmail}
+                    className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    Add
+                  </button>
+                </div>
+                {/* Serialized value the save action reads (unchanged server-side). */}
+                <input type="hidden" name="availableEmails" value={availableEmailsValue} />
+              </div>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Each address is <strong>locked&nbsp;☑</strong> so it can&rsquo;t be deleted by accident. Uncheck a row to edit or remove it. These populate the dropdowns below.
                 {isAdmin && " Admin addresses are always available."}
               </span>
             </Field>
