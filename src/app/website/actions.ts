@@ -230,7 +230,8 @@ export async function getSubscribers() {
 export async function emailMyList(
   from: string,
   subject: string,
-  message: string
+  message: string,
+  recipients: string[]
 ): Promise<{ ok: boolean; error?: string; sent?: number }> {
   const userId = await requireUserId();
   const fromAddr = from.trim().toLowerCase();
@@ -246,27 +247,59 @@ export async function emailMyList(
   const allowed = new Set((site?.availableEmails ?? []).map((e) => e.trim().toLowerCase()));
   if (!allowed.has(fromAddr)) return { ok: false, error: "That From address isn't in your saved list." };
 
+  // Only the selected recipients that are still subscribed. Unsubscribed people
+  // are excluded here regardless of what the client sent.
+  const wanted = new Set(recipients.map((e) => e.trim().toLowerCase()));
   const subs = await prisma.mailingSubscriber.findMany({
-    where: { OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])] },
-    select: { email: true },
+    where: { OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])], unsubscribed: false },
+    select: { id: true, email: true, unsubToken: true },
   });
-  const unique = Array.from(new Set(subs.map((s) => s.email).filter(Boolean)));
-  if (unique.length === 0) return { ok: false, error: "You have no subscribers yet." };
-  if (unique.length > 500) return { ok: false, error: "Lists over 500 need batched sending — not available yet." };
+  const seen = new Set<string>();
+  const targets = subs.filter((s) => {
+    const e = s.email.toLowerCase();
+    if (!wanted.has(e) || seen.has(e)) return false;
+    seen.add(e);
+    return true;
+  });
+  if (targets.length === 0) return { ok: false, error: "No eligible recipients selected." };
+  if (targets.length > 2000) return { ok: false, error: "Too many recipients for one send." };
 
+  // Give every recipient a one-click unsubscribe token.
+  const { randomUUID } = await import("node:crypto");
+  await Promise.all(
+    targets.map(async (t) => {
+      if (!t.unsubToken) {
+        t.unsubToken = randomUUID();
+        await prisma.mailingSubscriber.update({ where: { id: t.id }, data: { unsubToken: t.unsubToken } });
+      }
+    })
+  );
+
+  const base = process.env.APP_URL || "https://artistops.net";
   const who = site?.displayName || "Your artist";
   const esc = (s: string) => s.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
   const fromHeader = `${who} <${fromAddr}>`;
-  const html =
-    `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(cleanMessage)}</div>` +
-    `<hr style="margin:20px 0;border:none;border-top:1px solid #eee">` +
-    `<p style="color:#999;font-size:12px">You&rsquo;re receiving this because you joined ${esc(who)}&rsquo;s mailing list. Reply with &ldquo;unsubscribe&rdquo; to opt out.</p>`;
+  const bodyHtml = `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(cleanMessage)}</div>`;
 
+  // Batched: 20 in parallel per chunk, chunks sequential.
   let sent = 0;
-  for (const to of unique) {
-    // Reply-To = the From address so replies come back to it.
-    const res = await sendEmail(to, cleanSubject, html, fromAddr, fromHeader).catch(() => ({ ok: false, skipped: false }));
-    if (res.ok || (res as { skipped?: boolean }).skipped) sent++;
+  for (let i = 0; i < targets.length; i += 20) {
+    const chunk = targets.slice(i, i + 20);
+    const results = await Promise.all(
+      chunk.map((t) => {
+        const unsub = `${base}/api/unsubscribe?t=${t.unsubToken}`;
+        const html =
+          bodyHtml +
+          `<hr style="margin:20px 0;border:none;border-top:1px solid #eee">` +
+          `<p style="color:#999;font-size:12px">You&rsquo;re receiving this because you joined ${esc(who)}&rsquo;s mailing list. <a href="${unsub}" style="color:#999">Unsubscribe</a>.</p>`;
+        // Reply-To = the From address; List-Unsubscribe enables Gmail's native button.
+        return sendEmail(t.email, cleanSubject, html, fromAddr, fromHeader, {
+          "List-Unsubscribe": `<${unsub}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        }).catch(() => ({ ok: false, skipped: false }));
+      })
+    );
+    sent += results.filter((r) => r.ok || (r as { skipped?: boolean }).skipped).length;
   }
   return { ok: true, sent };
 }

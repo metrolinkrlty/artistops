@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 // Sends transactional email. Prefers Resend (RESEND_API_KEY + RESEND_FROM);
 // falls back to InMotion SMTP (SMTP_HOST/PORT/USER/PASS) if Resend isn't set.
 // If neither is configured, it skips gracefully instead of throwing.
-export async function sendEmail(to: string, subject: string, html: string, replyTo?: string, from?: string): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+export async function sendEmail(to: string, subject: string, html: string, replyTo?: string, from?: string, headers?: Record<string, string>): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
   // Prefer the artist's own SMTP mail server (InMotion) when configured.
   // Only fall back to Resend if SMTP isn't set up.
   const host = process.env.SMTP_HOST;
@@ -23,6 +23,7 @@ export async function sendEmail(to: string, subject: string, html: string, reply
         from: from || `ArtistOps <${user}>`,
         to, subject, html,
         ...(replyTo ? { replyTo } : {}),
+        ...(headers ? { headers } : {}),
       });
 
       return { ok: true };
@@ -50,6 +51,7 @@ export async function sendEmail(to: string, subject: string, html: string, reply
           subject,
           html,
           ...(replyTo ? { reply_to: replyTo } : {}),
+          ...(headers ? { headers } : {}),
         }),
       });
       if (!res.ok) {

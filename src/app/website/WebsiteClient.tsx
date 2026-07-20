@@ -82,6 +82,7 @@ type Subscriber = {
   name: string | null;
   notifyOptIn: boolean;
   source: string | null;
+  unsubscribed: boolean;
   createdAt: Date;
 };
 
@@ -167,11 +168,24 @@ export default function WebsiteClient({
   const [blastBody, setBlastBody] = useState("");
   const [blasting, setBlasting] = useState(false);
   const [blastMsg, setBlastMsg] = useState<string | null>(null);
+  // Recipient selection — default all subscribed; unsubscribed can never be picked.
+  const selectableEmails = subscribers.filter((s) => !s.unsubscribed).map((s) => s.email);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(selectableEmails));
+  const allSelected = selectableEmails.length > 0 && selectableEmails.every((e) => selected.has(e));
+  const selectedCount = selectableEmails.filter((e) => selected.has(e)).length;
+  function toggleRecipient(email: string) {
+    setSelected((s) => { const n = new Set(s); if (n.has(email)) n.delete(email); else n.add(email); return n; });
+  }
+  function toggleAllRecipients() {
+    setSelected(allSelected ? new Set() : new Set(selectableEmails));
+  }
   async function sendListEmail() {
+    const recipients = selectableEmails.filter((e) => selected.has(e));
     if (!blastFrom || !blastSubject.trim() || !blastBody.trim()) { setBlastMsg("Pick a From address, subject, and message."); return; }
-    if (!confirm(`Send this email to ${subscribers.length} subscriber${subscribers.length === 1 ? "" : "s"}?`)) return;
+    if (recipients.length === 0) { setBlastMsg("Select at least one recipient."); return; }
+    if (!confirm(`Send this email to ${recipients.length} subscriber${recipients.length === 1 ? "" : "s"}?`)) return;
     setBlasting(true); setBlastMsg(null);
-    const res = await emailMyList(blastFrom, blastSubject, blastBody);
+    const res = await emailMyList(blastFrom, blastSubject, blastBody, recipients);
     setBlasting(false);
     if (res.ok) { setBlastMsg(`Sent to ${res.sent} subscriber${res.sent === 1 ? "" : "s"}.`); setBlastSubject(""); setBlastBody(""); }
     else setBlastMsg(res.error || "Could not send.");
@@ -616,6 +630,9 @@ export default function WebsiteClient({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="py-2 pr-3 font-medium" title="Include in broadcast">
+                    <input type="checkbox" checked={allSelected} onChange={toggleAllRecipients} className="accent-primary" aria-label="Select all recipients" />
+                  </th>
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Notify</th>
                   <th className="py-2 pr-4 font-medium">Source</th>
@@ -625,9 +642,13 @@ export default function WebsiteClient({
               </thead>
               <tbody>
                 {subscribers.map((s) => (
-                  <SubscriberRow key={s.id} sub={s} onDelete={() =>
-                    startTransition(() => { deleteSubscriber(s.id); })
-                  } />
+                  <SubscriberRow
+                    key={s.id}
+                    sub={s}
+                    checked={selected.has(s.email)}
+                    onToggle={() => toggleRecipient(s.email)}
+                    onDelete={() => startTransition(() => { deleteSubscriber(s.id); })}
+                  />
                 ))}
               </tbody>
             </table>
@@ -638,7 +659,7 @@ export default function WebsiteClient({
         <div className="mt-6 rounded-lg border border-border p-4">
           <h3 className="text-sm font-semibold">Email your list</h3>
           <p className="mb-3 text-xs text-muted-foreground">
-            Send a message to all {subscribers.length} subscriber{subscribers.length === 1 ? "" : "s"}. Replies come back to the From address you choose.
+            Goes to the <strong>{selectedCount}</strong> selected subscriber{selectedCount === 1 ? "" : "s"} (uncheck anyone in the list above to skip them; unsubscribed people can&rsquo;t be selected). Replies come back to the From address you choose, and every email includes a one-click unsubscribe link.
           </p>
           <div className="grid gap-3">
             <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
@@ -671,8 +692,8 @@ export default function WebsiteClient({
               className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
             />
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={sendListEmail} disabled={blasting || subscribers.length === 0}>
-                {blasting ? "Sending…" : `Send to ${subscribers.length} subscriber${subscribers.length === 1 ? "" : "s"}`}
+              <Button onClick={sendListEmail} disabled={blasting || selectedCount === 0}>
+                {blasting ? "Sending…" : `Send to ${selectedCount} subscriber${selectedCount === 1 ? "" : "s"}`}
               </Button>
               {blastMsg && <span className="text-sm text-muted-foreground">{blastMsg}</span>}
             </div>
@@ -914,6 +935,9 @@ function ImageManager({
   disabled: boolean;
 }) {
   const router = useRouter();
+  // A photo lives in exactly one place: the public gallery wins, so never list a
+  // gallery photo in the hidden section (guards against stale data in both lists).
+  const hiddenOnly = hiddenGalleryImages.filter((u) => !galleryImages.includes(u));
   const [busy, setBusy] = useState<"hero" | "gallery" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const heroInput = useRef<HTMLInputElement>(null);
@@ -1092,7 +1116,7 @@ function ImageManager({
           )}
           <div className="mb-3">
             <p className="mb-2 text-xs font-medium text-muted-foreground">
-              Hidden from your public gallery ({hiddenGalleryImages.length}) — kept in your library. Drag photos in or out to hide or show them.
+              Hidden from your public gallery ({hiddenOnly.length}) — kept in your library. Drag photos in or out to hide or show them.
             </p>
             <div
               className={`grid grid-cols-3 gap-3 rounded-lg sm:grid-cols-5 ${dropZone === "hidden" ? "outline outline-2 outline-dashed outline-primary" : ""}`}
@@ -1100,12 +1124,12 @@ function ImageManager({
               onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropZone(null); }}
               onDrop={(e) => { if (dragSource.current === "gallery" && dragUrl.current) { e.preventDefault(); moveToHidden(dragUrl.current); } setDropZone(null); }}
             >
-              {hiddenGalleryImages.length === 0 && (
+              {hiddenOnly.length === 0 && (
                 <div className="col-span-full rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
                   Drag a gallery photo here to hide it from your public site.
                 </div>
               )}
-              {hiddenGalleryImages.map((url) => (
+              {hiddenOnly.map((url) => (
                 <div
                   key={url}
                   draggable
@@ -1173,15 +1197,28 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-function SubscriberRow({ sub, onDelete }: { sub: Subscriber; onDelete: () => void }) {
+function SubscriberRow({ sub, checked, onToggle, onDelete }: { sub: Subscriber; checked: boolean; onToggle: () => void; onDelete: () => void }) {
   return (
-    <tr className="border-b border-border/60">
+    <tr className={`border-b border-border/60 ${sub.unsubscribed ? "opacity-60" : ""}`}>
+      <td className="py-2.5 pr-3">
+        <input
+          type="checkbox"
+          checked={checked && !sub.unsubscribed}
+          onChange={onToggle}
+          disabled={sub.unsubscribed}
+          className="accent-primary disabled:cursor-not-allowed"
+          title={sub.unsubscribed ? "Unsubscribed — can't be emailed" : "Include in broadcast"}
+          aria-label="Include in broadcast"
+        />
+      </td>
       <td className="py-2.5 pr-4">
         <span className="font-medium text-foreground">{sub.email}</span>
         {sub.name && <span className="ml-2 text-muted-foreground">{sub.name}</span>}
       </td>
       <td className="py-2.5 pr-4">
-        {sub.notifyOptIn ? (
+        {sub.unsubscribed ? (
+          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-500">Unsubscribed</span>
+        ) : sub.notifyOptIn ? (
           <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-500">Opted in</span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>

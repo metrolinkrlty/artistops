@@ -644,15 +644,18 @@ model SiteTrack {
 // to hear about future releases and show dates (vs. an email captured only to
 // unlock a full track). One email per site.
 model MailingSubscriber {
-  id          String   @id @default(cuid())
-  userId      String?
-  site        String
-  email       String
-  name        String?
-  notifyOptIn Boolean  @default(false)
-  source      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String    @id @default(cuid())
+  userId         String?
+  site           String
+  email          String
+  name           String?
+  notifyOptIn    Boolean   @default(false)
+  source         String?
+  unsubscribed   Boolean   @default(false) // opted out of artist broadcasts — never re-selectable
+  unsubscribedAt DateTime?
+  unsubToken     String?   @unique // one-click unsubscribe token (set when first emailed)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   @@unique([site, email])
   @@index([userId])
   @@index([site])
