@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, Fragment, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   saveArtistSite,
   deleteSubscriber,
+  emailMyList,
   uploadSiteImage,
   clearHeroImage,
   removeGalleryImage,
@@ -69,7 +70,7 @@ type ArtistSite = {
 const ADMIN_ONLY_EMAILS = ["hello@artistops.net"];
 
 const EMAIL_FIELDS: { key: "contactEmail" | "notifyEmail" | "mailFromEmail" | "mailReplyTo"; label: string; hint: string; placeholder: string }[] = [
-  { key: "contactEmail", label: "Contact / booking email", hint: "Shown publicly on your website for fans and bookers.", placeholder: "booking@yourdomain.com" },
+  { key: "contactEmail", label: "Contact / booking email", hint: "Where your website's booking form sends inquiries. Not shown publicly.", placeholder: "booking@yourdomain.com" },
   { key: "notifyEmail", label: "Notify me of new signups", hint: "Private — we email you here when someone joins your mailing list.", placeholder: "you@yourdomain.com" },
   { key: "mailFromEmail", label: "Mailing list — From address", hint: "The From address on emails you send to your list.", placeholder: "hello@yourdomain.com" },
   { key: "mailReplyTo", label: "Mailing list — Reply-To", hint: "Where replies to your mailing-list emails go.", placeholder: "you@yourdomain.com" },
@@ -159,6 +160,22 @@ export default function WebsiteClient({
     mailFromEmail: site?.mailFromEmail ?? "",
     mailReplyTo: site?.mailReplyTo ?? "",
   });
+
+  // "Email my list" broadcast composer.
+  const [blastFrom, setBlastFrom] = useState(site?.mailFromEmail ?? "");
+  const [blastSubject, setBlastSubject] = useState("");
+  const [blastBody, setBlastBody] = useState("");
+  const [blasting, setBlasting] = useState(false);
+  const [blastMsg, setBlastMsg] = useState<string | null>(null);
+  async function sendListEmail() {
+    if (!blastFrom || !blastSubject.trim() || !blastBody.trim()) { setBlastMsg("Pick a From address, subject, and message."); return; }
+    if (!confirm(`Send this email to ${subscribers.length} subscriber${subscribers.length === 1 ? "" : "s"}?`)) return;
+    setBlasting(true); setBlastMsg(null);
+    const res = await emailMyList(blastFrom, blastSubject, blastBody);
+    setBlasting(false);
+    if (res.ok) { setBlastMsg(`Sent to ${res.sent} subscriber${res.sent === 1 ? "" : "s"}.`); setBlastSubject(""); setBlastBody(""); }
+    else setBlastMsg(res.error || "Could not send.");
+  }
 
   // onSubmit (not <form action=…>) so React 19 doesn't auto-reset the form after
   // saving — that reset was blanking the controlled dropdowns' DOM value until the
@@ -323,32 +340,35 @@ export default function WebsiteClient({
                 { value: "classic", title: "Classic", desc: "A song list with a player bar at the bottom — big play knob and a slider to scrub. The familiar look." },
                 { value: "simple", title: "Simple list", desc: "Just press play and listen. No moving effects — the most understated." },
               ].map((opt) => (
-                <label
-                  key={opt.value}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-input p-3 transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-                >
-                  <input
-                    type="radio"
-                    name="playerStyle"
-                    value={opt.value}
-                    defaultChecked={(site?.playerStyle ?? "waveform") === opt.value}
-                    className="mt-0.5 accent-primary"
-                  />
-                  <span className="text-sm">
-                    <span className="font-semibold">
-                      {opt.title}
-                      {opt.recommended && <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">Recommended</span>}
+                <Fragment key={opt.value}>
+                  <label
+                    className="flex cursor-pointer items-start gap-3 rounded-lg border border-input p-3 transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                  >
+                    <input
+                      type="radio"
+                      name="playerStyle"
+                      value={opt.value}
+                      defaultChecked={(site?.playerStyle ?? "waveform") === opt.value}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <span className="text-sm">
+                      <span className="font-semibold">
+                        {opt.title}
+                        {opt.recommended && <span className="ml-2 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">Recommended</span>}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{opt.desc}</span>
                     </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">{opt.desc}</span>
-                  </span>
-                </label>
+                  </label>
+                  {opt.value === "waveform" && (
+                    <label className="ml-8 flex w-fit cursor-pointer items-center gap-2 rounded-full border border-input px-3 py-1.5 text-sm font-medium transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+                      <input type="checkbox" name="showMusicNotes" defaultChecked={site?.showMusicNotes ?? true} className="accent-primary" />
+                      Music notes
+                      <span className="text-xs font-normal text-muted-foreground">— notes fly off the scrubber while a song plays</span>
+                    </label>
+                  )}
+                </Fragment>
               ))}
             </div>
-            <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-full border border-input px-3 py-1.5 text-sm font-medium transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/10">
-              <input type="checkbox" name="showMusicNotes" defaultChecked={site?.showMusicNotes ?? true} className="accent-primary" />
-              Music notes
-              <span className="text-xs font-normal text-muted-foreground">— little notes fly off the scrubber while a song plays (waveform player only)</span>
-            </label>
           </div>
           <div className="rounded-lg border border-border p-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
@@ -613,6 +633,54 @@ export default function WebsiteClient({
             </table>
           </div>
         )}
+
+        {/* Email your list */}
+        <div className="mt-6 rounded-lg border border-border p-4">
+          <h3 className="text-sm font-semibold">Email your list</h3>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Send a message to all {subscribers.length} subscriber{subscribers.length === 1 ? "" : "s"}. Replies come back to the From address you choose.
+          </p>
+          <div className="grid gap-3">
+            <div className="grid gap-3 sm:grid-cols-[220px_1fr]">
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-muted-foreground">From</span>
+                <select
+                  value={blastFrom}
+                  onChange={(e) => setBlastFrom(e.target.value)}
+                  className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+                >
+                  <option value="">— choose an address —</option>
+                  {emailOptions.map((addr) => <option key={addr} value={addr}>{addr}</option>)}
+                </select>
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs text-muted-foreground">Subject</span>
+                <input
+                  value={blastSubject}
+                  onChange={(e) => setBlastSubject(e.target.value)}
+                  placeholder="New song out now…"
+                  className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+                />
+              </label>
+            </div>
+            <textarea
+              value={blastBody}
+              onChange={(e) => setBlastBody(e.target.value)}
+              rows={5}
+              placeholder="Write your message…"
+              className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={sendListEmail} disabled={blasting || subscribers.length === 0}>
+                {blasting ? "Sending…" : `Send to ${subscribers.length} subscriber${subscribers.length === 1 ? "" : "s"}`}
+              </Button>
+              {blastMsg && <span className="text-sm text-muted-foreground">{blastMsg}</span>}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tip: add your own address as a subscriber and send a test first to check how it looks and lands.
+            </p>
+          </div>
+        </div>
       </section>
     </div>
   );

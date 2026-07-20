@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { mapSmartLinkToStreamLinks, mergeStreamLinks } from "@/lib/streamLinks";
 import { requireUserId } from "@/lib/session";
+import { sendEmail } from "@/lib/email";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
 import { SECTION_KEYS, type Show } from "./site-fields";
@@ -222,6 +223,52 @@ export async function getSubscribers() {
     },
     orderBy: { createdAt: "desc" },
   });
+}
+
+// Broadcast a message to all of this artist's subscribers. The From must be one
+// of the artist's own saved addresses; replies come back to it.
+export async function emailMyList(
+  from: string,
+  subject: string,
+  message: string
+): Promise<{ ok: boolean; error?: string; sent?: number }> {
+  const userId = await requireUserId();
+  const fromAddr = from.trim().toLowerCase();
+  const cleanSubject = subject.trim();
+  const cleanMessage = message.trim();
+  if (!cleanSubject || !cleanMessage) return { ok: false, error: "Add a subject and a message." };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromAddr)) return { ok: false, error: "Choose a valid From address." };
+
+  const site = await prisma.artistSite.findUnique({
+    where: { userId },
+    select: { slug: true, availableEmails: true, displayName: true },
+  });
+  const allowed = new Set((site?.availableEmails ?? []).map((e) => e.trim().toLowerCase()));
+  if (!allowed.has(fromAddr)) return { ok: false, error: "That From address isn't in your saved list." };
+
+  const subs = await prisma.mailingSubscriber.findMany({
+    where: { OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])] },
+    select: { email: true },
+  });
+  const unique = Array.from(new Set(subs.map((s) => s.email).filter(Boolean)));
+  if (unique.length === 0) return { ok: false, error: "You have no subscribers yet." };
+  if (unique.length > 500) return { ok: false, error: "Lists over 500 need batched sending — not available yet." };
+
+  const who = site?.displayName || "Your artist";
+  const esc = (s: string) => s.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
+  const fromHeader = `${who} <${fromAddr}>`;
+  const html =
+    `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(cleanMessage)}</div>` +
+    `<hr style="margin:20px 0;border:none;border-top:1px solid #eee">` +
+    `<p style="color:#999;font-size:12px">You&rsquo;re receiving this because you joined ${esc(who)}&rsquo;s mailing list. Reply with &ldquo;unsubscribe&rdquo; to opt out.</p>`;
+
+  let sent = 0;
+  for (const to of unique) {
+    // Reply-To = the From address so replies come back to it.
+    const res = await sendEmail(to, cleanSubject, html, fromAddr, fromHeader).catch(() => ({ ok: false, skipped: false }));
+    if (res.ok || (res as { skipped?: boolean }).skipped) sent++;
+  }
+  return { ok: true, sent };
 }
 
 const IMAGE_EXT: Record<string, string> = {

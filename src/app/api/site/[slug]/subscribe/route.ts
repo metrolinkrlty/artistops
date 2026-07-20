@@ -100,10 +100,9 @@ export async function POST(
     const who = site.displayName || slug;
     const subject = `New mailing-list signup — ${who}`;
     const html = signupNotificationHtml(who, email, notifyOptIn, source);
-    // Don't block the response or fail the signup if email is down.
-    sendEmail(site.notifyEmail, subject, html, site.mailReplyTo || undefined).catch(
-      () => {}
-    );
+    // Reply-To = the new subscriber, so the artist can just hit Reply to welcome
+    // them. Don't block the response or fail the signup if email is down.
+    sendEmail(site.notifyEmail, subject, html, email).catch(() => {});
   }
 
   return NextResponse.json({ ok: true }, { headers: CORS });
