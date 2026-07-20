@@ -663,9 +663,14 @@ model MailingSubscriber {
   name           String?
   notifyOptIn    Boolean   @default(false)
   source         String?
-  unsubscribed   Boolean   @default(false) // opted out of artist broadcasts — never re-selectable
+  unsubscribed   Boolean   @default(false) // opted out (only the listener can undo, by re-signing up)
   unsubscribedAt DateTime?
   unsubToken     String?   @unique // one-click unsubscribe token (set when first emailed)
+  resubscribed   Boolean   @default(false) // was unsubscribed, then signed up again
+  deleted        Boolean   @default(false) // soft-deleted by the artist (reversible)
+  deletedAt      DateTime?
+  signupCount    Int       @default(1) // # of signup submissions (debug play-gate re-subs)
+  blockedAttempts Int      @default(0) // website signups attempted while deleted (blocked)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   @@unique([site, email])

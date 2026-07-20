@@ -63,31 +63,55 @@ export async function POST(
     select: { userId: true, notifyEmail: true, mailReplyTo: true, displayName: true },
   });
 
-  // Only notify the artist about brand-new signups (not re-submits).
   const existing = await prisma.mailingSubscriber.findUnique({
     where: { site_email: { site: slug, email } },
-    select: { id: true },
+    select: { id: true, deleted: true, unsubscribed: true },
   });
 
+  // Notify only for a genuine (re)join, not a plain repeat signup or a blocked one.
+  let notifyKind: "new" | "resub" | null = null;
   try {
-    await prisma.mailingSubscriber.upsert({
-      where: { site_email: { site: slug, email } },
-      create: {
-        site: slug,
-        email,
-        name,
-        notifyOptIn,
-        source,
-        userId: site?.userId ?? null,
-      },
-      update: {
-        // Never downgrade an existing opt-in; upgrade to true if they opt in now.
-        ...(notifyOptIn ? { notifyOptIn: true } : {}),
-        ...(name ? { name } : {}),
-        ...(source ? { source } : {}),
-        ...(site?.userId ? { userId: site.userId } : {}),
-      },
-    });
+    if (!existing) {
+      // Brand-new subscriber.
+      await prisma.mailingSubscriber.create({
+        data: { site: slug, email, name, notifyOptIn, source, userId: site?.userId ?? null, signupCount: 1 },
+      });
+      notifyKind = "new";
+    } else if (existing.deleted) {
+      // Deleted email can't be re-added from the website — record the blocked attempt.
+      await prisma.mailingSubscriber.update({
+        where: { id: existing.id },
+        data: { blockedAttempts: { increment: 1 } },
+      });
+    } else if (existing.unsubscribed) {
+      // They opted out before and are signing up again → re-subscribed.
+      await prisma.mailingSubscriber.update({
+        where: { id: existing.id },
+        data: {
+          unsubscribed: false,
+          unsubscribedAt: null,
+          resubscribed: true,
+          signupCount: { increment: 1 },
+          ...(notifyOptIn ? { notifyOptIn: true } : {}),
+          ...(name ? { name } : {}),
+          ...(source ? { source } : {}),
+          ...(site?.userId ? { userId: site.userId } : {}),
+        },
+      });
+      notifyKind = "resub";
+    } else {
+      // Already subscribed — a repeat submission (this counter surfaces play-gate re-subs).
+      await prisma.mailingSubscriber.update({
+        where: { id: existing.id },
+        data: {
+          signupCount: { increment: 1 },
+          ...(notifyOptIn ? { notifyOptIn: true } : {}),
+          ...(name ? { name } : {}),
+          ...(source ? { source } : {}),
+          ...(site?.userId ? { userId: site.userId } : {}),
+        },
+      });
+    }
   } catch {
     return NextResponse.json(
       { ok: false, error: "Could not save. Try again." },
@@ -95,13 +119,12 @@ export async function POST(
     );
   }
 
-  // Fire-and-forget notification to the artist's chosen address (if set).
-  if (!existing && site?.notifyEmail) {
+  // Fire-and-forget notification for a new or re-subscribed listener.
+  if (notifyKind && site?.notifyEmail) {
     const who = site.displayName || slug;
-    const subject = `New mailing-list signup — ${who}`;
+    const subject = `${notifyKind === "resub" ? "Re-subscribe" : "New mailing-list signup"} — ${who}`;
     const html = signupNotificationHtml(who, email, notifyOptIn, source);
-    // Reply-To = the new subscriber, so the artist can just hit Reply to welcome
-    // them. Don't block the response or fail the signup if email is down.
+    // Reply-To = the subscriber, so the artist can just hit Reply.
     sendEmail(site.notifyEmail, subject, html, email).catch(() => {});
   }
 

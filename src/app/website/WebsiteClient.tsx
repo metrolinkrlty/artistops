@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   saveArtistSite,
-  deleteSubscriber,
+  setSubscriberDeleted,
+  purgeSubscriber,
   emailMyList,
   saveMailingList,
   deleteMailingList,
@@ -86,6 +87,10 @@ type Subscriber = {
   notifyOptIn: boolean;
   source: string | null;
   unsubscribed: boolean;
+  resubscribed: boolean;
+  deleted: boolean;
+  signupCount: number;
+  blockedAttempts: number;
   createdAt: Date;
 };
 
@@ -177,7 +182,7 @@ export default function WebsiteClient({
   const [blastMsg, setBlastMsg] = useState<string | null>(null);
   // Recipient selection — default to the last-saved list (most recent), else ALL.
   // Unsubscribed can never be picked.
-  const selectableEmails = subscribers.filter((s) => !s.unsubscribed).map((s) => s.email);
+  const selectableEmails = subscribers.filter((s) => !s.unsubscribed && !s.deleted).map((s) => s.email);
   const selectableSet = new Set(selectableEmails);
   const [selected, setSelected] = useState<Set<string>>(() => {
     const last = mailingLists[0];
@@ -724,6 +729,7 @@ export default function WebsiteClient({
                     <input type="checkbox" checked={allSelected} onChange={toggleAllRecipients} className="accent-primary" aria-label="Select all recipients" />
                   </th>
                   <th className="py-2 pr-4 font-medium">Email</th>
+                  <th className="py-2 pr-4 font-medium">Status</th>
                   <th className="py-2 pr-4 font-medium">Notify</th>
                   <th className="py-2 pr-4 font-medium">Source</th>
                   <th className="py-2 pr-4 font-medium">Added</th>
@@ -735,11 +741,13 @@ export default function WebsiteClient({
                   <SubscriberRow
                     key={s.id}
                     sub={s}
+                    isAdmin={isAdmin}
                     checked={selected.has(s.email)}
                     onToggle={() => toggleRecipient(s.email)}
-                    onDelete={() => {
-                      if (!confirm(`Remove ${s.email} from your list? This permanently deletes the subscriber (not just from a saved list).`)) return;
-                      startTransition(() => { deleteSubscriber(s.id); });
+                    onToggleDeleted={() => startTransition(() => { setSubscriberDeleted(s.id, !s.deleted).then(() => router.refresh()); })}
+                    onPurge={() => {
+                      if (!confirm(`Permanently delete ${s.email}? This can't be undone.`)) return;
+                      startTransition(() => { purgeSubscriber(s.id).then(() => router.refresh()); });
                     }}
                   />
                 ))}
@@ -1290,17 +1298,20 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
-function SubscriberRow({ sub, checked, onToggle, onDelete }: { sub: Subscriber; checked: boolean; onToggle: () => void; onDelete: () => void }) {
+function SubscriberRow({ sub, isAdmin, checked, onToggle, onToggleDeleted, onPurge }: {
+  sub: Subscriber; isAdmin: boolean; checked: boolean; onToggle: () => void; onToggleDeleted: () => void; onPurge: () => void;
+}) {
+  const eligible = !sub.unsubscribed && !sub.deleted;
   return (
-    <tr className={`border-b border-border/60 ${sub.unsubscribed ? "opacity-60" : ""}`}>
+    <tr className={`border-b border-border/60 ${!eligible ? "opacity-60" : ""}`}>
       <td className="py-2.5 pr-3">
         <input
           type="checkbox"
-          checked={checked && !sub.unsubscribed}
+          checked={checked && eligible}
           onChange={onToggle}
-          disabled={sub.unsubscribed}
+          disabled={!eligible}
           className="accent-primary disabled:cursor-not-allowed"
-          title={sub.unsubscribed ? "Unsubscribed — can't be emailed" : "Include in broadcast"}
+          title={sub.deleted ? "Deleted — can't be emailed" : sub.unsubscribed ? "Unsubscribed — can't be emailed" : "Include in broadcast"}
           aria-label="Include in broadcast"
         />
       </td>
@@ -1309,10 +1320,27 @@ function SubscriberRow({ sub, checked, onToggle, onDelete }: { sub: Subscriber; 
         {sub.name && <span className="ml-2 text-muted-foreground">{sub.name}</span>}
       </td>
       <td className="py-2.5 pr-4">
-        {sub.unsubscribed ? (
-          <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-500">Unsubscribed</span>
-        ) : sub.notifyOptIn ? (
-          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-500">Opted in</span>
+        <div className="flex flex-wrap items-center gap-1">
+          {sub.deleted ? (
+            <button type="button" onClick={onToggleDeleted} title="Click to undelete" className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-medium text-red-500 transition hover:bg-red-500/25">Deleted</button>
+          ) : sub.unsubscribed ? (
+            <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-xs text-yellow-600 dark:text-yellow-500" title="Only the listener can undo this, by re-signing up">Unsubscribed</span>
+          ) : sub.resubscribed ? (
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-500" title="Unsubscribed before, then signed up again">Re-subscribed</span>
+          ) : (
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-500">Subscribed</span>
+          )}
+          {sub.signupCount >= 2 && (
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-500" title="Number of signup submissions (watch for play-gate re-subs)">×{sub.signupCount}</span>
+          )}
+          {sub.blockedAttempts >= 1 && (
+            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-500" title="Website re-add attempts blocked while deleted">{sub.blockedAttempts} blocked</span>
+          )}
+        </div>
+      </td>
+      <td className="py-2.5 pr-4">
+        {sub.notifyOptIn ? (
+          <span className="rounded-full bg-primary/15 px-2 py-0.5 text-xs text-primary">Opted in</span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
         )}
@@ -1325,8 +1353,11 @@ function SubscriberRow({ sub, checked, onToggle, onDelete }: { sub: Subscriber; 
       <td className="py-2.5 pr-4 text-muted-foreground">
         {new Date(sub.createdAt).toLocaleDateString()}
       </td>
-      <td className="py-2.5 text-right">
-        <Button variant="ghost" size="xs" onClick={onDelete}>Remove</Button>
+      <td className="py-2.5 text-right whitespace-nowrap">
+        <Button variant="ghost" size="xs" onClick={onToggleDeleted}>{sub.deleted ? "Undelete" : "Delete"}</Button>
+        {isAdmin && sub.deleted && (
+          <Button variant="ghost" size="xs" onClick={onPurge} className="text-red-500" title="Admin: permanently remove this record">Purge</Button>
+        )}
       </td>
     </tr>
   );

@@ -251,7 +251,7 @@ export async function emailMyList(
   // are excluded here regardless of what the client sent.
   const wanted = new Set(recipients.map((e) => e.trim().toLowerCase()));
   const subs = await prisma.mailingSubscriber.findMany({
-    where: { OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])], unsubscribed: false },
+    where: { OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])], unsubscribed: false, deleted: false },
     select: { id: true, email: true, unsubToken: true },
   });
   const seen = new Set<string>();
@@ -611,17 +611,25 @@ export async function reorderSiteTracks(ids: string[]) {
   revalidatePath("/website");
 }
 
-export async function deleteSubscriber(id: string) {
+// Soft-delete toggle (reversible). Deleted subscribers can't be emailed or added
+// to a list; undeleting restores their prior subscription state (green if they
+// were subscribed, yellow if they'd unsubscribed).
+export async function setSubscriberDeleted(id: string, deleted: boolean) {
   const userId = await requireUserId();
-  const site = await prisma.artistSite.findUnique({
-    where: { userId },
-    select: { slug: true },
-  });
-  await prisma.mailingSubscriber.deleteMany({
-    where: {
-      id,
-      OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])],
-    },
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  await prisma.mailingSubscriber.updateMany({
+    where: { id, OR: [{ userId }, ...(site ? [{ site: site.slug }] : [])] },
+    data: { deleted, deletedAt: deleted ? new Date() : null },
   });
   revalidatePath("/website");
+}
+
+// Admin-only hard delete — permanently removes the record (junk/test cleanup).
+export async function purgeSubscriber(id: string): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
+  if (!me?.isAdmin) return { ok: false, error: "Admins only." };
+  await prisma.mailingSubscriber.deleteMany({ where: { id } });
+  revalidatePath("/website");
+  return { ok: true };
 }
