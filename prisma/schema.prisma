@@ -495,6 +495,7 @@ model ArtistSite {
   footerText      String?  // custom line shown in the public site footer
   playerStyle     String   @default("waveform") // music player look: "waveform" | "shade" | "simple" | "classic"
   showStreamLinks Boolean  @default(true)  // show per-song streaming links on the site at all
+  showMusicNotes  Boolean  @default(true)  // fly music notes off the waveform player's leading edge while playing
   streamLinksAfterGate Boolean @default(false) // false = show before/always, true = only after the fan unlocks the song
   hiddenSections  String[] @default([]) // section keys to hide, e.g. ["gallery","shows"]
   shows           Json?    // [{date, venue, city?, ticketUrl?}]

@@ -180,6 +180,7 @@ export default async function ArtistSitePage({ params }: Params) {
                 fbPageUrl={site.fbPageUrl}
                 playerStyle={(site.playerStyle as "waveform" | "shade" | "simple" | "classic") ?? "waveform"}
                 showStreamLinks={site.showStreamLinks}
+                showMusicNotes={site.showMusicNotes}
                 streamLinksAfterGate={site.streamLinksAfterGate}
               />
             </div>

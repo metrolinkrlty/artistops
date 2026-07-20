@@ -36,6 +36,7 @@ export async function GET(
       footerText: true,
       playerStyle: true,
       showStreamLinks: true,
+      showMusicNotes: true,
       streamLinksAfterGate: true,
       galleryImages: true,
       hiddenSections: true,

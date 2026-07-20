@@ -161,6 +161,7 @@ export default function SiteMusic({
   fbPageUrl,
   playerStyle = "waveform",
   showStreamLinks = true,
+  showMusicNotes = true,
   streamLinksAfterGate = false,
 }: {
   slug: string;
@@ -170,6 +171,7 @@ export default function SiteMusic({
   fbPageUrl: string | null;
   playerStyle?: PlayerStyle;
   showStreamLinks?: boolean;
+  showMusicNotes?: boolean;
   streamLinksAfterGate?: boolean;
 }) {
   // Which decorative layers this style shows.
@@ -269,7 +271,7 @@ export default function SiteMusic({
     // Emit music notes off the leading edge while playing (waveform style only).
     // Skip when the tab is hidden — timeupdate still fires, but the notes' CSS
     // animation is paused, so they'd pile up in the DOM instead of flying off.
-    if (playing && showBars && !a.paused && document.visibilityState === "visible") {
+    if (playing && showBars && showMusicNotes && !a.paused && document.visibilityState === "visible") {
       const now = performance.now();
       if (now - lastNoteRef.current > 230) { lastNoteRef.current = now; spawnNote(prog); }
     }
@@ -419,7 +421,7 @@ export default function SiteMusic({
               )}
 
               {/* Music notes flying off the leading edge while playing (waveform style) */}
-              {active && showBars && (
+              {active && showBars && showMusicNotes && (
                 <div ref={notesRef} className="pointer-events-none absolute inset-0 z-30 overflow-visible" aria-hidden />
               )}
 

@@ -43,6 +43,7 @@ type ArtistSite = {
   footerText: string | null;
   playerStyle: string | null;
   showStreamLinks: boolean;
+  showMusicNotes: boolean;
   streamLinksAfterGate: boolean;
   heroCtaPrimary: string | null;
   heroCtaSecondary: string | null;
@@ -319,6 +320,11 @@ export default function WebsiteClient({
                 </label>
               ))}
             </div>
+            <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-full border border-input px-3 py-1.5 text-sm font-medium transition hover:border-ring has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+              <input type="checkbox" name="showMusicNotes" defaultChecked={site?.showMusicNotes ?? true} className="accent-primary" />
+              Music notes
+              <span className="text-xs font-normal text-muted-foreground">— little notes fly off the scrubber while a song plays (waveform player only)</span>
+            </label>
           </div>
           <div className="rounded-lg border border-border p-4">
             <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
