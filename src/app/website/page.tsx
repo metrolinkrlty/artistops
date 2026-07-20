@@ -1,17 +1,18 @@
 import Header from "@/components/layout/Header";
 import { getCurrentUser } from "@/lib/session";
-import { getArtistSite, getSubscribers, getSiteTracks } from "./actions";
+import { getArtistSite, getSubscribers, getSiteTracks, getMailingLists } from "./actions";
 import WebsiteClient from "./WebsiteClient";
 import Onboarding from "./Onboarding";
 
 export const dynamic = "force-dynamic";
 
 export default async function WebsitePage() {
-  const [site, subscribers, user, siteTracks] = await Promise.all([
+  const [site, subscribers, user, siteTracks, mailingLists] = await Promise.all([
     getArtistSite(),
     getSubscribers(),
     getCurrentUser(),
     getSiteTracks(),
+    getMailingLists(),
   ]);
 
   return (
@@ -26,6 +27,7 @@ export default async function WebsitePage() {
           subscribers={subscribers}
           isAdmin={!!user?.isAdmin}
           siteTracks={siteTracks}
+          mailingLists={JSON.parse(JSON.stringify(mailingLists))}
         />
       ) : (
         <Onboarding />

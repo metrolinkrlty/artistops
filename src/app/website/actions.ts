@@ -304,6 +304,57 @@ export async function emailMyList(
   return { ok: true, sent };
 }
 
+// ---- Saved recipient lists (segments) ----------------------------------------
+
+export async function getMailingLists() {
+  const userId = await requireUserId();
+  return prisma.mailingList.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, name: true, emails: true, updatedAt: true },
+  });
+}
+
+// Save (or overwrite by name) a named selection of subscriber emails.
+export async function saveMailingList(name: string, emails: string[]): Promise<{ ok: boolean; error?: string; id?: string }> {
+  const userId = await requireUserId();
+  const clean = name.trim();
+  if (!clean) return { ok: false, error: "Give the list a name." };
+  const list = Array.from(new Set(emails.map((e) => e.trim().toLowerCase()).filter(Boolean)));
+  const rec = await prisma.mailingList.upsert({
+    where: { userId_name: { userId, name: clean } },
+    create: { userId, name: clean, emails: list },
+    update: { emails: list },
+  });
+  revalidatePath("/website");
+  return { ok: true, id: rec.id };
+}
+
+export async function deleteMailingList(id: string): Promise<{ ok: boolean }> {
+  const userId = await requireUserId();
+  await prisma.mailingList.deleteMany({ where: { id, userId } });
+  revalidatePath("/website");
+  return { ok: true };
+}
+
+// Manually add a subscriber. Marked source "manual". Respects a prior opt-out:
+// re-adding an unsubscribed address does NOT resubscribe them.
+export async function addSubscriber(email: string, name?: string): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const e = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return { ok: false, error: "Enter a valid email address." };
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { slug: true } });
+  const slug = site?.slug;
+  if (!slug) return { ok: false, error: "Set up your website first." };
+  await prisma.mailingSubscriber.upsert({
+    where: { site_email: { site: slug, email: e } },
+    create: { site: slug, email: e, name: name?.trim() || null, source: "manual", userId },
+    update: { ...(name?.trim() ? { name: name.trim() } : {}) },
+  });
+  revalidatePath("/website");
+  return { ok: true };
+}
+
 const IMAGE_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",

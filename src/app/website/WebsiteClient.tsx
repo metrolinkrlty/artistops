@@ -8,6 +8,9 @@ import {
   saveArtistSite,
   deleteSubscriber,
   emailMyList,
+  saveMailingList,
+  deleteMailingList,
+  addSubscriber,
   uploadSiteImage,
   clearHeroImage,
   removeGalleryImage,
@@ -97,16 +100,20 @@ const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: strin
   { key: "website", label: "Other / Website", placeholder: "https://…" },
 ];
 
+type SavedList = { id: string; name: string; emails: string[]; updatedAt: string };
+
 export default function WebsiteClient({
   site,
   subscribers,
   isAdmin,
   siteTracks,
+  mailingLists,
 }: {
   site: ArtistSite;
   subscribers: Subscriber[];
   isAdmin: boolean;
   siteTracks: { id: string; title: string; gate: string; streamLinks: unknown; linksMode: string }[];
+  mailingLists: SavedList[];
 }) {
   const router = useRouter();
   const social = (site?.socialLinks as SocialLinks) || {};
@@ -168,16 +175,57 @@ export default function WebsiteClient({
   const [blastBody, setBlastBody] = useState("");
   const [blasting, setBlasting] = useState(false);
   const [blastMsg, setBlastMsg] = useState<string | null>(null);
-  // Recipient selection — default all subscribed; unsubscribed can never be picked.
+  // Recipient selection — default to the last-saved list (most recent), else ALL.
+  // Unsubscribed can never be picked.
   const selectableEmails = subscribers.filter((s) => !s.unsubscribed).map((s) => s.email);
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(selectableEmails));
+  const selectableSet = new Set(selectableEmails);
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const last = mailingLists[0];
+    return last ? new Set(last.emails.filter((e) => selectableSet.has(e))) : new Set(selectableEmails);
+  });
+  const [activeListId, setActiveListId] = useState<string>(() => mailingLists[0]?.id ?? "");
   const allSelected = selectableEmails.length > 0 && selectableEmails.every((e) => selected.has(e));
   const selectedCount = selectableEmails.filter((e) => selected.has(e)).length;
   function toggleRecipient(email: string) {
     setSelected((s) => { const n = new Set(s); if (n.has(email)) n.delete(email); else n.add(email); return n; });
   }
-  function toggleAllRecipients() {
-    setSelected(allSelected ? new Set() : new Set(selectableEmails));
+  function toggleAllRecipients() { setSelected(allSelected ? new Set() : new Set(selectableEmails)); }
+  function selectAllRecipients() { setSelected(new Set(selectableEmails)); }
+  function clearRecipients() { setSelected(new Set()); }
+  function applyList(id: string) {
+    setActiveListId(id);
+    if (!id) { setSelected(new Set(selectableEmails)); return; } // "All subscribers"
+    const list = mailingLists.find((l) => l.id === id);
+    if (list) setSelected(new Set(list.emails.filter((e) => selectableSet.has(e))));
+  }
+  const [savingList, setSavingList] = useState(false);
+  async function saveCurrentList() {
+    const existing = mailingLists.find((l) => l.id === activeListId);
+    const name = prompt("Name this list (re-using a name overwrites it):", existing?.name ?? "");
+    if (name === null || !name.trim()) return;
+    setSavingList(true);
+    const res = await saveMailingList(name, selectableEmails.filter((e) => selected.has(e)));
+    setSavingList(false);
+    if (res.ok) router.refresh(); else alert(res.error || "Could not save the list.");
+  }
+  async function removeCurrentList() {
+    const list = mailingLists.find((l) => l.id === activeListId);
+    if (!list || !confirm(`Delete the saved list "${list.name}"? Your subscribers aren't affected.`)) return;
+    await deleteMailingList(list.id);
+    setActiveListId("");
+    router.refresh();
+  }
+  // Manual add.
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [addingManual, setAddingManual] = useState(false);
+  async function addManualSubscriber() {
+    if (!manualEmail.trim()) return;
+    setAddingManual(true);
+    const res = await addSubscriber(manualEmail, manualName);
+    setAddingManual(false);
+    if (res.ok) { setManualEmail(""); setManualName(""); router.refresh(); }
+    else alert(res.error || "Could not add.");
   }
   async function sendListEmail() {
     const recipients = selectableEmails.filter((e) => selected.has(e));
@@ -621,6 +669,48 @@ export default function WebsiteClient({
           </Button>
         </div>
 
+        {/* Saved lists, bulk select, and manual add */}
+        <div className="mb-4 flex flex-col gap-3 rounded-lg border border-border p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Recipients:</span>
+            <select
+              value={activeListId}
+              onChange={(e) => applyList(e.target.value)}
+              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+            >
+              <option value="">All subscribers</option>
+              {mailingLists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+            <Button variant="outline" size="xs" onClick={saveCurrentList} disabled={savingList}>
+              {savingList ? "Saving…" : "Save list"}
+            </Button>
+            {activeListId && <Button variant="ghost" size="xs" onClick={removeCurrentList}>Delete list</Button>}
+            <span className="mx-1 text-muted-foreground">·</span>
+            <Button variant="ghost" size="xs" onClick={selectAllRecipients}>Select all</Button>
+            <Button variant="ghost" size="xs" onClick={clearRecipients}>Clear</Button>
+            <span className="ml-auto text-xs text-muted-foreground">{selectedCount} selected</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+            <span className="text-xs font-medium text-muted-foreground">Add manually:</span>
+            <input
+              value={manualEmail}
+              onChange={(e) => setManualEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManualSubscriber(); } }}
+              placeholder="name@email.com"
+              className="h-8 w-52 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+            />
+            <input
+              value={manualName}
+              onChange={(e) => setManualName(e.target.value)}
+              placeholder="Name (optional)"
+              className="h-8 w-40 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring dark:bg-input/30"
+            />
+            <Button variant="outline" size="xs" onClick={addManualSubscriber} disabled={addingManual || !manualEmail.trim()}>
+              {addingManual ? "Adding…" : "Add"}
+            </Button>
+          </div>
+        </div>
+
         {subscribers.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             No subscribers yet. Emails captured on your website show up here.
@@ -647,7 +737,10 @@ export default function WebsiteClient({
                     sub={s}
                     checked={selected.has(s.email)}
                     onToggle={() => toggleRecipient(s.email)}
-                    onDelete={() => startTransition(() => { deleteSubscriber(s.id); })}
+                    onDelete={() => {
+                      if (!confirm(`Remove ${s.email} from your list? This permanently deletes the subscriber (not just from a saved list).`)) return;
+                      startTransition(() => { deleteSubscriber(s.id); });
+                    }}
                   />
                 ))}
               </tbody>
@@ -1224,7 +1317,11 @@ function SubscriberRow({ sub, checked, onToggle, onDelete }: { sub: Subscriber; 
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
-      <td className="py-2.5 pr-4 text-muted-foreground">{sub.source ?? "—"}</td>
+      <td className="py-2.5 pr-4 text-muted-foreground">
+        {sub.source === "manual"
+          ? <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-500">Manual add</span>
+          : (sub.source ?? "—")}
+      </td>
       <td className="py-2.5 pr-4 text-muted-foreground">
         {new Date(sub.createdAt).toLocaleDateString()}
       </td>
