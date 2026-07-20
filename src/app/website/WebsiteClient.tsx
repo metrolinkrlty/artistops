@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,10 +160,17 @@ export default function WebsiteClient({
     mailReplyTo: site?.mailReplyTo ?? "",
   });
 
-  async function onSave(formData: FormData) {
+  // onSubmit (not <form action=…>) so React 19 doesn't auto-reset the form after
+  // saving — that reset was blanking the controlled dropdowns' DOM value until the
+  // next render (they'd show "none" right after save, then reappear on refresh).
+  function onSave(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget); // capture synchronously
     setStatus(null);
-    const res = await saveArtistSite(formData);
-    setStatus(res);
+    startTransition(async () => {
+      const res = await saveArtistSite(fd);
+      setStatus(res);
+    });
   }
 
   const notifyCount = subscribers.filter((s) => s.notifyOptIn).length;
@@ -230,7 +237,7 @@ export default function WebsiteClient({
           These power your public website. The slug is its public id (e.g.{" "}
           <code className="text-foreground">luke-corliss</code>).
         </p>
-        <form action={onSave} className="space-y-5">
+        <form onSubmit={onSave} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Display name" required>
               <Input name="displayName" defaultValue={site?.displayName ?? ""} placeholder="Your name or band name" required />
