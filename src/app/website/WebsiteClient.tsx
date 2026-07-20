@@ -133,6 +133,14 @@ export default function WebsiteClient({
       ...(isAdmin ? ADMIN_ONLY_EMAILS : []),
     ])
   );
+  // Controlled so React 19's post-submit form reset doesn't snap these back to
+  // "none" (the uncontrolled version reverted every save).
+  const [emailSel, setEmailSel] = useState<Record<string, string>>({
+    contactEmail: site?.contactEmail ?? "",
+    notifyEmail: site?.notifyEmail ?? "",
+    mailFromEmail: site?.mailFromEmail ?? "",
+    mailReplyTo: site?.mailReplyTo ?? "",
+  });
 
   async function onSave(formData: FormData) {
     setStatus(null);
@@ -449,7 +457,8 @@ export default function WebsiteClient({
                 <Field key={f.key} label={f.label}>
                   <select
                     name={f.key}
-                    defaultValue={site?.[f.key] ?? ""}
+                    value={emailSel[f.key] ?? ""}
+                    onChange={(e) => setEmailSel((s) => ({ ...s, [f.key]: e.target.value }))}
                     className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                   >
                     <option value="">— none —</option>
@@ -459,9 +468,9 @@ export default function WebsiteClient({
                         {ADMIN_ONLY_EMAILS.includes(addr) ? " (admin)" : ""}
                       </option>
                     ))}
-                    {/* Keep a previously-saved value selectable even if not in the pool */}
-                    {site?.[f.key] && !emailOptions.includes(site[f.key]!) && (
-                      <option value={site[f.key]!}>{site[f.key]}</option>
+                    {/* Keep the selected value selectable even if it's not in the pool */}
+                    {emailSel[f.key] && !emailOptions.includes(emailSel[f.key]) && (
+                      <option value={emailSel[f.key]}>{emailSel[f.key]}</option>
                     )}
                   </select>
                   <span className="text-xs text-muted-foreground">{f.hint}</span>
