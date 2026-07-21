@@ -243,6 +243,17 @@ export async function saveEmailSettings(input: {
   return { ok: true };
 }
 
+// Artist opts their fan list in/out of social ad retargeting (Meta Custom
+// Audience). Still gated by the global admin master switch at send time.
+export async function setAdRetargeting(enabled: boolean): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { id: true } });
+  if (!site) return { ok: false, error: "Create your website first." };
+  await prisma.artistSite.update({ where: { userId }, data: { adRetargetingEnabled: enabled } });
+  revalidatePath("/email");
+  return { ok: true };
+}
+
 export async function getSubscribers() {
   const userId = await requireUserId();
   const site = await prisma.artistSite.findUnique({

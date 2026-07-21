@@ -2,16 +2,18 @@ import Link from "next/link";
 import Header from "@/components/layout/Header";
 import { getCurrentUser } from "@/lib/session";
 import { getArtistSite, getSubscribers, getMailingLists } from "../website/actions";
+import { getAppSetting, SETTING_AD_RETARGETING_GLOBAL } from "@/lib/settings";
 import EmailClient from "./EmailClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmailPage() {
-  const [site, subscribers, user, mailingLists] = await Promise.all([
+  const [site, subscribers, user, mailingLists, adGlobal] = await Promise.all([
     getArtistSite(),
     getSubscribers(),
     getCurrentUser(),
     getMailingLists(),
+    getAppSetting(SETTING_AD_RETARGETING_GLOBAL, "off"),
   ]);
 
   return (
@@ -28,6 +30,8 @@ export default async function EmailPage() {
           subscribers={subscribers}
           isAdmin={!!user?.isAdmin}
           mailingLists={JSON.parse(JSON.stringify(mailingLists))}
+          adRetargetingEnabled={site.adRetargetingEnabled ?? false}
+          adRetargetingGlobalOn={adGlobal === "on"}
         />
       ) : (
         <div className="p-6">

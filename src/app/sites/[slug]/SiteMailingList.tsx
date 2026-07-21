@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 // Posts to the existing public per-slug subscribe endpoint.
-export default function SiteMailingList({ slug }: { slug: string }) {
+export default function SiteMailingList({ slug, showAdConsent = false }: { slug: string; showAdConsent?: boolean }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
@@ -47,7 +47,8 @@ export default function SiteMailingList({ slug }: { slug: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto flex max-w-md flex-col gap-3">
+    <div className="mx-auto max-w-md">
+    <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <input
         type="text"
         value={name}
@@ -73,5 +74,12 @@ export default function SiteMailingList({ slug }: { slug: string }) {
       </button>
       {error && <p className="text-sm text-red-400">{error}</p>}
     </form>
+      <p className="mt-3 text-center text-xs text-neutral-500">
+        {showAdConsent
+          ? "By joining, you'll get email updates about new music and shows — and we may use your email to reach you on Instagram & Facebook too. Unsubscribe anytime; we never sell your info."
+          : "By joining, you'll get email updates about new music and shows. Unsubscribe anytime; we never sell your info."}{" "}
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-300">Privacy Policy</a>.
+      </p>
+    </div>
   );
 }

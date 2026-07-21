@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAppSetting, SETTING_AD_RETARGETING_GLOBAL } from "@/lib/settings";
 
 // Public, read-only site configuration for an artist website.
 // The website fetches this to render its bio, location, and social links.
@@ -50,6 +51,7 @@ export async function GET(
       fbPageUrl: true,
       socialLinks: true,
       contactEmail: true,
+      adRetargetingEnabled: true,
     },
   });
 
@@ -92,5 +94,11 @@ export async function GET(
     pixelId = null;
   }
 
-  return NextResponse.json({ ok: true, site: { ...site, pixelId, adPixels, albumLinks } }, { headers: CORS });
+  // Effective ad-retargeting flag: artist opt-in AND the global master switch.
+  // Exposed as a single boolean so bespoke sites gate their consent copy on it.
+  const adGlobal = await getAppSetting(SETTING_AD_RETARGETING_GLOBAL, "off");
+  const { adRetargetingEnabled, ...siteRest } = site;
+  const adRetargeting = adGlobal === "on" && !!adRetargetingEnabled;
+
+  return NextResponse.json({ ok: true, site: { ...siteRest, adRetargeting, pixelId, adPixels, albumLinks } }, { headers: CORS });
 }

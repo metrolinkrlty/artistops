@@ -12,7 +12,7 @@ const TOGGLE_COLS = [
   { key: "revenue", label: "Revenue" },
   { key: "joined", label: "Joined" },
 ] as const;
-import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, sendBlast, countBlastRecipients, updateLoginTagline, type AdminMessageView } from "./actions";
+import { createUser, updateUser, deleteUser, approveUser, rejectUser, messageUser, getUserThread, adminSendMessage, sendBlast, countBlastRecipients, updateLoginTagline, updateAdRetargetingGlobal, updatePrivacyPolicy, type AdminMessageView } from "./actions";
 
 type MembershipApplicationView = {
   role: string; referredBy: string; workLink: string | null;
@@ -34,7 +34,7 @@ const statusBadge: Record<string, string> = {
   REJECTED: "bg-red-500/20 text-red-400",
 };
 
-export default function AdminClient({ users, currentUserId, loginTagline, defaultLoginTagline }: { users: UserRow[]; currentUserId: string; loginTagline: string; defaultLoginTagline: string }) {
+export default function AdminClient({ users, currentUserId, loginTagline, defaultLoginTagline, adRetargetingGlobalOn, privacyPolicy, defaultPrivacyPolicy }: { users: UserRow[]; currentUserId: string; loginTagline: string; defaultLoginTagline: string; adRetargetingGlobalOn: boolean; privacyPolicy: string; defaultPrivacyPolicy: string }) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
@@ -53,6 +53,33 @@ export default function AdminClient({ users, currentUserId, loginTagline, defaul
     router.refresh();
     setTimeout(() => setTaglineSaved(false), 2500);
   }
+
+  // Global social-ad-retargeting master switch.
+  const [adGlobal, setAdGlobal] = useState(adRetargetingGlobalOn);
+  const [savingAdGlobal, setSavingAdGlobal] = useState(false);
+  async function toggleAdGlobal() {
+    const next = !adGlobal;
+    setAdGlobal(next);
+    setSavingAdGlobal(true);
+    await updateAdRetargetingGlobal(next);
+    setSavingAdGlobal(false);
+    router.refresh();
+  }
+
+  // Editable public privacy policy (markdown).
+  const [privacy, setPrivacy] = useState(privacyPolicy);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [privacySaved, setPrivacySaved] = useState(false);
+  async function handleSavePrivacy() {
+    setSavingPrivacy(true);
+    setPrivacySaved(false);
+    await updatePrivacyPolicy(privacy);
+    setSavingPrivacy(false);
+    setPrivacySaved(true);
+    router.refresh();
+    setTimeout(() => setPrivacySaved(false), 2500);
+  }
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -242,6 +269,71 @@ export default function AdminClient({ users, currentUserId, loginTagline, defaul
           </button>
           {taglineSaved && <span className="text-green-400 text-sm">Saved — live on /login</span>}
           <span className="ml-auto text-[#5a5e72] text-xs">{tagline.length} chars</span>
+        </div>
+      </div>
+
+      {/* Social ad retargeting — global master switch */}
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+              <h2 className="text-white font-semibold">Social ad retargeting (Meta)</h2>
+            </div>
+            <p className="text-[#8b8fa8] text-xs max-w-2xl">
+              Master switch for the whole platform. When <span className="text-[#c7cad8]">off</span>, no artist can sync their fan list to Meta and the ad-use consent line never shows on any signup form — even if an artist has turned it on. When <span className="text-[#c7cad8]">on</span>, each artist still controls their own participation from their Fan Email page. (Live sync also requires the Meta App / App Review — bundled with Page Insights.)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleAdGlobal}
+            disabled={savingAdGlobal}
+            role="switch"
+            aria-checked={adGlobal}
+            aria-label="Toggle global social ad retargeting"
+            className={`relative h-7 w-12 flex-none rounded-full transition-colors disabled:opacity-50 ${adGlobal ? "bg-indigo-600" : "bg-[#2a2d3a]"}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${adGlobal ? "left-6" : "left-1"}`} />
+          </button>
+        </div>
+        <p className={`mt-3 text-xs ${adGlobal ? "text-green-400" : "text-[#8b8fa8]"}`}>
+          {savingAdGlobal ? "Saving…" : adGlobal ? "On — artists can opt in from Fan Email." : "Off — retargeting disabled for all artists."}
+        </p>
+      </div>
+
+      {/* Editable public privacy policy */}
+      <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
+          <h2 className="text-white font-semibold">Privacy policy</h2>
+        </div>
+        <p className="text-[#8b8fa8] text-xs mb-3">
+          Markdown, published at <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">/privacy</a>. This is a template, not legal advice — have counsel review before relying on it. Changes go live immediately.
+        </p>
+        <textarea
+          value={privacy}
+          onChange={(e) => { setPrivacy(e.target.value); setPrivacySaved(false); }}
+          rows={14}
+          className={`${inputClass} font-mono text-xs leading-relaxed resize-y`}
+          placeholder="Leave blank to reset to the default draft."
+        />
+        <div className="flex items-center gap-3 mt-3">
+          <button
+            onClick={handleSavePrivacy}
+            disabled={savingPrivacy || privacy === privacyPolicy}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {savingPrivacy ? "Saving…" : "Save privacy policy"}
+          </button>
+          <button
+            onClick={() => setPrivacy(defaultPrivacyPolicy)}
+            type="button"
+            className="text-[#8b8fa8] text-sm hover:text-white"
+          >
+            Reset to default draft
+          </button>
+          {privacySaved && <span className="text-green-400 text-sm">Saved — live on /privacy</span>}
+          <span className="ml-auto text-[#5a5e72] text-xs">{privacy.length} chars</span>
         </div>
       </div>
 

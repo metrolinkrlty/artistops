@@ -11,6 +11,7 @@ import {
   addSubscriber,
   setSubscriberDeleted,
   purgeSubscriber,
+  setAdRetargeting,
 } from "../website/actions";
 
 // Platform addresses only admins may select in the dropdowns.
@@ -40,6 +41,8 @@ export default function EmailClient({
   subscribers,
   isAdmin,
   mailingLists,
+  adRetargetingEnabled,
+  adRetargetingGlobalOn,
 }: {
   slug: string;
   availableEmails: string[];
@@ -47,8 +50,25 @@ export default function EmailClient({
   subscribers: Subscriber[];
   isAdmin: boolean;
   mailingLists: SavedList[];
+  adRetargetingEnabled: boolean;
+  adRetargetingGlobalOn: boolean;
 }) {
   const router = useRouter();
+
+  // Per-artist social-ad-retargeting opt-in (gated by the global admin switch).
+  const [adOn, setAdOn] = useState(adRetargetingEnabled);
+  const [savingAd, setSavingAd] = useState(false);
+  const adEffectiveOn = adOn && adRetargetingGlobalOn;
+  async function toggleAd() {
+    if (!adRetargetingGlobalOn || savingAd) return;
+    const next = !adOn;
+    setAdOn(next);
+    setSavingAd(true);
+    const res = await setAdRetargeting(next);
+    setSavingAd(false);
+    if (res.ok) router.refresh();
+    else { setAdOn(!next); alert(res.error || "Could not save."); }
+  }
 
   // Sending addresses are managed in Settings → Email addresses; read-only here.
   const emailOptions = Array.from(
@@ -160,6 +180,36 @@ export default function EmailClient({
 
   return (
     <div className="space-y-8 p-6">
+      {/* Social ad retargeting opt-in */}
+      <section className="rounded-xl border border-border bg-card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Social ad retargeting</h2>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              Let your opted-in fans be matched to Meta (Facebook &amp; Instagram) so you can retarget them with ads and build lookalike audiences. When on, a short consent line shows on your signup form. Syncing turns on once Meta approves the app.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={adEffectiveOn}
+            aria-label="Toggle social ad retargeting"
+            onClick={toggleAd}
+            disabled={!adRetargetingGlobalOn || savingAd}
+            className={`relative h-7 w-12 flex-none rounded-full transition-colors disabled:opacity-50 ${adEffectiveOn ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${adEffectiveOn ? "left-6" : "left-1"}`} />
+          </button>
+        </div>
+        {!adRetargetingGlobalOn ? (
+          <p className="mt-3 text-xs text-amber-500">Turned off across the platform right now — contact your admin to enable it.</p>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {savingAd ? "Saving…" : adOn ? "On — your signup form shows the ad-use consent line, and opted-in fans are eligible for sync." : "Off — no ad-use consent line shows and your fans aren't synced."}
+          </p>
+        )}
+      </section>
+
       {emailOptions.length === 0 && (
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-6 py-4 text-sm">
           <p className="font-medium text-foreground">Add a sending address first.</p>

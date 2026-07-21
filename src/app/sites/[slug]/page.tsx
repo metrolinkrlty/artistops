@@ -10,6 +10,7 @@ import SiteMusic from "./SiteMusic";
 import SiteMailingList from "./SiteMailingList";
 import SiteAnalytics from "./SiteAnalytics";
 import SitePixels from "./SitePixels";
+import { getAppSetting, SETTING_AD_RETARGETING_GLOBAL } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,11 @@ export default async function ArtistSitePage({ params }: Params) {
     cookies(),
   ]);
   if (!site) notFound();
+
+  // Show the ad-use consent line on the signup form only when the artist opted in
+  // AND the platform-wide master switch is on.
+  const adGlobal = await getAppSetting(SETTING_AD_RETARGETING_GLOBAL, "off");
+  const showAdConsent = adGlobal === "on" && !!site.adRetargetingEnabled;
 
   // The artist's ad pixels (Meta/TikTok/Google), so this hosted site can retarget
   // visitors and track gate-unlock conversions. Defensive: never block the page.
@@ -288,7 +294,7 @@ export default async function ArtistSitePage({ params }: Params) {
             <p className="mx-auto mb-8 max-w-xl text-neutral-400">
               First word on new music and show dates. No spam — just the good stuff.
             </p>
-            <SiteMailingList slug={slug} />
+            <SiteMailingList slug={slug} showAdConsent={showAdConsent} />
           </div>
         </section>
       </main>

@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendEmail, approvedEmailHtml } from "@/lib/email";
 import { artistWantsEmail } from "@/app/messages/actions";
-import { setAppSetting, SETTING_LOGIN_TAGLINE, DEFAULT_LOGIN_TAGLINE } from "@/lib/settings";
+import { setAppSetting, SETTING_LOGIN_TAGLINE, DEFAULT_LOGIN_TAGLINE, SETTING_AD_RETARGETING_GLOBAL, SETTING_PRIVACY_POLICY, DEFAULT_PRIVACY_POLICY } from "@/lib/settings";
 
 async function requireAdmin() {
   const userId = await requireUserId();
@@ -22,6 +22,25 @@ export async function updateLoginTagline(value: string): Promise<{ ok: boolean }
   const clean = value.trim();
   await setAppSetting(SETTING_LOGIN_TAGLINE, clean || DEFAULT_LOGIN_TAGLINE);
   revalidatePath("/login");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+// Global master switch for social ad retargeting across all artists.
+export async function updateAdRetargetingGlobal(on: boolean): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  await setAppSetting(SETTING_AD_RETARGETING_GLOBAL, on ? "on" : "off");
+  revalidatePath("/admin");
+  revalidatePath("/email");
+  return { ok: true };
+}
+
+// Edit the public privacy policy (markdown). Empty input resets to the default draft.
+export async function updatePrivacyPolicy(content: string): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  const clean = content.trim();
+  await setAppSetting(SETTING_PRIVACY_POLICY, clean || DEFAULT_PRIVACY_POLICY);
+  revalidatePath("/privacy");
   revalidatePath("/admin");
   return { ok: true };
 }

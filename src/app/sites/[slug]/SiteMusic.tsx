@@ -509,7 +509,7 @@ export default function SiteMusic({
                     </button>
                   )}
                   <p className="pt-2 text-xs text-neutral-500">
-                    {t.gate === "email" ? `${previewCap}s preview. Enter your email and the full song unlocks right here.` : "One tap unlocks the full song."}
+                    {t.gate === "email" ? `${previewCap}s preview. Enter your email and the full song unlocks right here. We never sell your info.` : "One tap unlocks the full song."}
                   </p>
                 </div>
               )}
