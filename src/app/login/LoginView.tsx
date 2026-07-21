@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Music, DollarSign, Shield, BarChart2, Link2, Megaphone, Sparkles, Globe, Lock, Mail, User, Eye, EyeOff, CheckCircle2,
-  CalendarDays, type LucideIcon,
+  CalendarDays, Loader2, type LucideIcon,
 } from "lucide-react";
 import { APP_VERSION } from "@/lib/version";
 
@@ -48,7 +48,6 @@ const CATALOG_OPTIONS = [
 ];
 
 function AuthForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [artistName, setArtistName] = useState("");
@@ -88,15 +87,21 @@ function AuthForm() {
       body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
-    setLoading(false);
     if (res.ok) {
       if (mode === "signup") {
+        setLoading(false);
         setSubmitted(true); // friendly thank-you, no redirect
       } else {
-        router.push(params.get("from") || "/");
-        router.refresh();
+        // Keep the spinner up through the authenticated page load. One hard
+        // navigation applies the new session cookie in a single server render —
+        // the old push()+refresh() re-rendered the heavy dashboard twice with no
+        // indicator, which is what made sign-in feel slow.
+        const from = params.get("from") || "/";
+        const dest = from.startsWith("/") && !from.startsWith("//") ? from : "/";
+        window.location.assign(dest);
       }
     } else {
+      setLoading(false);
       setError(data.error || "Something went wrong");
     }
   }
@@ -259,8 +264,9 @@ function AuthForm() {
         )}
 
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <button type="submit" disabled={loading} className="w-full px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-          {loading ? (mode === "signup" ? "Sending request…" : "Signing in…") : mode === "signup" ? "Request access" : "Sign In"}
+        <button type="submit" disabled={loading} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed transition-colors">
+          {loading && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
+          {loading ? (mode === "signup" ? "Sending request…" : "Signing you in…") : mode === "signup" ? "Request access" : "Sign In"}
         </button>
         {mode === "login" && (
           <p className="text-center">

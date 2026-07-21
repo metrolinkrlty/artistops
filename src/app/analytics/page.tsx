@@ -1,6 +1,8 @@
 import Header from "@/components/layout/Header";
 import { prisma } from "@/lib/prisma";
 import { requireUserId } from "@/lib/session";
+import { getWebsiteUrl } from "./actions";
+import PixelDomainCard from "./PixelDomainCard";
 
 export const dynamic = "force-dynamic";
 
@@ -55,11 +57,12 @@ async function getAnalytics() {
 }
 
 export default async function AnalyticsPage() {
-  const a = await getAnalytics();
+  const [a, websiteUrl] = await Promise.all([getAnalytics(), getWebsiteUrl()]);
   return (
     <div className="flex-1">
       <Header title="Website Analytics" subtitle="Visitor traffic and conversion data" />
       <div className="p-8 space-y-6">
+        <PixelDomainCard websiteUrl={websiteUrl} />
         <div className="grid grid-cols-4 gap-4">
           {[
             { label: "Page Views", value: a.pageViews.toLocaleString() },

@@ -5,10 +5,13 @@ import { requireUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 const SETTING_KEYS = [
-  "proMembership", "ipiNumber", "websiteUrl",
+  "proMembership", "ipiNumber",
   "legalName", "businessName", "correspondentEmail", "phone", "altPhone",
   "addressLine", "city", "state", "zip", "country",
 ];
+// Note: "websiteUrl" (the pixel-tracking domain) is managed on the Website
+// Analytics page via saveWebsiteUrl, so it's intentionally not in this list —
+// saving general settings must never blank it.
 
 export async function getSettings(): Promise<Record<string, string>> {
   const userId = await requireUserId();

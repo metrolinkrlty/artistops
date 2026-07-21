@@ -24,9 +24,7 @@ export default async function EmailPage() {
         <EmailClient
           slug={site.slug}
           availableEmails={site.availableEmails ?? []}
-          notifyEmail={site.notifyEmail ?? null}
           mailFromEmail={site.mailFromEmail ?? null}
-          mailReplyTo={site.mailReplyTo ?? null}
           subscribers={subscribers}
           isAdmin={!!user?.isAdmin}
           mailingLists={JSON.parse(JSON.stringify(mailingLists))}

@@ -239,6 +239,7 @@ export async function saveEmailSettings(input: {
 
   revalidatePath("/email");
   revalidatePath("/website");
+  revalidatePath("/settings");
   return { ok: true };
 }
 
