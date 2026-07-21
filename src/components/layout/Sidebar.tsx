@@ -26,31 +26,71 @@ import {
   ShieldCheck,
   MonitorSmartphone,
   BellRing,
+  Mail,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/songs", label: "Songs", icon: Music },
-  { href: "/copyrights", label: "Copyrights", icon: Shield },
-  { href: "/rights", label: "Rights", icon: FileLock },
-  { href: "/releases", label: "Releases", icon: Package },
-  { href: "/distributors", label: "Distributors", icon: Truck },
-  { href: "/revenue", label: "Revenue", icon: DollarSign },
-  { href: "/streaming", label: "Streaming Plays", icon: BarChart2 },
-  { href: "/playlist-intelligence", label: "Playlist Intelligence", icon: ListMusic },
-  { href: "/audience", label: "Audience", icon: Users },
-  { href: "/social", label: "Social Media", icon: Share2 },
-  { href: "/advertising", label: "Advertising", icon: Megaphone },
-  { href: "/pixel-tracking", label: "Pixel Tracking", icon: Target },
-  { href: "/smart-links", label: "Smart Links", icon: Link2 },
-  { href: "/release-notify", label: "Release Notify", icon: BellRing },
-  { href: "/website", label: "Website", icon: MonitorSmartphone },
-  { href: "/analytics", label: "Website Analytics", icon: Globe },
-  { href: "/integrations", label: "Integrations", icon: Plug },
-  { href: "/forecasting", label: "Forecasting", icon: TrendingUp },
-  { href: "/ai-insights", label: "AI Insights", icon: Sparkles },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
+const navGroups: { label: string; items: { href: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+  {
+    label: "Overview",
+    items: [{ href: "/", label: "Dashboard", icon: LayoutDashboard }],
+  },
+  {
+    label: "Catalog",
+    items: [
+      { href: "/songs", label: "Songs", icon: Music },
+      { href: "/copyrights", label: "Copyrights", icon: Shield },
+      { href: "/rights", label: "Rights", icon: FileLock },
+      { href: "/releases", label: "Releases", icon: Package },
+      { href: "/distributors", label: "Distributors", icon: Truck },
+    ],
+  },
+  {
+    label: "Money",
+    items: [
+      { href: "/revenue", label: "Revenue", icon: DollarSign },
+      { href: "/forecasting", label: "Forecasting", icon: TrendingUp },
+    ],
+  },
+  {
+    label: "Insights",
+    items: [
+      { href: "/streaming", label: "Streaming Plays", icon: BarChart2 },
+      { href: "/playlist-intelligence", label: "Playlist Intelligence", icon: ListMusic },
+      { href: "/ai-insights", label: "AI Insights", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Fans",
+    items: [
+      { href: "/audience", label: "Audience", icon: Users },
+      { href: "/contacts", label: "Contacts", icon: Users },
+      { href: "/email", label: "Fan Email", icon: Mail },
+      { href: "/release-notify", label: "Release Notify", icon: BellRing },
+    ],
+  },
+  {
+    label: "Promote",
+    items: [
+      { href: "/social", label: "Social Media", icon: Share2 },
+      { href: "/advertising", label: "Advertising", icon: Megaphone },
+      { href: "/smart-links", label: "Smart Links", icon: Link2 },
+      { href: "/pixel-tracking", label: "Pixel Tracking", icon: Target },
+    ],
+  },
+  {
+    label: "Your Site",
+    items: [
+      { href: "/website", label: "Website", icon: MonitorSmartphone },
+      { href: "/analytics", label: "Website Analytics", icon: Globe },
+    ],
+  },
+  {
+    label: "Setup",
+    items: [
+      { href: "/integrations", label: "Integrations", icon: Plug },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpersonating = false }: { artistName?: string; isAdmin?: boolean; isImpersonating?: boolean }) {
@@ -69,25 +109,34 @@ export default function Sidebar({ artistName = "Artist", isAdmin = false, isImpe
         <p className="text-[#8b8fa8] text-sm mt-1">Music Business Manager</p>
         <p className="text-indigo-400 text-base font-semibold mt-1">v{APP_VERSION}</p>
       </div>
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href;
-          return (
-            <Link
-              key={href}
-              href={href}
-              data-navhref={href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                active
-                  ? "bg-indigo-600 text-white"
-                  : "text-[#8b8fa8] hover:text-white hover:bg-[#2a2d3a]"
-              }`}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 p-4 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.label} className="mb-4 last:mb-0">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#5c6070]">
+              {group.label}
+            </p>
+            <div className="space-y-1">
+              {group.items.map(({ href, label, icon: Icon }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    data-navhref={href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      active
+                        ? "bg-indigo-600 text-white"
+                        : "text-[#8b8fa8] hover:text-white hover:bg-[#2a2d3a]"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
         {isAdmin && (
           <Link
             href="/admin"

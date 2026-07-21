@@ -117,30 +117,13 @@ export async function saveArtistSite(formData: FormData) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return { invalid: v };
     return v;
   };
+  // Only the booking/contact recipient lives on the Website form. The address
+  // pool and the From / Reply-To / Notify settings are managed on the Fan Email
+  // page via saveEmailSettings, so we deliberately don't touch them here.
   const contactEmail = email("contactEmail");
-  const notifyEmail = email("notifyEmail");
-  const mailFromEmail = email("mailFromEmail");
-  const mailReplyTo = email("mailReplyTo");
-  for (const [label, val] of [
-    ["Contact email", contactEmail],
-    ["Notify email", notifyEmail],
-    ["Mailing from", mailFromEmail],
-    ["Reply-to", mailReplyTo],
-  ] as const) {
-    if (val && typeof val === "object") {
-      return { ok: false, error: `${label} is not a valid email address.` };
-    }
+  if (contactEmail && typeof contactEmail === "object") {
+    return { ok: false, error: "Contact email is not a valid email address." };
   }
-
-  // The pool of addresses the dropdowns pick from (comma/newline separated).
-  const availableEmails = Array.from(
-    new Set(
-      String(formData.get("availableEmails") || "")
-        .split(/[\n,]+/)
-        .map((e) => e.trim().toLowerCase())
-        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
-    )
-  );
 
   const socialLinks: SocialLinks = {};
   for (const key of SOCIAL_KEYS) {
@@ -155,11 +138,7 @@ export async function saveArtistSite(formData: FormData) {
   }
 
   const emailFields = {
-    availableEmails,
     contactEmail: contactEmail as string | null,
-    notifyEmail: notifyEmail as string | null,
-    mailFromEmail: mailFromEmail as string | null,
-    mailReplyTo: mailReplyTo as string | null,
   };
 
   const siteFields = {
@@ -206,6 +185,59 @@ export async function saveArtistSite(formData: FormData) {
     data: { userId },
   });
 
+  revalidatePath("/website");
+  return { ok: true };
+}
+
+// Managed on the Fan Email page: the address pool plus the From / Reply-To /
+// Notify settings. Kept separate from saveArtistSite so saving one never blanks
+// the other.
+export async function saveEmailSettings(input: {
+  availableEmails: string[];
+  notifyEmail: string | null;
+  mailFromEmail: string | null;
+  mailReplyTo: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const userId = await requireUserId();
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const norm = (v: string | null): string | null | { invalid: string } => {
+    if (!v) return null;
+    const t = v.trim();
+    if (!re.test(t)) return { invalid: t };
+    return t.toLowerCase();
+  };
+  const notifyEmail = norm(input.notifyEmail);
+  const mailFromEmail = norm(input.mailFromEmail);
+  const mailReplyTo = norm(input.mailReplyTo);
+  for (const [label, val] of [
+    ["Notify email", notifyEmail],
+    ["Mailing from", mailFromEmail],
+    ["Reply-to", mailReplyTo],
+  ] as const) {
+    if (val && typeof val === "object") {
+      return { ok: false, error: `${label} is not a valid email address.` };
+    }
+  }
+
+  const availableEmails = Array.from(
+    new Set(input.availableEmails.map((e) => e.trim().toLowerCase()).filter((e) => re.test(e)))
+  );
+
+  const site = await prisma.artistSite.findUnique({ where: { userId }, select: { id: true } });
+  if (!site) return { ok: false, error: "Create your website first." };
+
+  await prisma.artistSite.update({
+    where: { userId },
+    data: {
+      availableEmails,
+      notifyEmail: notifyEmail as string | null,
+      mailFromEmail: mailFromEmail as string | null,
+      mailReplyTo: mailReplyTo as string | null,
+    },
+  });
+
+  revalidatePath("/email");
   revalidatePath("/website");
   return { ok: true };
 }
