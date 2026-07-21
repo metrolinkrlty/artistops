@@ -187,6 +187,7 @@ export default function SiteMusic({
   const [openGate, setOpenGate] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null); // last-played track (classic bar persists it)
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -325,12 +326,12 @@ export default function SiteMusic({
     e.preventDefault();
     if (!email.trim() || busy) return;
     setBusy(true); setError(null);
-    const res = await unlockSiteTrackEmail(slug, t.trackId, email.trim());
+    const res = await unlockSiteTrackEmail(slug, t.trackId, email.trim(), name.trim() || undefined);
     setBusy(false);
     if (res.ok) {
       setUnlockedIds((s) => new Set(s).add(t.trackId));
       if (loadedIdRef.current === t.trackId) loadedIdRef.current = null; // reload as full next play
-      setOpenGate(null); setEmail("");
+      setOpenGate(null); setEmail(""); setName("");
       firePixelLead();
     } else {
       setError(res.error || "Something went wrong.");
@@ -384,45 +385,46 @@ export default function SiteMusic({
           return (
             <div key={t.trackId} className="select-none">
               <div className="relative">
-              {/* Animated shade + waveform (only for the playing row). rAF writes width/clip/left. */}
+              {/* Progress layers begin just to the right of the knob (offset ≈ px-5 + knob w-12 + gap-4). */}
               {active && showSweep && (
-                <div ref={seekAreaRef} className="pointer-events-none absolute inset-0 z-0">
-                  {/* faint full waveform (the unplayed hint) — waveform style only */}
-                  {showBars && (
-                    <div className="absolute inset-y-0 left-0 right-0 px-5 py-2 opacity-[0.12] text-neutral-300">
-                      <WaveBars level={volume} />
-                    </div>
-                  )}
-                  {/* shaded (played) area — a soft accent wash that grows */}
-                  <div ref={shadeRef} className="absolute inset-y-0 left-0 will-change-[width]" style={{ width: "0%", backgroundColor: "var(--accent)", opacity: 0.14 }} />
-                  {/* accent waveform, revealed by clip-path as the shade grows — waveform style only */}
-                  {showBars && (
-                    <div ref={waveClipRef} className="absolute inset-y-0 left-0 right-0 px-5 py-2 will-change-[clip-path]" style={{ color: "var(--accent)", clipPath: "inset(0 100% 0 0)" }}>
-                      <WaveBars level={volume} />
-                    </div>
+                <div className="pointer-events-none absolute inset-y-0 left-[84px] right-0">
+                  {/* Animated shade + waveform (only for the playing row). rAF writes width/clip/left. */}
+                  <div ref={seekAreaRef} className="pointer-events-none absolute inset-0 z-0">
+                    {/* faint full waveform (the unplayed hint) — waveform style only */}
+                    {showBars && (
+                      <div className="absolute inset-y-0 left-0 right-0 pr-5 py-2 opacity-[0.12] text-neutral-300">
+                        <WaveBars level={volume} />
+                      </div>
+                    )}
+                    {/* shaded (played) area — a soft accent wash that grows */}
+                    <div ref={shadeRef} className="absolute inset-y-0 left-0 will-change-[width]" style={{ width: "0%", backgroundColor: "var(--accent)", opacity: 0.14 }} />
+                    {/* accent waveform, revealed by clip-path as the shade grows — waveform style only */}
+                    {showBars && (
+                      <div ref={waveClipRef} className="absolute inset-y-0 left-0 right-0 pr-5 py-2 will-change-[clip-path]" style={{ color: "var(--accent)", clipPath: "inset(0 100% 0 0)" }}>
+                        <WaveBars level={volume} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Leading-edge scrubber — grab and drag to seek */}
+                  <div
+                    ref={handleRef}
+                    className="pointer-events-auto absolute inset-y-0 z-20 -ml-2 flex w-4 cursor-ew-resize touch-none items-center justify-center will-change-[left]"
+                    style={{ left: "0%" }}
+                    onPointerDown={(e) => { draggingRef.current = true; seekFromClientX(e.clientX); try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                    onPointerMove={(e) => { if (draggingRef.current) seekFromClientX(e.clientX); }}
+                    onPointerUp={(e) => { draggingRef.current = false; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* best-effort */ } }}
+                    aria-label="Scrub"
+                  >
+                    <div className="h-full w-[3px] rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                    <div className="absolute h-3.5 w-3.5 rounded-full border-2 border-neutral-950 shadow" style={{ backgroundColor: "var(--accent)" }} />
+                  </div>
+
+                  {/* Music notes flying off the leading edge while playing (waveform style) */}
+                  {showBars && showMusicNotes && (
+                    <div ref={notesRef} className="pointer-events-none absolute inset-0 z-30 overflow-visible" aria-hidden />
                   )}
                 </div>
-              )}
-
-              {/* Leading-edge scrubber — grab and drag to seek */}
-              {active && showSweep && (
-                <div
-                  ref={handleRef}
-                  className="absolute inset-y-0 z-20 -ml-2 flex w-4 cursor-ew-resize touch-none items-center justify-center will-change-[left]"
-                  style={{ left: "0%" }}
-                  onPointerDown={(e) => { draggingRef.current = true; seekFromClientX(e.clientX); try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* best-effort */ } }}
-                  onPointerMove={(e) => { if (draggingRef.current) seekFromClientX(e.clientX); }}
-                  onPointerUp={(e) => { draggingRef.current = false; try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* best-effort */ } }}
-                  aria-label="Scrub"
-                >
-                  <div className="h-full w-[3px] rounded-full" style={{ backgroundColor: "var(--accent)" }} />
-                  <div className="absolute h-3.5 w-3.5 rounded-full border-2 border-neutral-950 shadow" style={{ backgroundColor: "var(--accent)" }} />
-                </div>
-              )}
-
-              {/* Music notes flying off the leading edge while playing (waveform style) */}
-              {active && showBars && showMusicNotes && (
-                <div ref={notesRef} className="pointer-events-none absolute inset-0 z-30 overflow-visible" aria-hidden />
               )}
 
               <div className="relative z-10 flex items-center gap-4 px-5 py-4">
@@ -486,11 +488,14 @@ export default function SiteMusic({
                     Hear the WHOLE song by playing it forward!
                   </p>
                   {t.gate === "email" && (
-                    <form onSubmit={(e) => submitEmail(t, e)} className="flex flex-col gap-2 sm:flex-row">
-                      <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className={`flex-1 ${inputClass}`} />
-                      <button type="submit" disabled={busy} className="rounded-lg px-5 py-2 text-sm font-semibold text-neutral-950 transition disabled:opacity-60" style={{ backgroundColor: "var(--accent)" }}>
-                        {busy ? "Unlocking…" : "Email me the full song"}
-                      </button>
+                    <form onSubmit={(e) => submitEmail(t, e)} className="flex flex-col gap-2">
+                      <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name (optional)" className={inputClass} />
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className={`flex-1 ${inputClass}`} />
+                        <button type="submit" disabled={busy} className="rounded-lg px-5 py-2 text-sm font-semibold text-neutral-950 transition disabled:opacity-60" style={{ backgroundColor: "var(--accent)" }}>
+                          {busy ? "Unlocking…" : "Email me the full song"}
+                        </button>
+                      </div>
                     </form>
                   )}
                   {t.gate === "share" && (
