@@ -3,6 +3,7 @@ import { usePathname } from "next/navigation";
 import { Suspense } from "react";
 import Sidebar from "./Sidebar";
 import InactivityTimeout from "@/components/InactivityTimeout";
+import HelpTooltip from "@/components/HelpTooltip";
 import WelcomeSplash from "@/components/WelcomeSplash";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { ArtistNameProvider } from "./ArtistNameContext";
@@ -19,20 +20,27 @@ export default function RootLayoutClient({
   viewingAs?: { id: string; artistName: string } | null;
 }) {
   const pathname = usePathname();
-  const isPublic =
+  // Artist-facing public pages render with the artist's own theme — no ArtistOps
+  // chrome and no ArtistOps-styled tooltips.
+  const isArtistSite =
     pathname.startsWith("/listen/") ||
     pathname.startsWith("/sites/") ||
-    pathname.startsWith("/notify/") ||
+    pathname.startsWith("/notify/");
+  const isPublic =
+    isArtistSite ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/forgot-password") ||
     pathname.startsWith("/reset-password") ||
-    pathname.startsWith("/pending-approval");
+    pathname.startsWith("/pending-approval") ||
+    pathname.startsWith("/privacy");
 
-  if (isPublic) return <>{children}</>;
+  // ArtistOps-branded public pages (login, privacy, …) still get readable tooltips.
+  if (isPublic) return <>{!isArtistSite && <HelpTooltip />}{children}</>;
 
   return (
     <div className="flex min-h-screen flex-col">
       <InactivityTimeout />
+      <HelpTooltip />
       {viewingAs && <ImpersonationBanner artistName={viewingAs.artistName} />}
       <div className="flex flex-1">
         <Suspense fallback={null}>
