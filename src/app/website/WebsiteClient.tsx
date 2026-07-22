@@ -428,8 +428,11 @@ export default function WebsiteClient({
             )}
           </div>
 
-          {/* Floating save bar — stays reachable while scrolling this long form. */}
-          <div className="sticky bottom-4 z-20 flex items-center gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80">
+          {/* Floating save bar. Uses fixed (not sticky) because the app shell's
+              <main> has overflow-auto but grows instead of scrolling, which makes
+              sticky descendants never activate. Stays inside the form so the
+              submit button still submits it. */}
+          <div className="fixed bottom-6 right-6 z-40 flex max-w-[calc(100vw-3rem)] items-center gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-card/80">
             <Button type="submit" disabled={pending}>
               Save site details
             </Button>

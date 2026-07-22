@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   emailMyList,
@@ -285,7 +286,7 @@ export default function EmailClient({
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2 pr-3 font-medium" title="Include in broadcast">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAllRecipients} className="h-[18px] w-[18px] cursor-pointer rounded border-input accent-primary" aria-label="Select all recipients" />
+                    <Checkbox checked={allSelected} onChange={toggleAllRecipients} ariaLabel="Select all recipients" />
                   </th>
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
@@ -368,6 +369,36 @@ export default function EmailClient({
   );
 }
 
+// Custom checkbox: native inputs only let you tint the checked fill, which left
+// checked/unchecked looking too similar on the dark card. This draws both states
+// explicitly — outlined box when off, solid primary + white check when on.
+function Checkbox({ checked, onChange, disabled, title, ariaLabel }: {
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+  title?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <span className="relative inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center align-middle">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        title={title}
+        aria-label={ariaLabel}
+        className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-[4px] border-2 border-muted-foreground/70 bg-transparent transition-colors hover:border-primary/70 checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-40"
+      />
+      <Check
+        className="pointer-events-none absolute h-3 w-3 text-primary-foreground opacity-0 transition-opacity peer-checked:opacity-100"
+        strokeWidth={3.5}
+        aria-hidden
+      />
+    </span>
+  );
+}
+
 function SubscriberRow({ sub, isAdmin, checked, onToggle, onToggleDeleted, onPurge }: {
   sub: Subscriber; isAdmin: boolean; checked: boolean; onToggle: () => void; onToggleDeleted: () => void; onPurge: () => void;
 }) {
@@ -375,14 +406,12 @@ function SubscriberRow({ sub, isAdmin, checked, onToggle, onToggleDeleted, onPur
   return (
     <tr className={`border-b border-border/60 ${!eligible ? "opacity-60" : ""}`}>
       <td className="py-2.5 pr-3">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={checked && eligible}
           onChange={onToggle}
           disabled={!eligible}
-          className="h-[18px] w-[18px] cursor-pointer rounded border-input accent-primary disabled:cursor-not-allowed disabled:opacity-60"
           title={sub.deleted ? "Deleted — can't be emailed" : sub.unsubscribed ? "Unsubscribed — can't be emailed" : "Include in broadcast"}
-          aria-label="Include in broadcast"
+          ariaLabel="Include in broadcast"
         />
       </td>
       <td className="py-2.5 pr-4">
