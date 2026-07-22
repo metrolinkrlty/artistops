@@ -18,7 +18,10 @@ type Tip = { text: string; x: number; y: number; place: "top" | "bottom" };
 type Target = { el: HTMLElement; text: string; kind: "title" | "caption" };
 
 const MAX_W = 384; // matches max-w-sm
-const CAPTION_MAX_FONT = 12.5; // px — anything this small is a caption, not body copy
+// px — covers text-xs (12px) AND text-sm (14px), which is what the section
+// descriptions under Images / Song order / Import / Edit with AI use. Stops
+// short of text-base (16px) so real body copy is left alone.
+const CAPTION_MAX_FONT = 14.5;
 const CAPTION_MIN_CHARS = 40; // long enough to be an explanation, not a badge/count
 const CAPTION_MAX_CHARS = 600;
 
