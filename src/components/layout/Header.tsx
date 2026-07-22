@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Search, MessageSquare } from "lucide-react";
 import ChecklistBell from "./ChecklistBell";
 import LogoutPill from "./LogoutPill";
+import { useArtistName } from "./ArtistNameContext";
 import { getHeaderUnread } from "@/app/messages/actions";
 
 interface HeaderProps {
@@ -16,6 +17,7 @@ interface HeaderProps {
 
 export default function Header({ title, subtitle, subtitleTitle }: HeaderProps) {
   const pathname = usePathname();
+  const artistName = useArtistName();
   const [unread, setUnread] = useState(0);
 
   // Poll lightly so a new message shows up without a manual refresh. Re-checks
@@ -31,6 +33,9 @@ export default function Header({ title, subtitle, subtitleTitle }: HeaderProps) 
   return (
     <div className="flex items-center justify-between px-8 py-4 border-b border-[#2a2d3a] bg-[#0f1117]">
       <div>
+        {artistName && (
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">{artistName}</p>
+        )}
         <h1 className="text-white text-xl font-semibold">{title}</h1>
         {subtitle && (
           <p

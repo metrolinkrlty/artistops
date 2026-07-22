@@ -428,7 +428,8 @@ export default function WebsiteClient({
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Floating save bar — stays reachable while scrolling this long form. */}
+          <div className="sticky bottom-4 z-20 flex items-center gap-3 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-card/80">
             <Button type="submit" disabled={pending}>
               Save site details
             </Button>
@@ -438,10 +439,11 @@ export default function WebsiteClient({
         </form>
       </section>
 
+      {/* Song order (above the photo galleries) */}
+      <TrackOrder tracks={siteTracks} />
+
       {/* Images */}
       <ImageManager heroImageUrl={site?.heroImageUrl ?? null} galleryImages={site?.galleryImages ?? []} hiddenGalleryImages={site?.hiddenGalleryImages ?? []} disabled={!site?.slug} />
-
-      <TrackOrder tracks={siteTracks} />
     </div>
   );
 }

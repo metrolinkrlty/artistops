@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import InactivityTimeout from "@/components/InactivityTimeout";
 import WelcomeSplash from "@/components/WelcomeSplash";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import { ArtistNameProvider } from "./ArtistNameContext";
 
 export default function RootLayoutClient({
   children,
@@ -39,7 +40,9 @@ export default function RootLayoutClient({
         </Suspense>
         <Sidebar artistName={viewingAs ? viewingAs.artistName : artistName} isAdmin={isAdmin} isImpersonating={!!viewingAs} />
         <main className="flex-1 flex flex-col overflow-auto">
-          {children}
+          <ArtistNameProvider value={viewingAs ? viewingAs.artistName : artistName}>
+            {children}
+          </ArtistNameProvider>
         </main>
       </div>
     </div>

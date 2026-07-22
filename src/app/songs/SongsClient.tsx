@@ -29,6 +29,7 @@ const SONG_PLATFORM_FIELDS: { key: string; label: string; placeholder: string }[
 ];
 import { supabaseBrowser, AUDIO_BUCKET } from "@/lib/supabaseClient";
 import { DISTROKID_GENRES, DISTROKID_SUBGENRES } from "@/lib/genres";
+import { isWav, readRiffInfoIsrc } from "@/lib/audioTags";
 
 const statusColors: Record<string, string> = {
   DEMO: "bg-gray-500/20 text-gray-400",
@@ -203,16 +204,22 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
       const mm = await parseBlob(file);
       const c = mm.common;
       const f = mm.format;
+      // ISRC can hide in a WAV's RIFF INFO chunk, which music-metadata doesn't
+      // read — fall back to parsing it out of the raw bytes ourselves.
+      let isrc: string | undefined = (c.isrc || [])[0];
+      if (!isrc && isWav(file.name, file.type)) {
+        try { isrc = readRiffInfoIsrc(await file.arrayBuffer()) || undefined; } catch { /* best-effort */ }
+      }
       // Pre-fill blank form fields from tags (never overwrite what's there)
       fillIfEmpty("title", c.title);
       fillIfEmpty("artist", c.artist);
       fillIfEmpty("genre", (c.genre || [])[0]);
-      fillIfEmpty("isrc", (c.isrc || [])[0]);
+      fillIfEmpty("isrc", isrc);
       fillIfEmpty("bpm", c.bpm ?? undefined);
       fillIfEmpty("key", c.key);
       const summary = {
         title: c.title, artist: c.artist, album: c.album, year: c.year,
-        genre: c.genre, isrc: c.isrc, bpm: c.bpm, key: c.key, track: c.track,
+        genre: c.genre, isrc: isrc ? [isrc] : c.isrc, bpm: c.bpm, key: c.key, track: c.track,
         container: f.container, codec: f.codec,
         durationSec: f.duration ? Math.round(f.duration) : null,
         sampleRate: f.sampleRate, bitsPerSample: f.bitsPerSample, bitrate: f.bitrate,
@@ -334,17 +341,19 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
     setAudioFile(null); setMetaJson(""); setReading(false); setUploadPct(null); setPlayUrl(null);
   }
   function openAdd() {
-    setEditing(null); resetAudioState(); setPlatformLinks({}); setShowForm(true);
+    setEditing(null); resetAudioState(); setPlatformLinks({}); setOpenedForLinks(false); setShowForm(true);
   }
   function openEdit(song: Song) {
-    setEditing(song); resetAudioState(); setPlatformLinks({}); setShowForm(true);
+    setEditing(song); resetAudioState(); setPlatformLinks({}); setOpenedForLinks(false); setShowForm(true);
     if (song.audioFileRef) loadPlayback(song.audioFileRef);
     getSongSmartLink(song.id).then(setPlatformLinks).catch(() => {});
   }
   // Open the editor and jump straight to the streaming/platform links section.
   const linksSectionRef = useRef<HTMLDivElement>(null);
   const [scrollToLinks, setScrollToLinks] = useState(false);
-  function openEditToLinks(song: Song) { openEdit(song); setScrollToLinks(true); }
+  // True when the editor was opened from the links pill, so the header reflects it.
+  const [openedForLinks, setOpenedForLinks] = useState(false);
+  function openEditToLinks(song: Song) { openEdit(song); setScrollToLinks(true); setOpenedForLinks(true); }
   useEffect(() => {
     if (showForm && scrollToLinks) {
       const t = setTimeout(() => { linksSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); setScrollToLinks(false); }, 80);
@@ -519,7 +528,7 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
                         type="button"
                         onClick={() => openEditToLinks(song)}
                         className={`p-2 rounded-lg hover:bg-[#2a2d3a] transition-colors ${hasSmartLink.has(song.id) ? "text-indigo-400" : "text-[#8b8fa8] hover:text-indigo-400"}`}
-                        title={hasSmartLink.has(song.id) ? "Streaming links set — edit" : "Add streaming links"}
+                        title={hasSmartLink.has(song.id) ? "Edit streaming links" : "Add streaming links"}
                       >
                         <Link2 className="w-5 h-5" />
                       </button>
@@ -552,7 +561,7 @@ export default function SongsClient({ songs, featuredSongIds, smartLinkSongIds }
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a2d3a]">
-              <h2 className="text-white font-semibold">{editing ? "Edit Song" : "Add Song"}</h2>
+              <h2 className="text-white font-semibold">{editing ? (openedForLinks ? "Edit Song / Add links" : "Edit Song") : "Add Song"}</h2>
               <button onClick={() => setShowForm(false)} className="text-[#8b8fa8] hover:text-white">
                 <X className="w-5 h-5" />
               </button>

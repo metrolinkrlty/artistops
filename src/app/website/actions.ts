@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import { supabaseAdmin, IMAGE_BUCKET } from "@/lib/supabaseAdmin";
 import { SECTION_KEYS, type Show } from "./site-fields";
 import { FONT_KEYS } from "@/lib/siteFonts";
+import { getAppSetting, SETTING_AD_RETARGETING_GLOBAL } from "@/lib/settings";
 
 export type SocialLinks = {
   instagram?: string;
@@ -249,6 +250,13 @@ export async function setAdRetargeting(enabled: boolean): Promise<{ ok: boolean;
   const userId = await requireUserId();
   const site = await prisma.artistSite.findUnique({ where: { userId }, select: { id: true } });
   if (!site) return { ok: false, error: "Create your website first." };
+  // Enforce the global master switch server-side too: an artist can't enable
+  // their toggle while the platform-wide switch is off (belt-and-suspenders with
+  // the disabled UI). Turning OFF is always allowed.
+  if (enabled) {
+    const global = await getAppSetting(SETTING_AD_RETARGETING_GLOBAL, "off");
+    if (global !== "on") return { ok: false, error: "Ad retargeting is turned off platform-wide." };
+  }
   await prisma.artistSite.update({ where: { userId }, data: { adRetargetingEnabled: enabled } });
   revalidatePath("/email");
   return { ok: true };
