@@ -285,7 +285,7 @@ export default function EmailClient({
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="py-2 pr-3 font-medium" title="Include in broadcast">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAllRecipients} className="accent-primary" aria-label="Select all recipients" />
+                    <input type="checkbox" checked={allSelected} onChange={toggleAllRecipients} className="h-[18px] w-[18px] cursor-pointer rounded border-input accent-primary" aria-label="Select all recipients" />
                   </th>
                   <th className="py-2 pr-4 font-medium">Email</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
@@ -380,7 +380,7 @@ function SubscriberRow({ sub, isAdmin, checked, onToggle, onToggleDeleted, onPur
           checked={checked && eligible}
           onChange={onToggle}
           disabled={!eligible}
-          className="accent-primary disabled:cursor-not-allowed"
+          className="h-[18px] w-[18px] cursor-pointer rounded border-input accent-primary disabled:cursor-not-allowed disabled:opacity-60"
           title={sub.deleted ? "Deleted — can't be emailed" : sub.unsubscribed ? "Unsubscribed — can't be emailed" : "Include in broadcast"}
           aria-label="Include in broadcast"
         />
