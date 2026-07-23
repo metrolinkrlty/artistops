@@ -294,7 +294,7 @@ export default async function ArtistSitePage({ params }: Params) {
             <p className="mx-auto mb-8 max-w-xl text-neutral-400">
               First word on new music and show dates. No spam — just the good stuff.
             </p>
-            <SiteMailingList slug={slug} showAdConsent={showAdConsent} />
+            <SiteMailingList slug={slug} artistName={site.displayName} showAdConsent={showAdConsent} />
           </div>
         </section>
       </main>

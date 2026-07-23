@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 // Posts to the existing public per-slug subscribe endpoint.
-export default function SiteMailingList({ slug, showAdConsent = false }: { slug: string; showAdConsent?: boolean }) {
+export default function SiteMailingList({ slug, artistName = "this artist", showAdConsent = false }: { slug: string; artistName?: string; showAdConsent?: boolean }) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [adOptOut, setAdOptOut] = useState(false);
@@ -74,7 +74,7 @@ export default function SiteMailingList({ slug, showAdConsent = false }: { slug:
             onChange={(e) => setAdOptOut(e.target.checked)}
             className="mt-0.5 h-[16px] w-[16px] cursor-pointer accent-[var(--accent)]"
           />
-          <span>Just the emails, please — don&rsquo;t use my address to show me ads on Instagram &amp; Facebook.</span>
+          <span>Just the emails on {artistName}&rsquo;s song releases and shows, please — don&rsquo;t use my address to show me ads on Instagram, Facebook, or other social media.</span>
         </label>
       )}
       <button
