@@ -294,7 +294,7 @@ export async function emailMyList(
 
   const site = await prisma.artistSite.findUnique({
     where: { userId },
-    select: { slug: true, availableEmails: true, displayName: true },
+    select: { slug: true, availableEmails: true, displayName: true, adRetargetingEnabled: true },
   });
   const allowed = new Set((site?.availableEmails ?? []).map((e) => e.trim().toLowerCase()));
   if (!allowed.has(fromAddr)) return { ok: false, error: "That From address isn't in your saved list." };
@@ -329,6 +329,10 @@ export async function emailMyList(
 
   const base = process.env.APP_URL || "https://artistops.net";
   const who = site?.displayName || "Your artist";
+  // Only offer the ads-only opt-out when this artist actually runs ad matching,
+  // otherwise the link would promise something that isn't happening.
+  const adsOn =
+    (await getAppSetting(SETTING_AD_RETARGETING_GLOBAL, "off")) === "on" && !!site?.adRetargetingEnabled;
   const esc = (s: string) => s.replace(/[<>&]/g, (c) => (c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&amp;"));
   const fromHeader = `${who} <${fromAddr}>`;
   const bodyHtml = `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap">${esc(cleanMessage)}</div>`;
@@ -340,10 +344,15 @@ export async function emailMyList(
     const results = await Promise.all(
       chunk.map((t) => {
         const unsub = `${base}/api/unsubscribe?t=${t.unsubToken}`;
+        const adsOut = `${unsub}&ads=1`;
         const html =
           bodyHtml +
           `<hr style="margin:20px 0;border:none;border-top:1px solid #eee">` +
-          `<p style="color:#999;font-size:12px">You&rsquo;re receiving this because you joined ${esc(who)}&rsquo;s mailing list. <a href="${unsub}" style="color:#999">Unsubscribe</a>.</p>`;
+          `<p style="color:#999;font-size:12px">You&rsquo;re receiving this because you joined ${esc(who)}&rsquo;s mailing list. <a href="${unsub}" style="color:#999">Unsubscribe</a>.` +
+          (adsOn
+            ? ` Prefer to keep the emails but not see our ads on Instagram &amp; Facebook? <a href="${adsOut}" style="color:#999">Opt out of ads</a>.`
+            : "") +
+          `</p>`;
         // Reply-To = the From address; List-Unsubscribe enables Gmail's native button.
         return sendEmail(t.email, cleanSubject, html, fromAddr, fromHeader, {
           "List-Unsubscribe": `<${unsub}>`,

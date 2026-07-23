@@ -664,6 +664,7 @@ model MailingSubscriber {
   name           String?
   notifyOptIn    Boolean   @default(false)
   source         String?
+  adOptOut       Boolean   @default(false) // fan opted out of ad-audience matching (Meta) but still wants email
   unsubscribed   Boolean   @default(false) // opted out (only the listener can undo, by re-signing up)
   unsubscribedAt DateTime?
   unsubToken     String?   @unique // one-click unsubscribe token (set when first emailed)

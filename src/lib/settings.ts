@@ -37,7 +37,7 @@ This Privacy Policy explains how **[Artist / Company name]** ("we", "us") collec
 
 ## Your choices and rights
 - **Unsubscribe** from emails at any time using the link in any message.
-- **Opt out of ad targeting:** contact us and we will remove you from our advertising audiences.
+- **Opt out of ad targeting without unsubscribing:** every email we send includes an **"Opt out of ads"** link. Use it and we stop matching your address to advertising platforms while you keep receiving our emails. You can also decline this when you first join the list, or contact us and we'll remove you from our advertising audiences.
 - **Cookies/pixels:** you can control cookies in your browser and opt out of interest-based ads via your ad platform settings (e.g., Facebook Ad Preferences).
 
 ### If you are in the EU/UK (GDPR)

@@ -34,12 +34,16 @@ export async function POST(
 
   let email = "";
   let notifyOptIn = false;
+  let adOptOut = false;
   let name: string | null = null;
   let source: string | null = null;
   try {
     const body = await req.json();
     email = String(body.email || "").trim().toLowerCase();
     notifyOptIn = Boolean(body.notifyOptIn);
+    // The fan declined ad-audience matching but still wants the emails. Only ever
+    // set to true here — a later signup must not silently opt them back in.
+    adOptOut = Boolean(body.adOptOut);
     name = body.name ? String(body.name).trim() : null;
     source = body.source ? String(body.source).trim() : null;
   } catch {
@@ -74,7 +78,7 @@ export async function POST(
     if (!existing) {
       // Brand-new subscriber.
       await prisma.mailingSubscriber.create({
-        data: { site: slug, email, name, notifyOptIn, source, userId: site?.userId ?? null, signupCount: 1 },
+        data: { site: slug, email, name, notifyOptIn, adOptOut, source, userId: site?.userId ?? null, signupCount: 1 },
       });
       notifyKind = "new";
     } else if (existing.deleted) {
@@ -93,6 +97,7 @@ export async function POST(
           resubscribed: true,
           signupCount: { increment: 1 },
           ...(notifyOptIn ? { notifyOptIn: true } : {}),
+          ...(adOptOut ? { adOptOut: true } : {}),
           ...(name ? { name } : {}),
           ...(source ? { source } : {}),
           ...(site?.userId ? { userId: site.userId } : {}),
@@ -106,6 +111,7 @@ export async function POST(
         data: {
           signupCount: { increment: 1 },
           ...(notifyOptIn ? { notifyOptIn: true } : {}),
+          ...(adOptOut ? { adOptOut: true } : {}),
           ...(name ? { name } : {}),
           ...(source ? { source } : {}),
           ...(site?.userId ? { userId: site.userId } : {}),

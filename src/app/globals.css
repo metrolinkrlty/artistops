@@ -153,3 +153,19 @@
   15%  { opacity: 1; }
   100% { opacity: 0; transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% + var(--ny, -52px))) scale(1.2) rotate(var(--nr, 0deg)); }
 }
+
+/* Sub-panel labels read a size up.
+   Section headings inside panels ("Song unlock", "Music player style") and the
+   field labels above inputs ("Heading font", "Email") were both 14px, which is
+   small for sustained reading. Bumped here rather than at ~40 call sites so new
+   code inherits it too. Deliberately unlayered: plain rules beat Tailwind v4's
+   utilities layer, which is where .text-sm lives. */
+h3.text-sm {
+  font-size: 1rem;      /* 16px */
+  line-height: 1.5rem;
+}
+label.text-sm,
+label > span.text-sm {
+  font-size: 0.9375rem; /* 15px */
+  line-height: 1.375rem;
+}

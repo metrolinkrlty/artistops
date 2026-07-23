@@ -24,6 +24,7 @@ type Subscriber = {
   email: string;
   name: string | null;
   notifyOptIn: boolean;
+  adOptOut: boolean;
   source: string | null;
   unsubscribed: boolean;
   resubscribed: boolean;
@@ -434,6 +435,9 @@ function SubscriberRow({ sub, isAdmin, checked, onToggle, onToggleDeleted, onPur
           )}
           {sub.blockedAttempts >= 1 && (
             <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-500" title="Website re-add attempts blocked while deleted">{sub.blockedAttempts} blocked</span>
+          )}
+          {sub.adOptOut && (
+            <span className="rounded-full bg-slate-500/20 px-2 py-0.5 text-xs text-slate-300" title="This fan asked not to be used for ad targeting. They still get your emails, but they're excluded from any Meta ad audience.">No ads</span>
           )}
         </div>
       </td>
