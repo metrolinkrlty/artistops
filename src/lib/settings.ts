@@ -16,9 +16,9 @@ export const SETTING_PRIVACY_POLICY = "privacy_policy";
 // advice; have counsel review before relying on it. Admins can edit it in /admin.
 export const DEFAULT_PRIVACY_POLICY = `# Privacy Policy
 
-_Last updated: [add date]. This is a template — review with a qualified attorney before publishing._
+_Last updated: {{updated}}. This is a template — review with a qualified attorney before publishing._
 
-This Privacy Policy explains how **[Artist / Company name]** ("we", "us") collects, uses, and shares personal information when you visit our website or join our mailing list, and the choices you have. Our sites are operated with **ArtistOps** as our service provider.
+This Privacy Policy explains how **{{artistName}}** ("we", "us") collects, uses, and shares personal information when you visit our website or join our mailing list, and the choices you have. Our sites are operated with **ArtistOps** as our service provider.
 
 ## Information we collect
 - **You give us:** your email address, and your name if you choose to provide it, when you join our mailing list or unlock a song.
@@ -53,7 +53,7 @@ We keep your information for as long as you remain subscribed or as needed for t
 Our sites are not directed to children under 16, and we do not knowingly collect their information.
 
 ## Contact
-Questions or requests: **[contact email]**.
+Questions or requests: **{{contactEmail}}**.
 
 ## Changes
 We may update this policy; material changes will be posted here with a new "Last updated" date.
