@@ -24,6 +24,7 @@ export default async function SettingsPage() {
           notifyEmail={site?.notifyEmail ?? null}
           mailFromEmail={site?.mailFromEmail ?? null}
           mailReplyTo={site?.mailReplyTo ?? null}
+          privacyEmail={site?.privacyEmail ?? null}
           isAdmin={!!user?.isAdmin}
         />
       </div>

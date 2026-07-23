@@ -11,7 +11,7 @@ type Params = { params: Promise<{ slug: string }> };
 function getSite(slug: string) {
   return prisma.artistSite.findUnique({
     where: { slug },
-    select: { displayName: true, contactEmail: true, mailReplyTo: true, notifyEmail: true },
+    select: { displayName: true, privacyEmail: true, contactEmail: true, mailReplyTo: true, notifyEmail: true },
   });
 }
 
@@ -33,8 +33,9 @@ export default async function ArtistPrivacyPage({ params }: Params) {
   const html = renderPolicyMarkdown(
     fillPolicy(md, {
       artistName: site.displayName,
-      // Whichever address this artist actually reads.
-      contactEmail: site.contactEmail || site.mailReplyTo || site.notifyEmail || "the contact address on our website",
+      // Prefer the dedicated privacy/legal contact; fall back to booking, then
+      // reply-to / notify, then a generic phrase.
+      contactEmail: site.privacyEmail || site.contactEmail || site.mailReplyTo || site.notifyEmail || "the contact address on our website",
       updated: formatUpdated(row?.updatedAt ?? null),
     })
   );

@@ -517,6 +517,7 @@ model ArtistSite {
   notifyEmail     String?  // where new mailing-list signups are reported (internal)
   mailFromEmail   String?  // From address for the artist's outbound mailing-list email
   mailReplyTo     String?  // Reply-To for the artist's outbound mailing-list email
+  privacyEmail    String?  // where privacy / legal / data requests go (shown in the privacy policy)
   adRetargetingEnabled Boolean @default(false) // artist opted their fan list into social ad retargeting (Meta Custom Audience). Gated by the global admin toggle too.
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

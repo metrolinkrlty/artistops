@@ -10,10 +10,11 @@ const ADMIN_ONLY_EMAILS = ["hello@artistops.net"];
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const inputClass = "w-full bg-[#0f1117] border border-[#2a2d3a] text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:border-indigo-500";
 
-const SETTINGS_FIELDS: { key: "mailFromEmail" | "mailReplyTo" | "notifyEmail"; label: string; hint: string }[] = [
+const SETTINGS_FIELDS: { key: "mailFromEmail" | "mailReplyTo" | "notifyEmail" | "privacyEmail"; label: string; hint: string }[] = [
   { key: "mailFromEmail", label: "From address", hint: "The From address on emails you send to your list." },
   { key: "mailReplyTo", label: "Reply-To", hint: "Where replies to your list emails go." },
   { key: "notifyEmail", label: "Notify me of new signups", hint: "Private — we email you here when someone joins your list." },
+  { key: "privacyEmail", label: "Privacy / legal contact", hint: "Shown in your privacy policy for data, opt-out, and legal requests. Falls back to your booking email if left blank." },
 ];
 
 export default function EmailAddressesCard({
@@ -22,6 +23,7 @@ export default function EmailAddressesCard({
   notifyEmail,
   mailFromEmail,
   mailReplyTo,
+  privacyEmail,
   isAdmin,
 }: {
   hasSite: boolean;
@@ -29,6 +31,7 @@ export default function EmailAddressesCard({
   notifyEmail: string | null;
   mailFromEmail: string | null;
   mailReplyTo: string | null;
+  privacyEmail: string | null;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -63,6 +66,7 @@ export default function EmailAddressesCard({
     notifyEmail: notifyEmail ?? "",
     mailFromEmail: mailFromEmail ?? "",
     mailReplyTo: mailReplyTo ?? "",
+    privacyEmail: privacyEmail ?? "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -75,6 +79,7 @@ export default function EmailAddressesCard({
       notifyEmail: sel.notifyEmail || null,
       mailFromEmail: sel.mailFromEmail || null,
       mailReplyTo: sel.mailReplyTo || null,
+      privacyEmail: sel.privacyEmail || null,
     });
     setSaving(false);
     if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); router.refresh(); }
@@ -147,7 +152,7 @@ export default function EmailAddressesCard({
             {isAdmin && " Admin addresses are always available."}
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {SETTINGS_FIELDS.map((f) => (
               <div key={f.key}>
                 <label className="block text-[#8b8fa8] text-sm mb-1">{f.label}</label>

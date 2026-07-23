@@ -198,6 +198,7 @@ export async function saveEmailSettings(input: {
   notifyEmail: string | null;
   mailFromEmail: string | null;
   mailReplyTo: string | null;
+  privacyEmail: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const userId = await requireUserId();
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -211,10 +212,12 @@ export async function saveEmailSettings(input: {
   const notifyEmail = norm(input.notifyEmail);
   const mailFromEmail = norm(input.mailFromEmail);
   const mailReplyTo = norm(input.mailReplyTo);
+  const privacyEmail = norm(input.privacyEmail);
   for (const [label, val] of [
     ["Notify email", notifyEmail],
     ["Mailing from", mailFromEmail],
     ["Reply-to", mailReplyTo],
+    ["Privacy contact", privacyEmail],
   ] as const) {
     if (val && typeof val === "object") {
       return { ok: false, error: `${label} is not a valid email address.` };
@@ -235,6 +238,7 @@ export async function saveEmailSettings(input: {
       notifyEmail: notifyEmail as string | null,
       mailFromEmail: mailFromEmail as string | null,
       mailReplyTo: mailReplyTo as string | null,
+      privacyEmail: privacyEmail as string | null,
     },
   });
 
