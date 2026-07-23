@@ -16,16 +16,16 @@ export const SETTING_PRIVACY_POLICY = "privacy_policy";
 // advice; have counsel review before relying on it. Admins can edit it in /admin.
 export const DEFAULT_PRIVACY_POLICY = `# Privacy Policy
 
-_Last updated: {{updated}}. This is a template — review with a qualified attorney before publishing._
+Last updated: {{updated}}. This is a template — review with a qualified attorney before publishing._
 
-This Privacy Policy explains how **{{artistName}}** ("we", "us") collects, uses, and shares personal information when you visit our website or join our mailing list, and the choices you have. Our sites are operated with **ArtistOps** as our service provider.
+This Privacy Policy explains how **{{artistName}}** ("we", "us") collects, uses, and shares personal information when you visit our website or join our mailing list, and the choices you have. Our sites are operated with **ArtistOps.net** as our service provider.
 
 ## Information we collect
 - **You give us:** your email address, and your name if you choose to provide it, when you join our mailing list or unlock a song.
 - **Collected automatically:** basic usage and device data through cookies and tracking pixels (including the Meta Pixel) — pages viewed, referring source, and similar analytics.
 
 ## How we use your information
-- To send you email updates about new music, releases, and shows (when you opt in).
+- To send you email updates about new music, releases, and shows (when you're opted in).
 - To unlock songs you requested and remember you on future visits.
 - To measure site traffic and improve our content.
 - To market to you, including by **matching a hashed version of your email to your accounts on advertising platforms such as Meta (Facebook and Instagram)** so we can show you our updates and promotions there, and reach similar audiences. **This social-media/advertising use is optional and separate from our emails: if you opt out of it (by ticking the box when you join, or using the "Opt out of ads" link in any email), we will not match your address to any advertising platform — and you will still receive our email updates as usual.** We only do the ad matching for people who did not opt out.
@@ -37,7 +37,7 @@ This Privacy Policy explains how **{{artistName}}** ("we", "us") collects, uses,
 
 ## Your choices and rights
 - **Unsubscribe** from emails at any time using the link in any message.
-- **Opt out of the social-media/advertising part while keeping the emails:** this is a separate choice from unsubscribing. Tick the opt-out box when you join the list, or use the **"Opt out of ads"** link in any email we send. Either one stops us from matching your address to Meta or any other advertising platform, and **your email subscription is completely unaffected — you keep getting our updates.** You can also contact us and we'll remove you from our advertising audiences. (Unsubscribing, by contrast, stops the emails too.)
+- **Opt out of the social-media/advertising part while keeping the emails:** this is a separate choice from unsubscribing. Tick the opt-out box when you join the list, or use the **"Opt out of ads"** link in any email we send. Either one stops us from matching your address to Meta or any other advertising platform, and **your email subscription is completely unaffected — you keep getting our updates, new songs, and shows.** You can also contact us and we'll remove you from our advertising audiences. (Unsubscribing, by contrast, stops the emails too.)
 - **Cookies/pixels:** you can control cookies in your browser and opt out of interest-based ads via your ad platform settings (e.g., Facebook Ad Preferences).
 
 ### If you are in the EU/UK (GDPR)
@@ -56,8 +56,7 @@ Our sites are not directed to children under 16, and we do not knowingly collect
 Questions or requests: **{{contactEmail}}**.
 
 ## Changes
-We may update this policy; material changes will be posted here with a new "Last updated" date.
-`;
+We may update this policy; material changes will be posted here with a new "Last updated" date.`;
 
 // The default sign-in tagline. Used as the fallback when nothing is saved yet,
 // and as the "reset to default" value in the admin editor. Keep in sync with
